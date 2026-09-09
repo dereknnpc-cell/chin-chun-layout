@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Node / Scratch
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.system_generated/
+scratch/
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>金讚科技 - 廠房正式工程圖與模組化設備配置系統 (V2.4)</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E40AF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="style.css?v=2.4_force">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="theme-cad-light">
+  <!-- Top Navigation & Professional CAD Ribbon -->
+  <header class="cad-header-wrapper">
+    <!-- Row 1: Primary Navigation Bar -->
+    <div class="top-nav">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M3 9h18M9 21V9"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="brand-title">CHIN CHUN 金讚廠房工程平面配置系統</span>
+            <span class="cad-badge-version" style="background: #059669; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 12px; letter-spacing: 0.5px;">V2.4 最新版</span>
+          </div>
+          <span class="brand-subtitle">正式工程規範 · 140M×90M (含廠外車道與地磅站) · 自由動線規劃</span>
+        </div>
+      </div>
+
+      <!-- Floor Mode Switcher & Floor Manager -->
+      <div class="floor-selector-wrapper">
+        <div class="floor-selector" id="floorSelector">
+          <!-- Dynamically populated from layoutData.floors -->
+        </div>
+        <button id="btnAddFloorModalBtn" class="cad-btn primary btn-sm" title="新增自訂樓層或夾層 (如 3F, 屋頂, 戶外)">
+          <span class="btn-icon">＋</span> 新增樓層
+        </button>
+      </div>
+
+      <!-- Header Right: System Actions -->
+      <div class="header-right-actions">
+        <button id="themeToggleBtn" class="cad-btn secondary" title="切換工程藍圖/經典圖紙底色">
+          <span class="btn-icon">🌓</span> <span id="themeLabel">深色藍圖</span>
+        </button>
+
+        <div class="tool-separator"></div>
+
+        <div class="action-buttons">
+          <button id="forceReloadBtn" class="cad-btn secondary" title="若瀏覽器有舊快取或未看到新功能，點此一鍵清除快取並載入最新版">
+            <span class="btn-icon">🔄</span> 強制重整
+          </button>
+          <span id="autoSaveIndicator" class="autosave-tag" title="配置變更已自動保存在本地瀏覽器">✓ 已自動儲存</span>
+          <button id="saveJsonBtn" class="cad-btn secondary" title="下載當前擺放配置 JSON 檔">
+            <span class="btn-icon">💾</span> 儲存配置
+          </button>
+          <label class="cad-btn secondary" title="匯入已儲存的配置 JSON 檔" style="cursor: pointer; margin-bottom: 0;">
+            <span class="btn-icon">📂</span> 匯入配置
+            <input type="file" id="importJsonInput" accept=".json" style="display: none;">
+          </label>
+          <button id="printBtn" class="cad-btn secondary" title="列印或存為工程圖 PDF">
+            <span class="btn-icon">🖨️</span> 列印圖面
+          </button>
+          <button id="exportSvgBtn" class="cad-btn secondary" title="匯出高解析度向量圖">
+            <span class="btn-icon">🖼️</span> 向量 SVG
+          </button>
+          <button id="exportDxfBtn" class="cad-btn primary" title="匯出標準 AutoCAD DXF 檔">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            匯出 DXF
+          </button>
+          <button id="resetLayoutBtn" class="cad-btn danger" title="重設為 Derek Yeh V1.2 基準配置">
+            重設原廠
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Secondary CAD Tool Ribbon Bar -->
+    <div class="cad-ribbon-bar">
+      <!-- Left: Drawing & Editing Tools -->
+      <div class="ribbon-section">
+        <div class="history-actions" style="display: flex; align-items: center; gap: 4px; margin-right: 6px;">
+          <button id="btnUndo" class="cad-btn secondary btn-sm" title="回到上一步 (Ctrl+Z / Cmd+Z)" disabled>
+            <span class="btn-icon">↶</span> 復原
+          </button>
+          <button id="btnRedo" class="cad-btn secondary btn-sm" title="重做下一步 (Ctrl+Y / Cmd+Shift+Z)" disabled>
+            <span class="btn-icon">↷</span> 重做
+          </button>
+        </div>
+        <div class="tool-separator" style="margin: 0 4px;"></div>
+        <span class="ribbon-label">繪圖與建置工具:</span>
+        <button id="btnOpenAddModal" class="cad-btn highlight-accent" title="自訂規格新增設備或機台並放入廠房">
+          <span class="btn-icon">＋</span> 新增設備/機台
+        </button>
+        <button id="btnDrawRoute" class="cad-btn highlight" title="點擊以在圖面上自訂多點規劃物流或人員動線">
+          <span class="btn-icon">📍</span> 繪製動線
+        </button>
+        <button id="btnAddAisle" class="cad-btn secondary" title="新增一段矩形主物流走道色塊">
+          <span class="btn-icon">🟩</span> 新增走道
+        </button>
+        <button id="btnAddWall" class="cad-btn secondary" title="新增一段建築隔間實體雙線牆">
+          <span class="btn-icon">🧱</span> 新增牆體
+        </button>
+        <div class="snap-group">
+          <span class="tool-label">磁吸網格:</span>
+          <select id="snapSelect" class="cad-select">
+            <option value="0.5">0.5 公尺 (建議)</option>
+            <option value="1.0">1.0 公尺</option>
+            <option value="2.5">2.5 公尺 (半柱距)</option>
+            <option value="5.0">5.0 公尺 (整柱距)</option>
+            <option value="0">自由移動 (無磁吸)</option>
+          </select>
+        </div>
+        <div class="snap-group">
+          <span class="tool-label">廠區版面:</span>
+          <select id="siteViewSelect" class="cad-select">
+            <option value="expanded" selected>全廠區配置 (含廠外 140M×90M)</option>
+            <option value="indoor">室內聚焦 (100M×50M 柱網)</option>
+            <option value="max">超寬全覽 (160M×100M)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tool-separator"></div>
+
+      <!-- Center: Layer Controls -->
+      <div class="ribbon-section layer-section">
+        <span class="ribbon-label">圖層顯示:</span>
+        <div class="layer-toggles">
+          <label class="toggle-btn active" data-layer="grid">
+            <input type="checkbox" id="toggleGrid" checked> 柱網
+          </label>
+          <label class="toggle-btn active" data-layer="walls">
+            <input type="checkbox" id="toggleWalls" checked> 雙線牆
+          </label>
+          <label class="toggle-btn active" data-layer="flows">
+            <input type="checkbox" id="toggleFlows" checked> 動線
+          </label>
+          <label class="toggle-btn active" data-layer="dims">
+            <input type="checkbox" id="toggleDims" checked> 尺寸
+          </label>
+          <label class="toggle-btn active" data-layer="aisles">
+            <input type="checkbox" id="toggleAisles" checked> 走道
+          </label>
+          <label class="toggle-btn active" data-layer="mezzanine">
+            <input type="checkbox" id="toggleMezzanine" checked> 2F夾層
+          </label>
+          <label class="toggle-btn active" data-layer="handrails">
+            <input type="checkbox" id="toggleHandrails" checked> 2F護欄
+          </label>
+          <label class="toggle-btn active" data-layer="stairs">
+            <input type="checkbox" id="toggleStairs" checked> 梯廳
+          </label>
+        </div>
+      </div>
+
+      <!-- Right: Live Hints -->
+      <div class="ribbon-section hints-section">
+        <span class="cad-hint-badge">💡 選取按 <kbd>R</kbd> 旋轉 · <kbd>Del</kbd> 刪除 · 拖曳端點調長度 · 雙擊完成動線</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="main-workspace">
+    <!-- Left Sidebar: Modular Equipment Library -->
+    <aside class="sidebar-left">
+      <!-- Big Prominent Custom Add Equipment Card -->
+      <div class="custom-eq-banner" id="btnSidebarAddCustomBig" title="點擊自訂機台名稱、代號、尺寸、樓層與顏色並放置於廠房">
+        <div class="banner-icon">⚙️</div>
+        <div class="banner-text">
+          <span class="banner-title">＋ 自訂新增設備 / 機台</span>
+          <span class="banner-desc">任意長寬、代號、色彩與樓層</span>
+        </div>
+      </div>
+
+      <div class="sidebar-header">
+        <div class="sidebar-header-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <h3>模組化設備庫</h3>
+          <button id="btnSidebarAddCustom" class="cad-btn primary btn-sm" title="自訂規格新增設備或機台">＋ 新增機台</button>
+        </div>
+        <p class="sidebar-tip">點選卡片或「＋放置」立即將機台置入廠內</p>
+      </div>
+
+      <div class="library-search">
+        <input type="text" id="libSearch" placeholder="搜尋設備名稱或編號 (如 M1, QC, 切斷)...">
+      </div>
+
+      <div class="library-categories" id="libraryContainer">
+        <!-- Injected via JavaScript -->
+      </div>
+    </aside>
+
+    <!-- Center Canvas Area -->
+    <main class="canvas-viewport" id="canvasViewport">
+      <!-- Floating Route Drawing Action Bar -->
+      <div id="routeDrawingBar" class="route-drawing-bar" style="display: none;">
+        <div class="drawing-status">
+          <span class="pulse-dot"></span>
+          <span>動線繪製模式中 · 已加入 <strong id="routePointCount">0</strong> 個折點</span>
+        </div>
+        <div class="drawing-type-selector">
+          <label>動線類型:</label>
+          <select id="drawRouteTypeSelect" class="cad-select-sm">
+            <option value="forklift">叉車主幹道 (黃)</option>
+            <option value="pedestrian">安全人行道 (綠)</option>
+            <option value="process">物料流向線 (藍)</option>
+            <option value="evacuation">緊急逃生線 (紅)</option>
+          </select>
+        </div>
+        <div class="drawing-actions">
+          <button id="btnFinishRoute" class="cad-btn primary btn-sm">✔ 完成動線 (Enter)</button>
+          <button id="btnUndoRoutePoint" class="cad-btn secondary btn-sm">↶ 復原 (Backspace)</button>
+          <button id="btnCancelRoute" class="cad-btn danger btn-sm">✖ 取消 (Esc)</button>
+        </div>
+      </div>
+
+      <!-- Quick Rename Popover Box -->
+      <div id="quickRenameBox" class="quick-rename-box" style="display: none;">
+        <div class="quick-rename-header">
+          <span id="quickRenameTitle">✏️ 編輯模組名稱與編號</span>
+          <button id="quickRenameClose" class="btn-close" type="button">&times;</button>
+        </div>
+        <div class="quick-rename-body">
+          <div class="rename-field">
+            <label>模組/設備名稱</label>
+            <input type="text" id="quickRenameName" class="cad-input" placeholder="輸入名稱">
+          </div>
+          <div class="rename-field" id="quickRenameCodeGroup">
+            <label>設備識別編號</label>
+            <input type="text" id="quickRenameCode" class="cad-input" placeholder="輸入編號">
+          </div>
+        </div>
+        <div class="quick-rename-footer">
+          <button type="button" id="quickRenameCancel" class="cad-btn secondary btn-sm">取消</button>
+          <button type="button" id="quickRenameSave" class="cad-btn primary btn-sm">儲存變更 (Enter)</button>
+        </div>
+      </div>
+
+      <!-- Floating Canvas Controls -->
+      <div class="canvas-controls">
+        <button id="zoomInBtn" title="放大 (+)">＋</button>
+        <button id="zoomResetBtn" title="點擊或單按 Control 鍵恢復 100% 置中">100%</button>
+        <button id="zoomOutBtn" title="縮小 (-)">－</button>
+        <button id="fitScreenBtn" title="全廠俯瞰縮放">全覽</button>
+      </div>
+
+      <!-- Real-time Cursor Coordinates Bar -->
+      <div class="coordinate-bar">
+        <span class="coord-item">當前視圖: <strong id="floorIndicator" class="floor-badge-tag">1F 主廠房 (EL.+0.60M)</strong></span>
+        <span class="coord-item">座標 X: <strong id="cursorX">0.00</strong> m</span>
+        <span class="coord-item">座標 Y: <strong id="cursorY">0.00</strong> m</span>
+        <span class="coord-item">鄰近柱位: <strong id="nearestCol">X1 - Y1</strong></span>
+        <span class="coord-item">柱距模組: <strong id="gridBayInfo">5.00 m (柱中心) / 4.75 m (淨柱距)</strong></span>
+        <span class="coord-item" id="mezzanineStats">2F夾層面積: <strong>380.0 m²</strong></span>
+      </div>
+
+      <!-- SVG Drawing Surface -->
+      <svg id="factorySvg" class="factory-svg"></svg>
+    </main>
+
+    <!-- Right Sidebar: Inspector & Dimension Panel -->
+    <aside class="sidebar-right" id="inspectorPanel">
+      <div class="inspector-header">
+        <h3>設備屬性與尺寸檢查</h3>
+        <span id="selectionBadge" class="badge">未選取</span>
+      </div>
+
+      <div id="inspectorEmptyState" class="empty-state">
+        <div class="empty-icon">📐</div>
+        <p>在圖面上點選任何機台設備即可自由拖曳、旋轉或在此微調真實長寬尺寸。</p>
+        <div class="instruction-box">
+          <h4>操作秘訣：</h4>
+          <ul>
+            <li><strong>滑鼠拖曳：</strong>直接按住機台移動位置</li>
+            <li><strong>快速旋轉：</strong>選中後按 <kbd>R</kbd> 鍵旋轉 90°</li>
+            <li><strong>滾輪縮放：</strong>雙指或滾輪平滑縮放圖面</li>
+            <li><strong>畫布平移：</strong>按住滑鼠中鍵或拖曳空白處</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="inspectorContent" class="inspector-content" style="display: none;">
+        <!-- General Identity Card -->
+        <div class="property-card" id="cardGeneralInfo">
+          <div class="prop-group">
+            <label id="lblPropName">物件名稱</label>
+            <input type="text" id="propName" class="cad-input">
+          </div>
+          <div class="prop-group">
+            <label id="lblPropCode">識別編號 / 類型代碼</label>
+            <input type="text" id="propCode" class="cad-input">
+          </div>
+          <div class="prop-group">
+            <label>所屬分類 / 樓層</label>
+            <input type="text" id="propZone" class="cad-input" readonly>
+          </div>
+        </div>
+
+        <!-- Standard Item Dimensions (Equipment, Columns, Furniture, Zones) -->
+        <div class="property-card" id="cardStandardDims">
+          <h4>實體外觀尺寸 (公尺)</h4>
+          <div class="prop-row">
+            <div class="prop-group">
+              <label>長度 W (米)</label>
+              <input type="number" id="propWidth" step="0.1" min="0.2" class="cad-input">
+            </div>
+            <div class="prop-group">
+              <label>寬度 H (米)</label>
+              <input type="number" id="propHeight" step="0.1" min="0.2" class="cad-input">
+            </div>
+          </div>
+          <div class="prop-meta">
+            <span>佔地面積: <strong id="propArea">0.0</strong> m²</span>
+            <span>毫米規格: <span id="propMm">0 × 0 mm</span></span>
+          </div>
+        </div>
+
+        <!-- Standard Item Position & Rotation -->
+        <div class="property-card" id="cardStandardCoords">
+          <h4>定位座標 (自 X1-Y1 基準原點)</h4>
+          <div class="prop-row">
+            <div class="prop-group">
+              <label>X 座標 (米)</label>
+              <input type="number" id="propX" step="0.1" class="cad-input">
+            </div>
+            <div class="prop-group">
+              <label>Y 座標 (米)</label>
+              <input type="number" id="propY" step="0.1" class="cad-input">
+            </div>
+          </div>
+          <div class="prop-group" id="propRotationGroup">
+            <label>旋轉角度</label>
+            <div class="rotation-tools">
+              <button id="rotateLeftBtn" class="cad-btn secondary" title="逆時針 90°">↶ -90°</button>
+              <span id="rotationAngleDisplay" class="angle-val">0°</span>
+              <button id="rotateRightBtn" class="cad-btn secondary" title="順時針 90°">↷ +90°</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Architectural Wall Specific Card -->
+        <div class="property-card" id="cardWallProps" style="display: none;">
+          <h4>🧱 牆體端點與厚度參數</h4>
+          <div class="prop-row">
+            <div class="prop-group">
+              <label>起點 X1 (米)</label>
+              <input type="number" id="propWallX1" step="0.1" class="cad-input">
+            </div>
+            <div class="prop-group">
+              <label>起點 Y1 (米)</label>
+              <input type="number" id="propWallY1" step="0.1" class="cad-input">
+            </div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-group">
+              <label>終點 X2 (米)</label>
+              <input type="number" id="propWallX2" step="0.1" class="cad-input">
+            </div>
+            <div class="prop-group">
+              <label>終點 Y2 (米)</label>
+              <input type="number" id="propWallY2" step="0.1" class="cad-input">
+            </div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-group">
+              <label>牆體厚度 (米)</label>
+              <input type="number" id="propWallThickness" step="0.05" min="0.1" class="cad-input">
+            </div>
+          </div>
+          <div class="prop-meta">
+            <span>牆體長度: <strong id="propWallLength">0.00</strong> m</span>
+          </div>
+        </div>
+
+        <!-- Flow Route Specific Card -->
+        <div class="property-card" id="cardFlowProps" style="display: none;">
+          <h4>📍 動線規格與流向參數</h4>
+          <div class="prop-group">
+            <label>動線功能類型</label>
+            <select id="propFlowType" class="cad-select">
+              <option value="forklift">叉車專用主幹道 (黃色)</option>
+              <option value="pedestrian">人員安全步行動線 (綠色)</option>
+              <option value="process">製程原料物流線 (藍色)</option>
+              <option value="evacuation">緊急逃生避難路線 (紅色)</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <div class="prop-group">
+              <label>動線寬度 (米)</label>
+              <input type="number" id="propFlowWidth" step="0.1" min="0.5" max="8.0" class="cad-input">
+            </div>
+            <div class="prop-group">
+              <label>箭頭指示流向</label>
+              <select id="propFlowArrow" class="cad-select">
+                <option value="both">雙向流動 (⇆)</option>
+                <option value="forward">單向前進 (→)</option>
+                <option value="backward">單向回流 (←)</option>
+                <option value="none">無箭頭指示 (―)</option>
+              </select>
+            </div>
+          </div>
+          <div class="prop-meta">
+            <span>路徑節點數: <strong id="propFlowWaypoints">0</strong> 點</span>
+            <span>總長度: <strong id="propFlowTotalLen">0.00</strong> m</span>
+          </div>
+          <div class="prop-actions" style="margin-top: 10px; display: flex; gap: 8px;">
+            <button type="button" id="btnReverseFlow" class="cad-btn secondary btn-sm" style="flex: 1;" title="將動線起點與終點流向對調">⇄ 反轉流向</button>
+            <button type="button" id="btnDeleteSelectedWaypoint" class="cad-btn danger btn-sm" style="flex: 1;" title="刪除選取的端點節點">－ 刪除選取端點</button>
+          </div>
+          <p class="prop-tip" style="margin-top: 8px; font-size: 11px; color: var(--text-muted); line-height: 1.4;">
+            💡 操作秘訣：點擊動線線段可插入新轉折點；右鍵點擊端點圓球可快速刪除該點。
+          </p>
+        </div>
+
+        <!-- Engineering Title Block Inspector Card -->
+        <div class="property-card" id="cardTitleBlockProps" style="display: none;">
+          <h4>📑 工程圖說明欄 (可拖曳移動/靠齊)</h4>
+          <div class="prop-group">
+            <label>圖名 / TITLE</label>
+            <input type="text" id="propTbTitle" class="cad-input" placeholder="例如：1F生產動線、建築元件與全廠區配置">
+          </div>
+          <div class="prop-row">
+            <div class="prop-group">
+              <label>圖號 / DWG NO.</label>
+              <input type="text" id="propTbDwgNo" class="cad-input">
+            </div>
+            <div class="prop-group">
+              <label>版次 / REV</label>
+              <input type="text" id="propTbRev" class="cad-input">
+            </div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-group">
+              <label>繪製 / DESIGNER</label>
+              <input type="text" id="propTbDesigner" class="cad-input">
+            </div>
+            <div class="prop-group">
+              <label>標高 / ELEVATION</label>
+              <input type="text" id="propTbElevation" class="cad-input">
+            </div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-group">
+              <label>日期 / DATE</label>
+              <input type="text" id="propTbDate" class="cad-input">
+            </div>
+            <div class="prop-group">
+              <label>狀態 / STATUS</label>
+              <input type="text" id="propTbStatus" class="cad-input">
+            </div>
+          </div>
+          <div class="prop-group">
+            <label>規格尺寸 / SPEC</label>
+            <input type="text" id="propTbSpec" class="cad-input">
+          </div>
+          <div class="prop-actions" style="margin-top: 10px;">
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 6px;">四角快速靠齊定位:</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <button type="button" id="btnTbDockBR" class="cad-btn secondary btn-sm">↘ 靠右下角 (標準)</button>
+              <button type="button" id="btnTbDockBL" class="cad-btn secondary btn-sm">↙ 靠左下角</button>
+              <button type="button" id="btnTbDockTR" class="cad-btn secondary btn-sm">↗ 靠右上角</button>
+              <button type="button" id="btnTbDockTL" class="cad-btn secondary btn-sm">↖ 靠左上角</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clearance Readout Card -->
+        <div class="property-card" id="cardClearance">
+          <h4>淨空安全距離檢測</h4>
+          <div class="clearance-readouts">
+            <div class="clearance-item">
+              <span>距最近立柱:</span>
+              <strong id="distToCol">-- m</strong>
+            </div>
+            <div class="clearance-item">
+              <span>距主幹物流道:</span>
+              <strong id="distToAisle">-- m</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Universal Action Buttons -->
+        <div class="inspector-actions">
+          <button id="btnInspectorAddCustom" class="cad-btn highlight-accent" title="自訂規格新增設備或機台">
+            ＋ 新增機台
+          </button>
+          <button id="duplicateBtn" class="cad-btn secondary" title="複製選取的物件">
+            複製物件
+          </button>
+          <button id="deleteBtn" class="cad-btn danger" title="刪除選取的物件 (Delete鍵)">
+            刪除物件
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Modal: Add New Equipment / Machine -->
+  <div id="addEquipmentModal" class="cad-modal-overlay" style="display: none;">
+    <div class="cad-modal-dialog">
+      <div class="cad-modal-header">
+        <div class="modal-title">
+          <span class="modal-icon">⚙️</span>
+          <h3>新增自訂設備 / 機台模組</h3>
+        </div>
+        <button id="closeAddModalBtn" class="cad-modal-close" type="button" title="關閉視窗">&times;</button>
+      </div>
+      <form id="addEquipmentForm" class="cad-modal-body">
+        <div class="modal-form-grid">
+          <div class="form-group full-width">
+            <label>設備 / 模組名稱 <span class="req">*</span></label>
+            <input type="text" id="newEqName" class="cad-input" placeholder="例如：貼合主力機 A 線、CNC 4軸成型機、自動包裝機" required>
+          </div>
+          <div class="form-group">
+            <label>設備識別代碼 (Code) <span class="req">*</span></label>
+            <input type="text" id="newEqCode" class="cad-input" placeholder="例如：M3-1、CNC-01、PKG-2" required>
+          </div>
+          <div class="form-group">
+            <label>設備分類</label>
+            <select id="newEqCategory" class="cad-select">
+              <option value="ADH">⚙️ 貼合加工 (ADH Line)</option>
+              <option value="Cutting">✂️ 裁切成型 (Cutting)</option>
+              <option value="Automation">🤖 自動化機台 (Automation)</option>
+              <option value="QC">🔍 品檢/工作站 (QC)</option>
+              <option value="Storage">📦 倉儲/料架 (Storage)</option>
+              <option value="Material">🧱 原料暫存 (Material)</option>
+              <option value="Outdoor">🚚 廠外/物流設施 (Outdoor)</option>
+              <option value="Furniture">🪑 辦公/傢俱 (Furniture)</option>
+              <option value="Utility">⚡ 廠務/公用 (Utility)</option>
+              <option value="General">🏷️ 一般設備 (General)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>長度 W (公尺) <span class="req">*</span></label>
+            <input type="number" id="newEqWidth" class="cad-input" step="0.1" min="0.2" max="60" value="4.0" required>
+          </div>
+          <div class="form-group">
+            <label>寬度 H (公尺) <span class="req">*</span></label>
+            <input type="number" id="newEqHeight" class="cad-input" step="0.1" min="0.2" max="40" value="2.0" required>
+          </div>
+          <div class="form-group">
+            <label>放置樓層 / 分層</label>
+            <select id="newEqFloor" class="cad-select">
+              <!-- Dynamically populated -->
+              <option value="1F">1F 主廠房生產線</option>
+              <option value="2F">2F 倉庫夾層</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>設備標示色彩</label>
+            <div class="color-picker-row">
+              <input type="color" id="newEqColorPicker" value="#2563EB" class="cad-color-input">
+              <div class="preset-colors" id="presetColors">
+                <button type="button" class="color-swatch active" data-color="#2563EB" style="background:#2563EB;"></button>
+                <button type="button" class="color-swatch" data-color="#D97706" style="background:#D97706;"></button>
+                <button type="button" class="color-swatch" data-color="#16A34A" style="background:#16A34A;"></button>
+                <button type="button" class="color-swatch" data-color="#DC2626" style="background:#DC2626;"></button>
+                <button type="button" class="color-swatch" data-color="#7C3AED" style="background:#7C3AED;"></button>
+                <button type="button" class="color-swatch" data-color="#0284C7" style="background:#0284C7;"></button>
+                <button type="button" class="color-swatch" data-color="#334155" style="background:#334155;"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-stats-box">
+          <span>佔地面積: <strong id="newEqArea">8.00</strong> m²</span>
+          <span>毫米規格: <strong id="newEqMm">4000 × 2000 mm</strong></span>
+        </div>
+        <div class="cad-modal-footer">
+          <label class="save-template-check">
+            <input type="checkbox" id="saveToCustomLibCheck" checked> 同步儲存至左側「⭐ 自訂設備庫」供重複點選新增
+          </label>
+          <div class="footer-buttons">
+            <button type="button" id="cancelAddModalBtn" class="cad-btn secondary">取消</button>
+            <button type="submit" id="submitAddModalBtn" class="cad-btn primary">確認並放置於圖面</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add New Floor Layer -->
+  <div id="floorManageModal" class="cad-modal-overlay" style="display: none;">
+    <div class="cad-modal-dialog" style="max-width: 440px;">
+      <div class="cad-modal-header">
+        <div class="modal-title">
+          <span class="modal-icon">🏢</span>
+          <h3>新增樓層 / 夾層分層</h3>
+        </div>
+        <button id="closeFloorModalBtn" class="cad-modal-close" type="button" title="關閉視窗">&times;</button>
+      </div>
+      <form id="addFloorForm" class="cad-modal-body">
+        <div class="form-group">
+          <label>樓層代號 (Floor Code) <span class="req">*</span></label>
+          <input type="text" id="newFloorCode" class="cad-input" placeholder="例如：3F、B1、ROOF、MEZZ-2" required>
+        </div>
+        <div class="form-group">
+          <label>樓層名稱 <span class="req">*</span></label>
+          <input type="text" id="newFloorName" class="cad-input" placeholder="例如：研發與辦公中心、屋頂機房、戶外物流貨場" required>
+        </div>
+        <div class="form-group">
+          <label>基準標高 (Elevation) <span class="req">*</span></label>
+          <input type="text" id="newFloorElevation" class="cad-input" placeholder="例如：EL. +8.20M、EL. ±0.00M" value="EL. +8.20M" required>
+        </div>
+        <div class="form-group">
+          <label>樓層說明備註</label>
+          <input type="text" id="newFloorDesc" class="cad-input" placeholder="例如：新建研發大樓分層">
+        </div>
+        <div class="cad-modal-footer">
+          <div class="footer-buttons">
+            <button type="button" id="cancelFloorModalBtn" class="cad-btn secondary">取消</button>
+            <button type="submit" id="submitFloorModalBtn" class="cad-btn primary">建立樓層並切換</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Floating Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Load Application Logic -->
+  <script src="app.js?v=2.4_force"></script>
+</body>
+</html>

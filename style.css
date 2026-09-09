@@ -1,0 +1,1738 @@
+/* =========================================================
+   CHIN CHUN FACTORY LAYOUT - CAD ENGINEERING STYLESHEET
+   ========================================================= */
+
+:root {
+  /* Light Engineering Theme Variables */
+  --bg-app: #F1F5F9;
+  --bg-panel: #FFFFFF;
+  --bg-canvas: #F8FAFC;
+  --border-ui: #E2E8F0;
+  --border-cad: #CBD5E1;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --text-accent: #2563EB;
+  
+  --cad-grid-axis: #DC2626;
+  --cad-col-bubble: #EF4444;
+  --cad-column: #334155;
+  --cad-wall: #0F172A;
+  --cad-dim-line: #0284C7;
+  --cad-dim-text: #0369A1;
+  --cad-selection: #2563EB;
+  --cad-selection-glow: rgba(37, 99, 235, 0.35);
+
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --danger: #DC2626;
+  --danger-hover: #B91C1C;
+  --secondary: #F8FAFC;
+  --secondary-border: #CBD5E1;
+  --secondary-hover: #E2E8F0;
+}
+
+/* Dark Blueprint Theme */
+body.theme-cad-dark {
+  --bg-app: #0B1329;
+  --bg-panel: #0F172A;
+  --bg-canvas: #090E1E;
+  --border-ui: #1E293B;
+  --border-cad: #334155;
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-accent: #38BDF8;
+
+  --cad-grid-axis: #F87171;
+  --cad-col-bubble: #EF4444;
+  --cad-column: #94A3B8;
+  --cad-wall: #F1F5F9;
+  --cad-dim-line: #38BDF8;
+  --cad-dim-text: #7DD3FC;
+  --cad-selection: #38BDF8;
+  --cad-selection-glow: rgba(56, 189, 248, 0.45);
+
+  --secondary: #1E293B;
+  --secondary-border: #334155;
+  --secondary-hover: #2D3D54;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-app);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+/* --- Top Navigation & CAD Ribbon Toolbar --- */
+.cad-header-wrapper {
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.top-nav {
+  height: 50px;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-ui);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, #1E40AF, #3B82F6);
+  color: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.3);
+}
+
+.brand-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  display: block;
+}
+
+.brand-subtitle {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* --- Floor Switcher Controls --- */
+.floor-selector {
+  display: flex;
+  background: var(--bg-app);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border-ui);
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.floor-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.floor-btn:hover {
+  color: var(--text-main);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.floor-btn.active {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.floor-pill {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  background: #E2E8F0;
+  color: #334155;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.floor-btn.active .floor-pill {
+  background: #2563EB;
+  color: white;
+}
+
+.floor-pill.pill-2f {
+  background: #E0E7FF;
+  color: #3730A3;
+}
+
+.floor-btn.active .floor-pill.pill-2f {
+  background: #4F46E5;
+  color: white;
+}
+
+.floor-pill.pill-overlay {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.floor-btn.active .floor-pill.pill-overlay {
+  background: #D97706;
+  color: white;
+}
+
+.floor-elev {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 4px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.floor-badge-tag {
+  color: #2563EB;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* --- Secondary CAD Ribbon Bar --- */
+.cad-ribbon-bar {
+  height: 42px;
+  background-color: var(--bg-app);
+  border-bottom: 1px solid var(--border-ui);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.ribbon-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ribbon-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.snap-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+}
+
+.tool-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tool-separator {
+  width: 1px;
+  height: 20px;
+  background-color: var(--border-cad);
+  opacity: 0.7;
+}
+
+.cad-select {
+  padding: 3px 8px;
+  height: 28px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 5px;
+  border: 1px solid var(--border-cad);
+  background-color: var(--bg-panel);
+  color: var(--text-main);
+  outline: none;
+  cursor: pointer;
+}
+
+.layer-toggles {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: nowrap;
+}
+
+.toggle-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  height: 26px;
+  border-radius: 5px;
+  border: 1px solid var(--border-cad);
+  background-color: var(--bg-panel);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.toggle-btn.active {
+  background-color: rgba(37, 99, 235, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.toggle-btn input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--primary);
+  margin: 0;
+}
+
+.hints-section {
+  flex-shrink: 0;
+}
+
+.cad-hint-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-ui);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cad-hint-badge kbd {
+  background: var(--bg-app);
+  border: 1px solid var(--border-cad);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cad-btn {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.cad-btn.primary {
+  background-color: var(--primary);
+  color: white;
+}
+.cad-btn.primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.cad-btn.secondary {
+  background-color: var(--secondary);
+  border-color: var(--secondary-border);
+  color: var(--text-main);
+}
+.cad-btn.secondary:hover {
+  background-color: var(--secondary-hover);
+}
+
+.cad-btn.danger {
+  background-color: rgba(220, 38, 38, 0.08);
+  color: var(--danger);
+  border-color: rgba(220, 38, 38, 0.25);
+}
+.cad-btn.danger:hover {
+  background-color: var(--danger);
+  color: white;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- Main Workspace Layout --- */
+.main-workspace {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+/* --- Left Sidebar --- */
+.sidebar-left {
+  width: 280px;
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border-ui);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+
+.sidebar-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-ui);
+}
+
+.sidebar-header h3 {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sidebar-tip {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.library-search {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-ui);
+}
+
+.library-search input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border-cad);
+  border-radius: 6px;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  outline: none;
+}
+
+.library-categories {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lib-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.lib-item-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lib-item {
+  padding: 8px 10px;
+  border: 1px solid var(--border-ui);
+  background-color: var(--bg-panel);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.15s ease;
+}
+
+.lib-item:hover {
+  border-color: var(--primary);
+  background-color: rgba(37, 99, 235, 0.05);
+  transform: translateX(2px);
+}
+
+.lib-item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.lib-item-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lib-item-dim {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.lib-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: var(--secondary);
+  border: 1px solid var(--border-cad);
+}
+
+/* --- Center Canvas Viewport --- */
+.canvas-viewport {
+  flex: 1;
+  position: relative;
+  background-color: var(--bg-canvas);
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.factory-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Floating Canvas Controls */
+.canvas-controls {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-cad);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.canvas-controls button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background-color: transparent;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-controls button:hover {
+  background-color: var(--secondary-hover);
+}
+
+/* Coordinates Status Bar */
+.coordinate-bar {
+  position: absolute;
+  bottom: 12px;
+  left: 14px;
+  background-color: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  color: #F8FAFC;
+  padding: 6px 14px;
+  border-radius: 20px;
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.coord-item strong {
+  color: #38BDF8;
+}
+
+/* --- Right Sidebar (Inspector) --- */
+.sidebar-right {
+  width: 320px;
+  background-color: var(--bg-panel);
+  border-left: 1px solid var(--border-ui);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+
+.inspector-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-ui);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inspector-header h3 {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background-color: var(--secondary);
+  border: 1px solid var(--border-cad);
+  font-weight: 600;
+}
+
+.badge.active {
+  background-color: rgba(37, 99, 235, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.empty-state {
+  padding: 30px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.empty-icon {
+  font-size: 42px;
+  margin-bottom: 12px;
+}
+
+.instruction-box {
+  margin-top: 24px;
+  text-align: left;
+  background-color: var(--bg-app);
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-ui);
+}
+
+.instruction-box h4 {
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+
+.instruction-box ul {
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.instruction-box li {
+  font-size: 11px;
+}
+
+.inspector-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.property-card {
+  background-color: var(--bg-app);
+  border: 1px solid var(--border-ui);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.property-card h4 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.prop-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prop-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.cad-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1px solid var(--border-cad);
+  border-radius: 6px;
+  background-color: var(--bg-panel);
+  color: var(--text-main);
+  outline: none;
+}
+
+.cad-input:focus {
+  border-color: var(--primary);
+}
+
+.prop-row {
+  display: flex;
+  gap: 8px;
+}
+
+.prop-row .prop-group {
+  flex: 1;
+}
+
+.prop-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px dashed var(--border-cad);
+  padding-top: 6px;
+}
+
+.rotation-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.angle-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.clearance-readouts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clearance-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.clearance-item strong {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--primary);
+}
+
+.inspector-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.inspector-actions button {
+  flex: 1;
+}
+
+/* --- SVG Graphic Elements Styling --- */
+.svg-equipment-group {
+  cursor: move;
+  transition: filter 0.15s ease;
+}
+
+.svg-equipment-group:hover {
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
+}
+
+.svg-equipment-group.selected rect.main-box {
+  stroke: var(--cad-selection) !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 8px var(--cad-selection-glow));
+}
+
+.svg-equipment-group.dragging {
+  opacity: 0.85;
+}
+
+/* --- 2F Mezzanine Architectural Elements --- */
+.mezzanine-deck {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.mezzanine-deck:hover {
+  filter: brightness(1.05);
+}
+
+.mezzanine-zone-label {
+  pointer-events: none;
+  font-family: 'Inter', sans-serif;
+  user-select: none;
+}
+
+.handrail-line {
+  stroke: #D97706;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 7, 4;
+}
+
+.handrail-line-glow {
+  stroke: #FDE68A;
+  stroke-width: 6;
+  opacity: 0.4;
+  stroke-linecap: round;
+}
+
+.support-post-circle {
+  fill: #1E293B;
+  stroke: #E2E8F0;
+  stroke-width: 1.5;
+}
+
+.stair-run-step {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+
+.lift-box {
+  fill: #334155;
+  stroke: #94A3B8;
+  stroke-width: 2;
+}
+
+/* --- Architectural Double-line Walls (雙筆劃實體牆) --- */
+.wall-double-poly {
+  fill: var(--bg-app);
+  stroke: var(--cad-wall);
+  stroke-width: 1.2;
+}
+
+body.theme-cad-dark .wall-double-poly {
+  fill: #1E293B;
+  stroke: #F1F5F9;
+}
+
+.wall-centerline {
+  stroke: var(--border-cad);
+  stroke-width: 0.8;
+  stroke-dasharray: 4, 3;
+}
+
+/* --- Interactive Structural Columns (可移動與刪除之結構立柱) --- */
+.svg-column-group {
+  cursor: move;
+  transition: opacity 0.15s ease;
+}
+
+.svg-column-group:hover .column-box {
+  stroke: var(--cad-selection) !important;
+  stroke-width: 2px !important;
+  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.4));
+}
+
+.svg-column-group.selected .column-box {
+  fill: var(--cad-selection) !important;
+  stroke: #1D4ED8 !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.6));
+}
+
+.svg-column-group .col-tag {
+  pointer-events: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  font-weight: 700;
+  fill: var(--text-muted);
+}
+
+.svg-column-group.selected .col-tag {
+  fill: #2563EB;
+  font-weight: 800;
+}
+
+/* --- Highlighting & Interactive Creation Tools --- */
+.cad-btn.highlight {
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  color: white;
+  border-color: #1E40AF;
+  font-weight: 700;
+}
+
+.cad-btn.highlight:hover {
+  background: linear-gradient(135deg, #1D4ED8, #1E40AF);
+}
+
+.cad-btn.drawing-mode {
+  background: #DC2626 !important;
+  color: white !important;
+  border-color: #B91C1C !important;
+  animation: pulseCad 1.2s infinite ease-in-out;
+}
+
+@keyframes pulseCad {
+  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+/* --- Wall Interactive Styles --- */
+.svg-wall-group {
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.svg-wall-group:hover .wall-double-poly {
+  stroke: var(--cad-selection) !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 5px rgba(37, 99, 235, 0.45));
+}
+
+.svg-wall-group.selected .wall-double-poly {
+  stroke: var(--cad-selection) !important;
+  stroke-width: 3px !important;
+  fill: rgba(37, 99, 235, 0.18) !important;
+  filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.6));
+}
+
+.wall-endpoint-handle {
+  fill: #FFFFFF;
+  stroke: var(--cad-selection);
+  stroke-width: 2;
+  cursor: crosshair;
+  transition: transform 0.15s ease;
+}
+
+.wall-endpoint-handle:hover {
+  transform: scale(1.35);
+  fill: var(--cad-selection);
+  stroke: #FFFFFF;
+}
+
+/* --- Aisles Interactive Styles --- */
+.svg-aisle-group {
+  cursor: move;
+  transition: filter 0.15s ease;
+}
+
+.svg-aisle-group:hover rect {
+  stroke: #B7791F !important;
+  stroke-width: 2.5px !important;
+}
+
+.svg-aisle-group.selected rect {
+  stroke: var(--cad-selection) !important;
+  stroke-width: 3.5px !important;
+  filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.5));
+}
+
+/* --- Flow Routes Interactive Styles --- */
+.svg-flow-group {
+  cursor: pointer;
+}
+
+.flow-hit-area {
+  stroke: transparent;
+  stroke-width: 20;
+  fill: none;
+  cursor: pointer;
+}
+
+.svg-flow-group:hover .flow-line-main {
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.7));
+}
+
+.svg-flow-group.selected .flow-line-main {
+  filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.8));
+}
+
+@keyframes flowDashAnim {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.flow-line-animated {
+  animation: flowDashAnim 1.4s linear infinite;
+}
+
+.flow-waypoint-handle {
+  fill: #FFFFFF;
+  stroke: #2563EB;
+  stroke-width: 2.5;
+  cursor: grab;
+  transition: transform 0.15s ease;
+}
+
+.flow-waypoint-handle:hover {
+  transform: scale(1.4);
+  fill: #2563EB;
+  stroke: #FFFFFF;
+}
+
+.flow-waypoint-handle:active {
+  cursor: grabbing;
+}
+
+/* --- Architectural Components Rendering Styles --- */
+.door-swing-arc {
+  fill: rgba(59, 130, 246, 0.08);
+  stroke: #3B82F6;
+  stroke-width: 1.2;
+  stroke-dasharray: 4, 3;
+}
+
+.door-leaf-line {
+  stroke: #1D4ED8;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.door-frame {
+  fill: #334155;
+}
+
+.window-glass {
+  stroke: #0284C7;
+  stroke-width: 1.6;
+}
+
+.window-frame-line {
+  stroke: #475569;
+  stroke-width: 1.8;
+}
+
+.stair-tread-line {
+  stroke: #475569;
+  stroke-width: 1;
+}
+
+.furniture-contour {
+  fill: rgba(241, 245, 249, 0.85);
+  stroke: #475569;
+  stroke-width: 1.5;
+}
+
+.furniture-chair-back {
+  fill: #E2E8F0;
+  stroke: #64748B;
+  stroke-width: 1.2;
+}
+
+.sanitary-fixture-body {
+  fill: #E0F2FE;
+  stroke: #0284C7;
+  stroke-width: 1.5;
+}
+
+/* =========================================================
+   NEW ENHANCEMENTS: CUSTOM EQUIPMENT, FLOW & RENAME
+   ========================================================= */
+
+/* Highlight Accent Button */
+.cad-btn.highlight-accent {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: #FFFFFF;
+  border: 1px solid #047857;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+}
+
+.cad-btn.highlight-accent:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.45);
+}
+
+/* Auto Save Indicator Tag */
+.autosave-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #16A34A;
+  background: rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  padding: 3px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.3s ease;
+}
+
+body.theme-cad-dark .autosave-tag {
+  color: #4ADE80;
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+/* Floating Route Drawing Action Bar */
+.route-drawing-bar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-panel);
+  border: 1.5px solid #F59E0B;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-radius: 30px;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 100;
+  animation: slideDownFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+}
+
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.drawing-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.pulse-dot {
+  width: 10px;
+  height: 10px;
+  background-color: #EF4444;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: pulseDotAnim 1.4s infinite;
+}
+
+@keyframes pulseDotAnim {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 7px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.drawing-type-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cad-select-sm {
+  height: 28px;
+  font-size: 12px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-cad);
+  background: var(--bg-panel);
+  color: var(--text-main);
+  outline: none;
+}
+
+.drawing-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-sm {
+  height: 28px !important;
+  font-size: 12px !important;
+  padding: 0 10px !important;
+  border-radius: 6px !important;
+}
+
+/* Quick Rename Popover Box */
+.quick-rename-box {
+  position: absolute;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-cad);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  border-radius: 10px;
+  padding: 14px;
+  width: 290px;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: popoverFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popoverFade {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.quick-rename-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-ui);
+  padding-bottom: 6px;
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.btn-close:hover {
+  color: var(--danger);
+}
+
+.rename-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rename-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.quick-rename-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+/* Custom Modal Dialog */
+.cad-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cad-modal-dialog {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-cad);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 520px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  animation: dialogPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dialogPop {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.cad-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-ui);
+}
+
+.cad-modal-header .modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cad-modal-header .modal-title h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.cad-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.cad-modal-close:hover {
+  color: var(--danger);
+}
+
+.cad-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.form-group label .req {
+  color: var(--danger);
+}
+
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cad-color-input {
+  width: 34px;
+  height: 32px;
+  border: 1px solid var(--border-cad);
+  border-radius: 6px;
+  cursor: pointer;
+  background: none;
+  padding: 1px;
+}
+
+.preset-colors {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch.active {
+  border-color: #0F172A;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4);
+}
+
+body.theme-cad-dark .color-swatch.active {
+  border-color: #FFFFFF;
+}
+
+.modal-stats-box {
+  background: var(--bg-app);
+  border: 1px dashed var(--border-cad);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-around;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.modal-stats-box strong {
+  color: var(--primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cad-modal-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-ui);
+}
+
+.save-template-check {
+  font-size: 12px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.cad-modal-footer .footer-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Flow handles and waypoints */
+.flow-waypoint-handle {
+  fill: #FFFFFF;
+  stroke: #2563EB;
+  stroke-width: 2.5;
+  cursor: move;
+  transition: r 0.15s ease, fill 0.15s ease;
+}
+
+.flow-waypoint-handle:hover {
+  r: 8;
+  fill: #EF4444;
+  stroke: #FFFFFF;
+}
+
+.flow-hit-area {
+  stroke: transparent;
+  stroke-width: 18;
+  fill: none;
+  cursor: pointer;
+}
+
+.lib-item-custom-delete {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: auto;
+  opacity: 0.6;
+}
+
+.lib-item-custom-delete:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+  opacity: 1;
+}
+
+/* =========================================================
+   NEW ENHANCEMENTS V2.2: MULTI-FLOOR, OUTDOOR, TITLE BLOCK
+   ========================================================= */
+
+/* Floor Selector Wrapper & Dynamic Floors */
+.floor-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.floor-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-app);
+  padding: 3px 6px;
+  border-radius: 20px;
+  border: 1px solid var(--border-ui);
+  overflow-x: auto;
+  max-width: 580px;
+}
+
+/* Custom Equipment Banner in Left Sidebar */
+.custom-eq-banner {
+  margin: 10px 12px 6px 12px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #1E40AF, #2563EB);
+  border-radius: 8px;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.custom-eq-banner:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.45);
+  background: linear-gradient(135deg, #1D4ED8, #1D4ED8);
+}
+
+.custom-eq-banner .banner-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.custom-eq-banner .banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.custom-eq-banner .banner-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.custom-eq-banner .banner-desc {
+  font-size: 10.5px;
+  opacity: 0.85;
+}
+
+/* Library Item "+ 放置" Action Button */
+.lib-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.lib-item-add-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--primary);
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  opacity: 0.88;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.lib-item:hover .lib-item-add-btn {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.lib-count-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-app);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.cad-toast {
+  background: rgba(15, 23, 42, 0.92);
+  color: #FFFFFF;
+  padding: 10px 18px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  animation: toastPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+.cad-toast.success {
+  border-left: 4px solid #10B981;
+}
+
+.cad-toast.info {
+  border-left: 4px solid #38BDF8;
+}
+
+@keyframes toastPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Title Block Draggable Group */
+.svg-title-block-group {
+  cursor: move !important;
+  user-select: none;
+}
+
+.svg-title-block-group:hover rect:first-child {
+  stroke: var(--cad-selection) !important;
+  stroke-width: 2.5 !important;
+}
+
+.svg-title-block-group.selected rect:first-child {
+  stroke: var(--cad-selection) !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 8px var(--cad-selection-glow));
+}
+
+/* Outdoor / Site Elements */
+.outdoor-road-band {
+  fill: #E2E8F0;
+  stroke: #94A3B8;
+  stroke-width: 1.5;
+}
+
+body.theme-cad-dark .outdoor-road-band {
+  fill: #1E293B;
+  stroke: #334155;
+}
+
+.outdoor-dock-bay {
+  fill: #FEF3C7;
+  stroke: #D97706;
+  stroke-width: 1.5;
+}
+
+body.theme-cad-dark .outdoor-dock-bay {
+  fill: rgba(217, 119, 6, 0.18);
+  stroke: #F59E0B;
+}
+
+.outdoor-parking-bay {
+  fill: #F1F5F9;
+  stroke: #94A3B8;
+  stroke-width: 1;
+}
+
+body.theme-cad-dark .outdoor-parking-bay {
+  fill: #0F172A;
+  stroke: #475569;
+}
+
+/* Button Disabled State (for Undo/Redo) */
+.cad-btn:disabled, .cad-btn[disabled] {
+  opacity: 0.38 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  filter: grayscale(0.8);
+}
+
+/* Wall Snapping Visual Indicators */
+.wall-snap-indicator {
+  pointer-events: none;
+}
+
+.wall-snap-ring {
+  fill: none;
+  stroke: #EC4899;
+  stroke-width: 2.5;
+}
+
+.wall-snap-dot {
+  fill: #F43F5E;
+  stroke: #FFFFFF;
+  stroke-width: 1.5;
+}
+
+.wall-snap-guide {
+  stroke: #EC4899;
+  stroke-width: 1.8;
+  stroke-dasharray: 5, 3;
+  pointer-events: none;
+}
+
+/* Enhanced Office Furniture Symbols */
+.furniture-desk-top {
+  fill: #F8FAFC;
+  stroke: #475569;
+  stroke-width: 1.5;
+}
+
+body.theme-cad-dark .furniture-desk-top {
+  fill: #1E293B;
+  stroke: #94A3B8;
+}
+
+.furniture-chair-seat {
+  fill: #3B82F6;
+  stroke: #1D4ED8;
+  stroke-width: 1;
+}
+
+.furniture-screen-line {
+  stroke: #0284C7;
+  stroke-width: 2;
+}
+
+.furniture-conf-top {
+  fill: #F1F5F9;
+  stroke: #334155;
+  stroke-width: 1.8;
+}
+
+body.theme-cad-dark .furniture-conf-top {
+  fill: #0F172A;
+  stroke: #64748B;
+}
+
