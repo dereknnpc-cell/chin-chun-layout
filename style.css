@@ -68,9 +68,16 @@ body {
   background-color: var(--bg-app);
   overflow: hidden;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   user-select: none;
+}
+
+/* Hidden on desktop; narrow screens use these controls for off-canvas panels. */
+.mobile-workspace-bar,
+.mobile-panel-scrim {
+  display: none;
 }
 
 /* --- Top Navigation & CAD Ribbon Toolbar --- */
@@ -1736,3 +1743,274 @@ body.theme-cad-dark .furniture-conf-top {
   stroke: #64748B;
 }
 
+/* --- Tablet & Mobile Workspace --- */
+@media (max-width: 900px) {
+  .cad-header-wrapper {
+    flex: 0 0 auto;
+  }
+
+  .top-nav {
+    height: 56px;
+    justify-content: flex-start;
+    padding: 6px 10px;
+    gap: 10px;
+    scrollbar-width: none;
+  }
+
+  .top-nav::-webkit-scrollbar,
+  .cad-ribbon-bar::-webkit-scrollbar,
+  .floor-selector::-webkit-scrollbar {
+    display: none;
+  }
+
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand-title {
+    max-width: 210px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .brand-subtitle,
+  .cad-badge-version,
+  .floor-name,
+  .floor-elev {
+    display: none !important;
+  }
+
+  .floor-selector {
+    max-width: none;
+    padding: 3px;
+  }
+
+  .floor-btn {
+    min-width: 42px;
+    min-height: 36px;
+    justify-content: center;
+    padding: 4px 7px;
+  }
+
+  .header-right-actions {
+    gap: 6px;
+  }
+
+  .header-right-actions .tool-separator,
+  .autosave-tag {
+    display: none;
+  }
+
+  .cad-ribbon-bar {
+    height: 48px;
+    justify-content: flex-start;
+    padding: 6px 10px;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .cad-ribbon-bar > .tool-separator,
+  .layer-section,
+  .hints-section,
+  .ribbon-label {
+    display: none;
+  }
+
+  .ribbon-section {
+    flex: 0 0 auto;
+  }
+
+  .cad-btn,
+  .toggle-btn,
+  .cad-select {
+    min-height: 36px;
+  }
+
+  .main-workspace {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    isolation: isolate;
+  }
+
+  .canvas-viewport {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    min-width: 0;
+    touch-action: none;
+  }
+
+  .sidebar-left,
+  .sidebar-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: min(88vw, 360px);
+    max-width: 360px;
+    z-index: 60;
+    transition: transform 180ms ease, visibility 180ms ease;
+    visibility: hidden;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+  }
+
+  .sidebar-left {
+    left: 0;
+    transform: translateX(-102%);
+  }
+
+  .sidebar-right {
+    right: 0;
+    transform: translateX(102%);
+  }
+
+  .sidebar-left.is-open,
+  .sidebar-right.is-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .mobile-panel-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(15, 23, 42, 0.38);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 180ms ease, visibility 180ms ease;
+  }
+
+  .mobile-panel-scrim.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .mobile-workspace-bar {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px;
+    border: 1px solid var(--border-cad);
+    border-radius: 12px;
+    background: var(--bg-panel);
+    background: color-mix(in srgb, var(--bg-panel) 94%, transparent);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(10px);
+  }
+
+  .mobile-workspace-btn {
+    min-height: 38px;
+    padding: 0 11px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .mobile-workspace-btn.active {
+    background: var(--primary);
+    color: #FFFFFF;
+  }
+
+  .canvas-controls {
+    top: 58px;
+    left: 10px;
+  }
+
+  .canvas-controls button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .coordinate-bar {
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100% - 20px);
+    padding: 6px 12px;
+    white-space: nowrap;
+  }
+
+  .coordinate-bar .coord-item:not(:first-child) {
+    display: none;
+  }
+
+  .route-drawing-bar {
+    top: 58px;
+    right: 8px;
+    left: 58px;
+    flex-wrap: wrap;
+    max-height: calc(100% - 70px);
+    overflow-y: auto;
+  }
+
+  .quick-rename-box {
+    top: 58px;
+    right: 10px;
+    left: 58px;
+    width: auto;
+  }
+
+  .cad-modal-overlay {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .cad-modal-dialog {
+    width: 100% !important;
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
+
+  .toast-container {
+    bottom: max(16px, env(safe-area-inset-bottom));
+    width: calc(100% - 24px);
+  }
+
+  .cad-toast {
+    width: 100%;
+    justify-content: center;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand-title {
+    max-width: 180px;
+    font-size: 12.5px;
+  }
+
+  .brand-text {
+    max-width: 180px;
+  }
+
+  .top-nav .cad-btn {
+    padding-inline: 9px;
+  }
+
+  .mobile-workspace-btn {
+    padding-inline: 9px;
+  }
+
+  .sidebar-left,
+  .sidebar-right {
+    width: min(90vw, 340px);
+  }
+}

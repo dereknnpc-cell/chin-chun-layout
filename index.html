@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#1E40AF">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=2.4_force">
+  <link rel="stylesheet" href="style.css?v=2.4_mobile1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -173,8 +173,22 @@
 
   <!-- Main Workspace -->
   <div class="main-workspace">
+    <!-- Mobile workspace controls: side panels become drawers on narrow screens -->
+    <nav class="mobile-workspace-bar" aria-label="手機版工作區切換">
+      <button id="mobileLibraryBtn" class="mobile-workspace-btn" type="button" aria-controls="mobileLibraryPanel" aria-expanded="false">
+        <span aria-hidden="true">⚙️</span> 設備庫
+      </button>
+      <button id="mobileCanvasBtn" class="mobile-workspace-btn active" type="button" aria-label="關閉面板並顯示完整圖面">
+        <span aria-hidden="true">⌗</span> 圖面
+      </button>
+      <button id="mobileInspectorBtn" class="mobile-workspace-btn" type="button" aria-controls="inspectorPanel" aria-expanded="false">
+        <span aria-hidden="true">📐</span> 屬性
+      </button>
+    </nav>
+    <button id="mobilePanelScrim" class="mobile-panel-scrim" type="button" aria-label="關閉側邊面板" aria-hidden="true"></button>
+
     <!-- Left Sidebar: Modular Equipment Library -->
-    <aside class="sidebar-left">
+    <aside class="sidebar-left" id="mobileLibraryPanel">
       <!-- Big Prominent Custom Add Equipment Card -->
       <div class="custom-eq-banner" id="btnSidebarAddCustomBig" title="點擊自訂機台名稱、代號、尺寸、樓層與顏色並放置於廠房">
         <div class="banner-icon">⚙️</div>
@@ -631,6 +645,6 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Load Application Logic -->
-  <script src="app.js?v=2.4_force"></script>
+  <script src="app.js?v=2.4_mobile1"></script>
 </body>
 </html>

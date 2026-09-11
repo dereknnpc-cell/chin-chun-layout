@@ -6636,6 +6636,60 @@
     updateViewBox();
   }
 
+  // --- Mobile Off-canvas Workspace Controller ---
+  function bindMobileWorkspace() {
+    const libraryPanel = document.getElementById("mobileLibraryPanel");
+    const libraryBtn = document.getElementById("mobileLibraryBtn");
+    const canvasBtn = document.getElementById("mobileCanvasBtn");
+    const inspectorBtn = document.getElementById("mobileInspectorBtn");
+    const scrim = document.getElementById("mobilePanelScrim");
+
+    if (!libraryPanel || !libraryBtn || !canvasBtn || !inspectorBtn || !scrim) return;
+
+    const setMobilePanel = (panelName = null) => {
+      const libraryOpen = panelName === "library";
+      const inspectorOpen = panelName === "inspector";
+
+      libraryPanel.classList.toggle("is-open", libraryOpen);
+      inspectorPanel.classList.toggle("is-open", inspectorOpen);
+      scrim.classList.toggle("is-open", libraryOpen || inspectorOpen);
+      scrim.setAttribute("aria-hidden", String(!(libraryOpen || inspectorOpen)));
+      libraryBtn.classList.toggle("active", libraryOpen);
+      inspectorBtn.classList.toggle("active", inspectorOpen);
+      canvasBtn.classList.toggle("active", !libraryOpen && !inspectorOpen);
+      libraryBtn.setAttribute("aria-expanded", String(libraryOpen));
+      inspectorBtn.setAttribute("aria-expanded", String(inspectorOpen));
+    };
+
+    libraryBtn.addEventListener("click", () => {
+      setMobilePanel(libraryPanel.classList.contains("is-open") ? null : "library");
+    });
+
+    inspectorBtn.addEventListener("click", () => {
+      setMobilePanel(inspectorPanel.classList.contains("is-open") ? null : "inspector");
+    });
+
+    canvasBtn.addEventListener("click", () => {
+      setMobilePanel(null);
+      requestAnimationFrame(fitToScreen);
+    });
+
+    scrim.addEventListener("click", () => setMobilePanel(null));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") setMobilePanel(null);
+    });
+
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        if (window.innerWidth > 900) setMobilePanel(null);
+        fitToScreen();
+      }, 120);
+    });
+  }
+
 
   // --- Dynamic Floor Management Controller ---
   function renderFloorSelector() {
@@ -6758,6 +6812,8 @@
 
   // --- Event Bindings ---
   function bindEvents() {
+    bindMobileWorkspace();
+
     if (btnFloor1F) btnFloor1F.addEventListener("click", () => switchFloor("1F"));
     if (btnFloor2F) btnFloor2F.addEventListener("click", () => switchFloor("2F"));
     if (btnFloorOverlay) btnFloorOverlay.addEventListener("click", () => switchFloor("OVERLAY"));
