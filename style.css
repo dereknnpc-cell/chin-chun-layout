@@ -1549,23 +1549,34 @@ body.theme-cad-dark .color-swatch.active {
   opacity: 0.85;
 }
 
-/* Library Item "+ 放置" Action Button */
+/* Library item actions stay on one line, even inside the mobile drawer. */
 .lib-item-actions {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-left: auto;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .lib-item-add-btn {
+  width: 30px;
+  height: 30px;
   font-size: 11px;
   font-weight: 700;
-  padding: 3px 8px;
+  line-height: 1;
+  padding: 0;
   border-radius: 4px;
   background: var(--primary);
   color: #FFFFFF;
   border: none;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  white-space: nowrap;
   opacity: 0.88;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }

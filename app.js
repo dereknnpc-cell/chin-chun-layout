@@ -6231,7 +6231,7 @@
             </div>
             <div class="lib-item-actions">
               <span class="lib-badge" style="border-color: ${item.col}; color: ${item.col}">${item.code}</span>
-              <button type="button" class="lib-item-add-btn" title="立即放置到圖面中央">＋ 放置</button>
+              <button type="button" class="lib-item-add-btn" title="立即放置到圖面中央" aria-label="放置 ${item.name}">＋</button>
               ${item.isCustom ? `<button type="button" class="lib-item-custom-delete" data-del-code="${item.code}" title="從自訂庫移除">×</button>` : ''}
             </div>
           </div>
