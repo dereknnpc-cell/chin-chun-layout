@@ -1754,6 +1754,204 @@ body.theme-cad-dark .furniture-conf-top {
   stroke: #64748B;
 }
 
+/* --- Secure Cloud Sync --- */
+.cloud-account-btn {
+  border-color: #0EA5E9;
+  background: rgba(14, 165, 233, 0.1);
+  color: #0369A1;
+}
+
+.cloud-account-btn[data-state="synced"] {
+  border-color: #10B981;
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+
+.cloud-account-btn[data-state="error"] {
+  border-color: #EF4444;
+  color: #B91C1C;
+}
+
+.cloud-sync-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bg-app);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.cloud-sync-tag[data-state="synced"] {
+  background: rgba(16, 185, 129, 0.13);
+  color: #047857;
+}
+
+.cloud-sync-tag[data-state="syncing"],
+.cloud-sync-tag[data-state="pending"] {
+  background: rgba(245, 158, 11, 0.14);
+  color: #B45309;
+}
+
+.cloud-sync-tag[data-state="error"] {
+  background: rgba(239, 68, 68, 0.13);
+  color: #B91C1C;
+}
+
+body.theme-cad-dark .cloud-account-btn,
+body.theme-cad-dark .cloud-sync-tag[data-state="offline"] {
+  color: #7DD3FC;
+}
+
+.cloud-modal-overlay {
+  display: none;
+}
+
+.cloud-modal-overlay.active {
+  display: flex;
+}
+
+.cloud-modal-dialog {
+  max-width: 600px;
+}
+
+.cloud-modal-header .modal-title p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.cloud-modal-body {
+  max-height: min(72vh, 680px);
+  overflow-y: auto;
+}
+
+.cloud-intro,
+.cloud-privacy-note,
+.cloud-section-heading p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.cloud-login-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cloud-wide-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.cloud-privacy-note {
+  margin-top: 12px;
+}
+
+.cloud-message {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #1D4ED8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cloud-message[data-type="success"] {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.cloud-message[data-type="error"] {
+  background: rgba(239, 68, 68, 0.11);
+  color: #B91C1C;
+}
+
+.cloud-account-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-ui);
+  border-radius: 10px;
+  background: var(--bg-app);
+}
+
+.cloud-account-card > div {
+  min-width: 0;
+}
+
+.cloud-account-card span,
+.cloud-member-row span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.cloud-account-card strong,
+.cloud-member-row strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+.cloud-role-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.12);
+  color: #1D4ED8 !important;
+  font-weight: 800;
+}
+
+.cloud-member-manager {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-ui);
+}
+
+.cloud-section-heading h4 {
+  margin: 0 0 3px;
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.cloud-member-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px auto;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cloud-member-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.cloud-member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-ui);
+  border-radius: 8px;
+}
+
+.cloud-empty {
+  padding: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
 /* --- Tablet & Mobile Workspace --- */
 @media (max-width: 900px) {
   .cad-header-wrapper {
@@ -1809,7 +2007,8 @@ body.theme-cad-dark .furniture-conf-top {
   }
 
   .header-right-actions .tool-separator,
-  .autosave-tag {
+  .autosave-tag,
+  .cloud-sync-tag {
     display: none;
   }
 
@@ -2023,5 +2222,23 @@ body.theme-cad-dark .furniture-conf-top {
   .sidebar-left,
   .sidebar-right {
     width: min(90vw, 340px);
+  }
+
+  .cloud-member-form {
+    grid-template-columns: minmax(0, 1fr) 92px;
+  }
+
+  .cloud-member-form .cad-btn {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  .cloud-account-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .cloud-account-card > button {
+    grid-column: 1 / -1;
+    justify-content: center;
   }
 }

@@ -4538,6 +4538,7 @@
           ind.style.opacity = "1";
           ind.textContent = "✓ 已自動儲存";
         }
+        window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
       } catch (e) {
         console.warn("Auto-save failed:", e);
       }
@@ -4547,6 +4548,7 @@
   function saveCustomLibToStorage() {
     try {
       localStorage.setItem(STORAGE_KEY_CUSTOM_LIB, JSON.stringify(customEquipmentLib));
+      window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
     } catch (e) {
       console.warn("Custom lib save failed:", e);
     }
@@ -4710,6 +4712,39 @@
     return rec ? rec.item : null;
   }
 
+  function initializeCloudSync() {
+    if (!window.ChinChunCloud) {
+      console.warn("Cloud sync bundle is unavailable; continuing in local mode.");
+      return;
+    }
+    window.ChinChunCloud.init({
+      getLayout: () => layoutData,
+      getCustomLibrary: () => customEquipmentLib,
+      applyRemote: (remoteLayout, remoteLibrary) => {
+        if (!remoteLayout || (!remoteLayout.equipment && !remoteLayout.dimensions)) return;
+        layoutData = JSON.parse(JSON.stringify(remoteLayout));
+        customEquipmentLib = Array.isArray(remoteLibrary) ? JSON.parse(JSON.stringify(remoteLibrary)) : [];
+        try {
+          localStorage.setItem(STORAGE_KEY_LAYOUT, JSON.stringify(layoutData));
+          localStorage.setItem(STORAGE_KEY_CUSTOM_LIB, JSON.stringify(customEquipmentLib));
+        } catch (error) {
+          console.warn("Could not preserve remote data locally:", error);
+        }
+        if (!layoutData.floors?.some(floor => floor.id === currentFloor)) currentFloor = "1F";
+        undoStack.length = 0;
+        redoStack.length = 0;
+        deselectAll();
+        renderFloorSelector();
+        populateLibrary();
+        renderSvg();
+        updateUndoRedoButtons();
+      },
+      notify: (message, type) => showToast(message, type)
+    }).catch((error) => {
+      console.warn("Cloud sync initialization failed:", error);
+    });
+  }
+
   // --- Initialize Application ---
   function init() {
     svgEl.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
@@ -4721,9 +4756,10 @@
     fitToScreen();
     updateViewBox();
     updateUndoRedoButtons();
+    initializeCloudSync();
 
     setTimeout(() => {
-      showToast("🚀 系統已升級 V2.4：即時縮放%、Ctrl+滾輪縮放、Ctrl鍵置中、Undo/Redo、單面牆磁吸與辦公傢俱", "info", 5000);
+      showToast("☁ 系統已升級 V2.5：支援安全登入、跨裝置雲端儲存與員工權限管理", "info", 5000);
     }, 600);
   }
 
@@ -6117,6 +6153,7 @@
     }
 
     selectItem(cloned.id);
+    saveToLocalStorage();
     renderSvg();
   }
 
@@ -7323,6 +7360,7 @@
         w.thickness = Math.max(0.1, parseFloat(propWallThickness.value) || 0.3);
 
         propWallLength.textContent = Math.hypot(w.x2 - w.x1, w.y2 - w.y1).toFixed(2);
+        saveToLocalStorage();
         renderSvg();
       });
     });
@@ -7337,6 +7375,7 @@
       f.color = f.type === "forklift" ? "#F59E0B" :
                 f.type === "pedestrian" ? "#10B981" :
                 f.type === "process" ? "#3B82F6" : "#EF4444";
+      saveToLocalStorage();
       renderSvg();
     });
 
@@ -7345,6 +7384,7 @@
       const rec = findItemRecord(selectedId);
       if (!rec || rec.type !== "flow") return;
       rec.item.width_m = Math.max(0.5, parseFloat(e.target.value) || 2.0);
+      saveToLocalStorage();
       renderSvg();
     });
 
@@ -7353,6 +7393,7 @@
       const rec = findItemRecord(selectedId);
       if (!rec || rec.type !== "flow") return;
       rec.item.arrow_direction = e.target.value;
+      saveToLocalStorage();
       renderSvg();
     });
 
@@ -7702,6 +7743,7 @@
         layoutData = JSON.parse(JSON.stringify(INITIAL_LAYOUT));
         deselectAll();
         renderSvg();
+        saveToLocalStorage();
         const ind = document.getElementById("autoSaveIndicator");
         if (ind) ind.textContent = "已重設為原廠基準";
       }

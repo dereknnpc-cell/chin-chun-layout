@@ -1,12 +1,21 @@
 # CHIN CHUN 金讚科技 — 廠房工程平面配置系統 (CAD Factory Layout System)
 
-金讚鋼鐵與貼合加工廠房正式工程圖與模組化設備配置系統，支援 140M×90M 全廠區（含廠外 8 米環廠雙向重車道、40 呎貨櫃裝卸碼頭、大門地磅站）、多樓層設計、獨立單面牆磁吸編輯、辦公室傢俱模組、SVG / DXF 匯出與即時歷史復原 (Undo/Redo)。
+金讚鋼鐵與貼合加工廠房正式工程圖與模組化設備配置系統，支援 140M×90M 全廠區（含廠外 8 米環廠雙向重車道、40 呎貨櫃裝卸碼頭、大門地磅站）、多樓層設計、獨立單面牆磁吸編輯、辦公室傢俱模組、SVG / DXF 匯出、即時歷史復原，以及 Supabase 跨裝置雲端同步。
 
 ---
 
 ## 🚀 部署上線給其他員工使用的方式
 
-本系統為純前端靜態架構（HTML5 + CSS3 + Vanilla JavaScript），**不需要任何後端資料庫或伺服器環境**，零維護成本，可透過以下方式讓全公司員工隨時使用：
+介面仍是純前端靜態架構（HTML5 + CSS3 + Vanilla JavaScript），由 Vercel 託管；共用配置、員工權限與登入則使用 Supabase。
+
+## ☁ 雲端同步與員工登入
+
+1. 開啟正式網址後，點擊上方的「雲端帳號」。
+2. 輸入已加入員工名單的 Email，至信箱點擊一次性登入連結。
+3. 第一次由管理員登入時，這台裝置目前的配置會建立為第一份雲端版本；之後登入的裝置會載入同一份共用配置。
+4. 管理員可在「雲端帳號」視窗新增或移除員工 Email。
+
+未登入時仍可使用本機模式；修改只存在該瀏覽器。登入後每次修改會同時儲存在本機與雲端，其他已登入裝置也會收到最新版本。
 
 ### 方案一：GitHub + Vercel 自動部署（最推薦，全自動更新）
 
@@ -23,7 +32,7 @@
    - 開啟 [Vercel 官網 (https://vercel.com)](https://vercel.com)，使用 GitHub 帳號免費登入。
    - 點擊 **「Add New...」->「Project」**。
    - 選擇您的 `chin-chun-layout` 儲存庫，點擊 **「Import」**。
-   - **Framework Preset** 選擇 **Other**（純靜態網頁，無需填寫 Build Command）。
+   - **Framework Preset** 選擇 **Other**；建置指令使用 `npm run build`。
    - 點擊 **「Deploy」**！
 
 3. **立即取得全公司共用網址**：
@@ -69,6 +78,13 @@ npx nativefier --name "金讚廠房配置系統" "http://localhost:8080" --icon 
 
 在本地終端機啟動：
 ```bash
-python3 -m http.server 8080
+python3 -m http.server 4173
 ```
-開啟瀏覽器訪問：`http://localhost:8080/index.html`
+開啟瀏覽器訪問：`http://127.0.0.1:4173/index.html`
+
+修改 `cloud-sync-source.js` 後，執行下列指令重新產生瀏覽器版本：
+
+```bash
+npm ci
+npm run build
+```
