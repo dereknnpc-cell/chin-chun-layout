@@ -7,7 +7,7 @@
   // --- Global Constants & Scale ---
   const BAY_SIZE_M = 5.0; // 5.0 meters per column bay (X-axis)
   const COLS_X = 21;      // X1 to X21 (100.0m total width)
-  const COLS_Y = 11;      // Y1 to Y11 (50.0m base depth)
+  const COLS_Y = 9;       // Y1 to Y9 (40.0m structural grid from the EPS source)
   const COL_SIZE_M = 0.5; // 500mm concrete column
 
   const SCALE = 24.0;     // 24 SVG pixels per meter
@@ -32,18 +32,68 @@
   // --- Initial Factory Baseline Data ---
   const INITIAL_LAYOUT = __INITIAL_LAYOUT_JSON__;
 
+  const SOURCE_GEOMETRY_REVISION = INITIAL_LAYOUT.source_geometry_revision;
+  const BASELINE_EQUIPMENT_IDS = new Set(INITIAL_LAYOUT.equipment.map(item => item.id));
+
+  function applySourceGeometryRevision(candidate) {
+    if (!candidate || (!candidate.equipment && !candidate.dimensions)) {
+      return { layout: candidate, migrated: false };
+    }
+    if (candidate.source_geometry_revision === SOURCE_GEOMETRY_REVISION) {
+      return { layout: candidate, migrated: false };
+    }
+
+    const migratedLayout = JSON.parse(JSON.stringify(candidate));
+    const customEquipment = (migratedLayout.equipment || []).filter(
+      item => !BASELINE_EQUIPMENT_IDS.has(item.id)
+    );
+    migratedLayout.equipment = [
+      ...JSON.parse(JSON.stringify(INITIAL_LAYOUT.equipment)),
+      ...customEquipment
+    ];
+    migratedLayout.grid = JSON.parse(JSON.stringify(INITIAL_LAYOUT.grid));
+    migratedLayout.walls = JSON.parse(JSON.stringify(INITIAL_LAYOUT.walls));
+    migratedLayout.columns = JSON.parse(JSON.stringify(INITIAL_LAYOUT.columns));
+    migratedLayout.version = INITIAL_LAYOUT.version;
+    migratedLayout.source_geometry_revision = SOURCE_GEOMETRY_REVISION;
+    migratedLayout.source_geometry_file = INITIAL_LAYOUT.source_geometry_file;
+
+    if (migratedLayout.title_block) {
+      migratedLayout.title_block.rev = "REV V2.6";
+      migratedLayout.title_block.date = "2026/09/14";
+      migratedLayout.title_block.spec = "EPS V1.2 校正 · 100M×40M 柱網";
+    }
+
+    if (Array.isArray(migratedLayout.floors)) {
+      const firstFloor = migratedLayout.floors.find(floor => floor.id === "1F");
+      if (firstFloor) firstFloor.desc = "100M×40M EPS 精準柱網";
+    }
+    return { layout: migratedLayout, migrated: true };
+  }
+
   // --- State Variables ---
   let layoutData = JSON.parse(JSON.stringify(INITIAL_LAYOUT));
+  let sourceGeometryMigrated = false;
   try {
     const savedLayout = localStorage.getItem(STORAGE_KEY_LAYOUT);
     if (savedLayout) {
       const parsed = JSON.parse(savedLayout);
       if (parsed && (parsed.equipment || parsed.dimensions)) {
-        layoutData = parsed;
+        const result = applySourceGeometryRevision(parsed);
+        layoutData = result.layout;
+        sourceGeometryMigrated = result.migrated;
       }
     }
   } catch (err) {
     console.warn("Could not load layout from localStorage:", err);
+  }
+
+  if (sourceGeometryMigrated) {
+    try {
+      localStorage.setItem(STORAGE_KEY_LAYOUT, JSON.stringify(layoutData));
+    } catch (err) {
+      console.warn("Could not preserve the EPS geometry migration locally:", err);
+    }
   }
 
   let customEquipmentLib = [];
@@ -56,7 +106,7 @@
     console.warn("Could not load custom lib from localStorage:", err);
   }
 
-  let siteViewMode = "expanded"; // 'expanded' (140x90m) | 'indoor' (100x50m) | 'max' (160x100m)
+  let siteViewMode = "expanded"; // 'expanded' (140x90m) | 'indoor' (100x40m) | 'max' (160x100m)
   let currentFloor = "1F";
   let selectedId = null;
   let selectedItemType = null; // 'equipment' | 'column' | 'wall' | 'aisle' | 'zone' | 'flow' | 'title_block'
@@ -65,7 +115,7 @@
   // Initialize Dynamic Floors if not present
   if (!layoutData.floors || !Array.isArray(layoutData.floors) || layoutData.floors.length === 0) {
     layoutData.floors = [
-      { id: "1F", name: "主廠房生產線", elev: "EL. +0.60M", desc: "100M×50M 主生產基地" },
+      { id: "1F", name: "主廠房生產線", elev: "EL. +0.60M", desc: "100M×40M EPS 精準柱網" },
       { id: "2F", name: "左側倉庫夾層", elev: "EL. +4.40M", desc: "380m² 夾層倉儲區" },
       { id: "OVERLAY", name: "雙層透視疊加", elev: "ALL", desc: "1F+2F 結構對齊" }
     ];
@@ -77,11 +127,11 @@
       company: "金讚科技 · 廠房平面配置工程圖",
       title: "1F生產動線、建築元件與全廠區配置",
       dwg_no: "CC-ENG-2026-004",
-      rev: "REV V2.2",
+      rev: "REV V2.6",
       designer: "Derek Yeh",
       elevation: "1F +0.6M / 2F +4.4M",
-      date: "2026/09/09",
-      spec: "140M×90M · 廠區/車道/設備",
+      date: "2026/09/14",
+      spec: "EPS V1.2 校正 · 100M×40M 柱網",
       scale: "1:150 (Metric)",
       status: "APPROVED 正式版",
       x: null, // null = docked at bottom-right
@@ -290,6 +340,7 @@
           ind.style.opacity = "1";
           ind.textContent = "✓ 已自動儲存";
         }
+        window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
       } catch (e) {
         console.warn("Auto-save failed:", e);
       }
@@ -299,6 +350,7 @@
   function saveCustomLibToStorage() {
     try {
       localStorage.setItem(STORAGE_KEY_CUSTOM_LIB, JSON.stringify(customEquipmentLib));
+      window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
     } catch (e) {
       console.warn("Custom lib save failed:", e);
     }
@@ -462,6 +514,48 @@
     return rec ? rec.item : null;
   }
 
+  function initializeCloudSync() {
+    if (!window.ChinChunCloud) {
+      console.warn("Cloud sync bundle is unavailable; continuing in local mode.");
+      return;
+    }
+    window.ChinChunCloud.init({
+      getLayout: () => layoutData,
+      getCustomLibrary: () => customEquipmentLib,
+      applyRemote: (remoteLayout, remoteLibrary) => {
+        if (!remoteLayout || (!remoteLayout.equipment && !remoteLayout.dimensions)) return;
+        const geometryResult = applySourceGeometryRevision(
+          JSON.parse(JSON.stringify(remoteLayout))
+        );
+        layoutData = geometryResult.layout;
+        customEquipmentLib = Array.isArray(remoteLibrary) ? JSON.parse(JSON.stringify(remoteLibrary)) : [];
+        try {
+          localStorage.setItem(STORAGE_KEY_LAYOUT, JSON.stringify(layoutData));
+          localStorage.setItem(STORAGE_KEY_CUSTOM_LIB, JSON.stringify(customEquipmentLib));
+        } catch (error) {
+          console.warn("Could not preserve remote data locally:", error);
+        }
+        if (!layoutData.floors?.some(floor => floor.id === currentFloor)) currentFloor = "1F";
+        undoStack.length = 0;
+        redoStack.length = 0;
+        deselectAll();
+        renderFloorSelector();
+        populateLibrary();
+        renderSvg();
+        updateUndoRedoButtons();
+        if (geometryResult.migrated) {
+          window.setTimeout(() => {
+            window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
+            showToast("已套用 2026 EPS 精準尺寸、牆面與 152 支柱位", "success");
+          }, 0);
+        }
+      },
+      notify: (message, type) => showToast(message, type)
+    }).catch((error) => {
+      console.warn("Cloud sync initialization failed:", error);
+    });
+  }
+
   // --- Initialize Application ---
   function init() {
     svgEl.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
@@ -473,9 +567,10 @@
     fitToScreen();
     updateViewBox();
     updateUndoRedoButtons();
+    initializeCloudSync();
 
     setTimeout(() => {
-      showToast("🚀 系統已升級 V2.4：即時縮放%、Ctrl+滾輪縮放、Ctrl鍵置中、Undo/Redo、單面牆磁吸與辦公傢俱", "info", 5000);
+      showToast("📐 V2.6：已依 2026 Layout for AI.eps 校正設備尺寸、牆面與柱位", "info", 5000);
     }, 600);
   }
 
@@ -835,7 +930,7 @@
         }
 
       } else {
-        // --- 1F / OVERLAY Grid Axes (X1~X21, Y1~Y11) ---
+        // --- 1F / OVERLAY Grid Axes (X1~X21, Y1~Y9) ---
         for (let i = 0; i < COLS_X; i++) {
           const xm = i * BAY_SIZE_M;
           const px = OFFSET_X + xm * SCALE;
@@ -993,7 +1088,7 @@
           <line x1="${OFFSET_X - 30}" y1="${totalY1}" x2="${dimX2 - 5}" y2="${totalY1}" stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="2,2"/>
           <line x1="${OFFSET_X - 30}" y1="${totalY2}" x2="${dimX2 - 5}" y2="${totalY2}" stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="2,2"/>
           <line x1="${dimX2}" y1="${totalY1 + 4}" x2="${dimX2}" y2="${totalY2 - 4}" stroke="var(--cad-dim-line)" stroke-width="1.5" marker-start="url(#dimArrowStart)" marker-end="url(#dimArrowEnd)"/>
-          <text x="${dimX2 - 10}" y="${(totalY1 + totalY2) / 2}" font-size="13" font-weight="800" fill="var(--cad-dim-text)" text-anchor="end" dominant-baseline="central" transform="rotate(-90 ${dimX2 - 10} ${(totalY1 + totalY2) / 2})">廠房總深度 50.00 M (10 跨 × 5.00 M)</text>
+          <text x="${dimX2 - 10}" y="${(totalY1 + totalY2) / 2}" font-size="13" font-weight="800" fill="var(--cad-dim-text)" text-anchor="end" dominant-baseline="central" transform="rotate(-90 ${dimX2 - 10} ${(totalY1 + totalY2) / 2})">廠房總深度 ${((COLS_Y - 1) * BAY_SIZE_M).toFixed(2)} M (${COLS_Y - 1} 跨 × ${BAY_SIZE_M.toFixed(2)} M)</text>
         `;
       }
       html += `</g>`;
@@ -1113,21 +1208,23 @@
         html += `</g>`;
       }
 
-      // Void opening
+      // Void opening is optional in the source drawing.
       const vo = m2f.void_opening;
-      const vx = OFFSET_X + vo.x * SCALE;
-      const vy = OFFSET_Y + vo.y * SCALE;
-      const vw = vo.width * SCALE;
-      const vh = vo.height * SCALE;
-      html += `
-        <g id="layerVoidOpening">
-          <rect x="${vx}" y="${vy}" width="${vw}" height="${vh}" fill="var(--bg-canvas)" stroke="#DC2626" stroke-width="2" stroke-dasharray="6,4"/>
-          <line x1="${vx}" y1="${vy}" x2="${vx + vw}" y2="${vy + vh}" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,4" stroke-opacity="0.6"/>
-          <line x1="${vx + vw}" y1="${vy}" x2="${vx}" y2="${vy + vh}" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,4" stroke-opacity="0.6"/>
-          <rect x="${vx + vw / 2 - 70}" y="${vy + vh / 2 - 12}" width="140" height="24" rx="4" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
-          <text x="${vx + vw / 2}" y="${vy + vh / 2}" font-size="10" font-weight="800" fill="#DC2626" text-anchor="middle" dominant-baseline="central">沖壓機挑空區 (VOID)</text>
-        </g>
-      `;
+      if (vo) {
+        const vx = OFFSET_X + vo.x * SCALE;
+        const vy = OFFSET_Y + vo.y * SCALE;
+        const vw = vo.width * SCALE;
+        const vh = vo.height * SCALE;
+        html += `
+          <g id="layerVoidOpening">
+            <rect x="${vx}" y="${vy}" width="${vw}" height="${vh}" fill="var(--bg-canvas)" stroke="#DC2626" stroke-width="2" stroke-dasharray="6,4"/>
+            <line x1="${vx}" y1="${vy}" x2="${vx + vw}" y2="${vy + vh}" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,4" stroke-opacity="0.6"/>
+            <line x1="${vx + vw}" y1="${vy}" x2="${vx}" y2="${vy + vh}" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,4" stroke-opacity="0.6"/>
+            <rect x="${vx + vw / 2 - 70}" y="${vy + vh / 2 - 12}" width="140" height="24" rx="4" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+            <text x="${vx + vw / 2}" y="${vy + vh / 2}" font-size="10" font-weight="800" fill="#DC2626" text-anchor="middle" dominant-baseline="central">沖壓機挑空區 (VOID)</text>
+          </g>
+        `;
+      }
 
       html += `</g>`;
     }
@@ -1869,6 +1966,7 @@
     }
 
     selectItem(cloned.id);
+    saveToLocalStorage();
     renderSvg();
   }
 
@@ -1944,17 +2042,17 @@
         { code: "COL-600", name: "重載鋼構柱 (600×600)", w: 0.6, h: 0.6, cat: "Column", col: "#1E293B" }
       ],
       "⚙️ 貼合與原料加工 (ADH Line)": [
-        { code: "M1-1", name: "ADH 1 (貼合機主機 M1-1)", w: 9.5, h: 2.2, cat: "ADH", col: "#2B6CB0" },
-        { code: "M2-1", name: "ADH 2 (貼合機主機 M2-1)", w: 9.5, h: 2.2, cat: "ADH", col: "#2B6CB0" },
-        { code: "N1-1", name: "DC (集塵設備/DC)", w: 3.2, h: 3.8, cat: "ADH", col: "#4A90E2" },
-        { code: "F1-1", name: "Foam (發泡原料存放區)", w: 14.5, h: 4.8, cat: "Material", col: "#319795" },
-        { code: "A1-1", name: "EVA 1 (EVA 原料暫存 1)", w: 18.0, h: 4.8, cat: "Material", col: "#319795" }
+        { code: "M1-1", name: "ADH 1 (貼合機主機 M1-1)", w: 30.25, h: 4.0, cat: "ADH", col: "#2B6CB0" },
+        { code: "M2-1", name: "ADH 2 (貼合機主機 M2-1)", w: 25.0, h: 4.3, cat: "ADH", col: "#2B6CB0" },
+        { code: "N1-1", name: "DC (集塵設備/DC)", w: 1.35, h: 3.74, cat: "ADH", col: "#4A90E2" },
+        { code: "F1-1", name: "Foam (發泡原料存放區)", w: 15.0, h: 3.8, cat: "Material", col: "#319795" },
+        { code: "A1-1", name: "EVA 1 (EVA 原料暫存 1)", w: 13.6, h: 3.7, cat: "Material", col: "#319795" }
       ],
       "✂️ 裁切與成型精加工 (Cutting)": [
         { code: "T Cut 1", name: "T Cut 1 (裁切機 1)", w: 4.5, h: 2.7, cat: "Cutting", col: "#F5A623" },
         { code: "T Cut 2", name: "T Cut 2 (裁切機 2)", w: 4.5, h: 2.7, cat: "Cutting", col: "#F5A623" },
-        { code: "C1-1", name: "PF 1 精密切斷機", w: 18.5, h: 3.8, cat: "Cutting", col: "#D69E2E" },
-        { code: "C1-2", name: "PF 2 精密切斷機", w: 7.5, h: 3.5, cat: "Cutting", col: "#D69E2E" },
+        { code: "C1-1", name: "PF 1 精密切斷機", w: 20.23, h: 4.2, cat: "Cutting", col: "#D69E2E" },
+        { code: "C1-2", name: "PF 2 精密切斷機", w: 6.75, h: 4.2, cat: "Cutting", col: "#D69E2E" },
         { code: "J1-1", name: "V Cut 2 (V型裁斷機)", w: 4.5, h: 4.6, cat: "Cutting", col: "#F5A623" },
         { code: "J1-3", name: "V Cut 3 (V型裁斷機)", w: 4.5, h: 4.5, cat: "Cutting", col: "#F5A623" },
         { code: "L4-1", name: "Die Cut 模切機", w: 4.2, h: 4.0, cat: "Cutting", col: "#ECC94B" }
@@ -1983,7 +2081,7 @@
             </div>
             <div class="lib-item-actions">
               <span class="lib-badge" style="border-color: ${item.col}; color: ${item.col}">${item.code}</span>
-              <button type="button" class="lib-item-add-btn" title="立即放置到圖面中央">＋ 放置</button>
+              <button type="button" class="lib-item-add-btn" title="立即放置到圖面中央" aria-label="放置 ${item.name}">＋</button>
               ${item.isCustom ? `<button type="button" class="lib-item-custom-delete" data-del-code="${item.code}" title="從自訂庫移除">×</button>` : ''}
             </div>
           </div>
@@ -2388,6 +2486,60 @@
     updateViewBox();
   }
 
+  // --- Mobile Off-canvas Workspace Controller ---
+  function bindMobileWorkspace() {
+    const libraryPanel = document.getElementById("mobileLibraryPanel");
+    const libraryBtn = document.getElementById("mobileLibraryBtn");
+    const canvasBtn = document.getElementById("mobileCanvasBtn");
+    const inspectorBtn = document.getElementById("mobileInspectorBtn");
+    const scrim = document.getElementById("mobilePanelScrim");
+
+    if (!libraryPanel || !libraryBtn || !canvasBtn || !inspectorBtn || !scrim) return;
+
+    const setMobilePanel = (panelName = null) => {
+      const libraryOpen = panelName === "library";
+      const inspectorOpen = panelName === "inspector";
+
+      libraryPanel.classList.toggle("is-open", libraryOpen);
+      inspectorPanel.classList.toggle("is-open", inspectorOpen);
+      scrim.classList.toggle("is-open", libraryOpen || inspectorOpen);
+      scrim.setAttribute("aria-hidden", String(!(libraryOpen || inspectorOpen)));
+      libraryBtn.classList.toggle("active", libraryOpen);
+      inspectorBtn.classList.toggle("active", inspectorOpen);
+      canvasBtn.classList.toggle("active", !libraryOpen && !inspectorOpen);
+      libraryBtn.setAttribute("aria-expanded", String(libraryOpen));
+      inspectorBtn.setAttribute("aria-expanded", String(inspectorOpen));
+    };
+
+    libraryBtn.addEventListener("click", () => {
+      setMobilePanel(libraryPanel.classList.contains("is-open") ? null : "library");
+    });
+
+    inspectorBtn.addEventListener("click", () => {
+      setMobilePanel(inspectorPanel.classList.contains("is-open") ? null : "inspector");
+    });
+
+    canvasBtn.addEventListener("click", () => {
+      setMobilePanel(null);
+      requestAnimationFrame(fitToScreen);
+    });
+
+    scrim.addEventListener("click", () => setMobilePanel(null));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") setMobilePanel(null);
+    });
+
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        if (window.innerWidth > 900) setMobilePanel(null);
+        fitToScreen();
+      }, 120);
+    });
+  }
+
 
   // --- Dynamic Floor Management Controller ---
   function renderFloorSelector() {
@@ -2490,7 +2642,7 @@
       floorIndicatorEl.textContent = "1F 主廠房 (EL.+0.60M)";
       floorIndicatorEl.style.color = "#2563EB";
       gridBayInfoEl.textContent = "5.00 m 柱距 · 立柱與牆體自由編輯/移動/刪除";
-      mezzanineStatsEl.innerHTML = "廠房總跨度: <strong>100.0 M × 50.0 M</strong>";
+      mezzanineStatsEl.innerHTML = "廠房總跨度: <strong>100.0 M × 40.0 M</strong>";
     } else if (targetFloor === "2F") {
       floorIndicatorEl.textContent = "2F 倉庫夾層 (EL.+4.40M)";
       floorIndicatorEl.style.color = "#4F46E5";
@@ -2510,6 +2662,8 @@
 
   // --- Event Bindings ---
   function bindEvents() {
+    bindMobileWorkspace();
+
     if (btnFloor1F) btnFloor1F.addEventListener("click", () => switchFloor("1F"));
     if (btnFloor2F) btnFloor2F.addEventListener("click", () => switchFloor("2F"));
     if (btnFloorOverlay) btnFloorOverlay.addEventListener("click", () => switchFloor("OVERLAY"));
@@ -3019,6 +3173,7 @@
         w.thickness = Math.max(0.1, parseFloat(propWallThickness.value) || 0.3);
 
         propWallLength.textContent = Math.hypot(w.x2 - w.x1, w.y2 - w.y1).toFixed(2);
+        saveToLocalStorage();
         renderSvg();
       });
     });
@@ -3033,6 +3188,7 @@
       f.color = f.type === "forklift" ? "#F59E0B" :
                 f.type === "pedestrian" ? "#10B981" :
                 f.type === "process" ? "#3B82F6" : "#EF4444";
+      saveToLocalStorage();
       renderSvg();
     });
 
@@ -3041,6 +3197,7 @@
       const rec = findItemRecord(selectedId);
       if (!rec || rec.type !== "flow") return;
       rec.item.width_m = Math.max(0.5, parseFloat(e.target.value) || 2.0);
+      saveToLocalStorage();
       renderSvg();
     });
 
@@ -3049,6 +3206,7 @@
       const rec = findItemRecord(selectedId);
       if (!rec || rec.type !== "flow") return;
       rec.item.arrow_direction = e.target.value;
+      saveToLocalStorage();
       renderSvg();
     });
 
@@ -3398,6 +3556,7 @@
         layoutData = JSON.parse(JSON.stringify(INITIAL_LAYOUT));
         deselectAll();
         renderSvg();
+        saveToLocalStorage();
         const ind = document.getElementById("autoSaveIndicator");
         if (ind) ind.textContent = "已重設為原廠基準";
       }
