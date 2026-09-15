@@ -3860,6 +3860,7 @@
   let dragPointIndex = -1;
   let dragOffset = { x: 0, y: 0 };
   let dragStartM = { x: 0, y: 0 };
+  let wallEndpointDrag = null;
   let currentSnapM = 0.5; // default 0.5m snap
 
   // Flow Route Drawing Tool state
@@ -3938,6 +3939,10 @@
   const propWallY2 = document.getElementById("propWallY2");
   const propWallThickness = document.getElementById("propWallThickness");
   const propWallLength = document.getElementById("propWallLength");
+  const propWallAngle = document.getElementById("propWallAngle");
+  const wallAngleDisplay = document.getElementById("wallAngleDisplay");
+  const wallRotateLeftBtn = document.getElementById("wallRotateLeftBtn");
+  const wallRotateRightBtn = document.getElementById("wallRotateRightBtn");
 
   // Flow Route Specific Card
   const cardFlowProps = document.getElementById("cardFlowProps");
@@ -4094,6 +4099,43 @@
   function snapValue(val, step) {
     if (step <= 0) return val;
     return Math.round(val / step) * step;
+  }
+
+  function normalizeDegrees(angle) {
+    const numericAngle = Number(angle);
+    if (!Number.isFinite(numericAngle)) return 0;
+    return ((numericAngle % 360) + 360) % 360;
+  }
+
+  function getWallAngle(wall) {
+    return normalizeDegrees(Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1) * 180 / Math.PI);
+  }
+
+  function setWallAngle(wall, angle) {
+    const length = Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1);
+    if (length < 0.001) return false;
+
+    const radians = normalizeDegrees(angle) * Math.PI / 180;
+    const cleanCoordinate = value => {
+      const rounded = Math.round(value * 10000) / 10000;
+      return Math.abs(rounded) < 0.00005 ? 0 : rounded;
+    };
+    wall.x2 = cleanCoordinate(wall.x1 + Math.cos(radians) * length);
+    wall.y2 = cleanCoordinate(wall.y1 + Math.sin(radians) * length);
+    return true;
+  }
+
+  function syncWallInspector(wall) {
+    propWallX1.value = wall.x1.toFixed(2);
+    propWallY1.value = wall.y1.toFixed(2);
+    propWallX2.value = wall.x2.toFixed(2);
+    propWallY2.value = wall.y2.toFixed(2);
+    propWallThickness.value = (wall.thickness || 0.3).toFixed(2);
+    propWallLength.textContent = Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1).toFixed(2);
+
+    const roundedAngle = Math.round(getWallAngle(wall) * 100) / 100;
+    propWallAngle.value = String(roundedAngle);
+    wallAngleDisplay.textContent = `${roundedAngle}°`;
   }
 
   // Helper: calculate 4-vertex polygon for double-line wall
@@ -4880,6 +4922,11 @@
     `;
 
     svgEl.innerHTML = html;
+    const selectedWall = selectedId ? findItemRecord(selectedId) : null;
+    if (selectedWall && selectedWall.type === "wall") {
+      const selectedWallGroup = document.getElementById(selectedId);
+      if (selectedWallGroup) svgEl.appendChild(selectedWallGroup);
+    }
     attachSvgClickListeners();
   }
 
@@ -5273,12 +5320,7 @@
       cardWallProps.style.display = "block";
       cardClearance.style.display = "none";
 
-      propWallX1.value = item.x1.toFixed(2);
-      propWallY1.value = item.y1.toFixed(2);
-      propWallX2.value = item.x2.toFixed(2);
-      propWallY2.value = item.y2.toFixed(2);
-      propWallThickness.value = (item.thickness || 0.3).toFixed(2);
-      propWallLength.textContent = Math.hypot(item.x2 - item.x1, item.y2 - item.y1).toFixed(2);
+      syncWallInspector(item);
 
     } else if (rec.type === "flow") {
       selectionBadge.textContent = `📍 動線 · ${item.name.split(' ')[0]}`;
@@ -5469,8 +5511,20 @@
 
   function rotateSelected(delta) {
     if (!selectedId) return;
-    const item = findItemById(selectedId);
-    if (!item || typeof item.rotation === "undefined") return;
+    const rec = findItemRecord(selectedId);
+    if (!rec || !rec.item) return;
+    const item = rec.item;
+
+    if (rec.type === "wall") {
+      pushHistoryState(`旋轉牆面 ${item.id || ''}`);
+      if (!setWallAngle(item, getWallAngle(item) + delta)) return;
+      syncWallInspector(item);
+      saveToLocalStorage();
+      renderSvg();
+      return;
+    }
+
+    if (typeof item.rotation === "undefined") return;
 
     pushHistoryState(`旋轉物件 ${item.code || item.name || ''}`);
     item.rotation = ((item.rotation || 0) + delta + 360) % 360;
@@ -6442,9 +6496,15 @@
 
         } else if (dragMode === "wall-p1") {
           const w = rec.item;
-          const rawX = snapValue(mPt.x, currentSnapM);
-          const rawY = snapValue(mPt.y, currentSnapM);
+          if (!wallEndpointDrag) return;
+          const snappedDeltaX = snapValue(mPt.x - wallEndpointDrag.startPointer.x, currentSnapM);
+          const snappedDeltaY = snapValue(mPt.y - wallEndpointDrag.startPointer.y, currentSnapM);
+          if (snappedDeltaX === 0 && snappedDeltaY === 0) return;
+          const rawX = wallEndpointDrag.startPoint.x + snappedDeltaX;
+          const rawY = wallEndpointDrag.startPoint.y + snappedDeltaY;
           const snap = findWallSnap(w, "p1", rawX, rawY);
+          const previousX = w.x1;
+          const previousY = w.y1;
           if (snap) {
             w.x1 = snap.snapX;
             w.y1 = snap.snapY;
@@ -6454,17 +6514,23 @@
             w.y1 = rawY;
             currentWallSnapInfo = null;
           }
-          dragHasMoved = true;
-          propWallX1.value = w.x1.toFixed(2);
-          propWallY1.value = w.y1.toFixed(2);
-          propWallLength.textContent = Math.hypot(w.x2 - w.x1, w.y2 - w.y1).toFixed(2);
-          renderSvg();
+          if (Math.abs(w.x1 - previousX) > 0.0001 || Math.abs(w.y1 - previousY) > 0.0001) {
+            dragHasMoved = true;
+            syncWallInspector(w);
+            renderSvg();
+          }
 
         } else if (dragMode === "wall-p2") {
           const w = rec.item;
-          const rawX = snapValue(mPt.x, currentSnapM);
-          const rawY = snapValue(mPt.y, currentSnapM);
+          if (!wallEndpointDrag) return;
+          const snappedDeltaX = snapValue(mPt.x - wallEndpointDrag.startPointer.x, currentSnapM);
+          const snappedDeltaY = snapValue(mPt.y - wallEndpointDrag.startPointer.y, currentSnapM);
+          if (snappedDeltaX === 0 && snappedDeltaY === 0) return;
+          const rawX = wallEndpointDrag.startPoint.x + snappedDeltaX;
+          const rawY = wallEndpointDrag.startPoint.y + snappedDeltaY;
           const snap = findWallSnap(w, "p2", rawX, rawY);
+          const previousX = w.x2;
+          const previousY = w.y2;
           if (snap) {
             w.x2 = snap.snapX;
             w.y2 = snap.snapY;
@@ -6474,11 +6540,11 @@
             w.y2 = rawY;
             currentWallSnapInfo = null;
           }
-          dragHasMoved = true;
-          propWallX2.value = w.x2.toFixed(2);
-          propWallY2.value = w.y2.toFixed(2);
-          propWallLength.textContent = Math.hypot(w.x2 - w.x1, w.y2 - w.y1).toFixed(2);
-          renderSvg();
+          if (Math.abs(w.x2 - previousX) > 0.0001 || Math.abs(w.y2 - previousY) > 0.0001) {
+            dragHasMoved = true;
+            syncWallInspector(w);
+            renderSvg();
+          }
 
         } else if (dragMode === "flow-point") {
           const f = rec.item;
@@ -6515,9 +6581,18 @@
       if (wallHandle && e.button === 0) {
         const wid = wallHandle.getAttribute("data-wall-id");
         const handle = wallHandle.getAttribute("data-handle");
-        selectItem(wid);
+        const rec = findItemRecord(wid);
+        if (!rec || rec.type !== "wall") return;
+        e.preventDefault();
+        selectedId = wid;
         isDragging = true;
         dragMode = handle === "p1" ? "wall-p1" : "wall-p2";
+        wallEndpointDrag = {
+          startPointer: { x: mPt.x, y: mPt.y },
+          startPoint: handle === "p1"
+            ? { x: rec.item.x1, y: rec.item.y1 }
+            : { x: rec.item.x2, y: rec.item.y2 }
+        };
         return;
       }
 
@@ -6577,6 +6652,7 @@
       isPanning = false;
       dragPointIndex = -1;
       dragMode = "translate";
+      wallEndpointDrag = null;
       viewportEl.style.cursor = isDrawingRoute ? "crosshair" : "default";
     });
 
@@ -6669,10 +6745,33 @@
         w.y2 = parseFloat(propWallY2.value) || 0;
         w.thickness = Math.max(0.1, parseFloat(propWallThickness.value) || 0.3);
 
-        propWallLength.textContent = Math.hypot(w.x2 - w.x1, w.y2 - w.y1).toFixed(2);
+        syncWallInspector(w);
         saveToLocalStorage();
         renderSvg();
       });
+    });
+
+    propWallAngle.addEventListener("change", () => {
+      if (!selectedId) return;
+      const rec = findItemRecord(selectedId);
+      if (!rec || rec.type !== "wall") return;
+      const requestedAngle = Number(propWallAngle.value);
+      if (!Number.isFinite(requestedAngle)) {
+        syncWallInspector(rec.item);
+        return;
+      }
+
+      pushHistoryState(`調整牆面角度 ${rec.item.id || ''}`);
+      setWallAngle(rec.item, requestedAngle);
+      syncWallInspector(rec.item);
+      saveToLocalStorage();
+      renderSvg();
+    });
+    propWallAngle.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        propWallAngle.blur();
+      }
     });
 
     // Flow specific inputs
@@ -6709,6 +6808,8 @@
 
     document.getElementById("rotateLeftBtn").addEventListener("click", () => rotateSelected(-90));
     document.getElementById("rotateRightBtn").addEventListener("click", () => rotateSelected(90));
+    wallRotateLeftBtn.addEventListener("click", () => rotateSelected(-90));
+    wallRotateRightBtn.addEventListener("click", () => rotateSelected(90));
     document.getElementById("duplicateBtn").addEventListener("click", duplicateSelected);
     document.getElementById("deleteBtn").addEventListener("click", deleteSelected);
 

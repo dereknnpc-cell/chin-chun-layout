@@ -751,6 +751,13 @@ body {
   font-size: 13px;
 }
 
+.prop-hint {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .clearance-readouts {
   display: flex;
   flex-direction: column;

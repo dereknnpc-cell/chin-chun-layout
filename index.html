@@ -6,13 +6,13 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>金讚科技 - 廠房正式工程圖與模組化設備配置系統 (V2.6)</title>
+  <title>金讚科技 - 廠房正式工程圖與模組化設備配置系統 (V2.6.1)</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1E40AF">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=2.6_eps1">
+  <link rel="stylesheet" href="style.css?v=2.6.1_wall3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -32,7 +32,7 @@
         <div class="brand-text">
           <div style="display: flex; align-items: center; gap: 6px;">
             <span class="brand-title">CHIN CHUN 金讚廠房工程平面配置系統</span>
-            <span class="cad-badge-version" style="background: #059669; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 12px; letter-spacing: 0.5px;">V2.6 EPS 校正版</span>
+            <span class="cad-badge-version" style="background: #059669; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 12px; letter-spacing: 0.5px;">V2.6.1 牆面角度修正版</span>
           </div>
           <span class="brand-subtitle">正式工程規範 · 140M×90M (含廠外車道與地磅站) · 自由動線規劃</span>
         </div>
@@ -396,10 +396,23 @@
               <label>牆體厚度 (米)</label>
               <input type="number" id="propWallThickness" step="0.05" min="0.1" class="cad-input">
             </div>
+            <div class="prop-group">
+              <label>牆面角度 (°)</label>
+              <input type="number" id="propWallAngle" step="1" min="0" max="359" class="cad-input">
+            </div>
+          </div>
+          <div class="prop-group">
+            <label>固定起點 P1 旋轉</label>
+            <div class="rotation-tools">
+              <button id="wallRotateLeftBtn" class="cad-btn secondary" title="逆時針 90°">↶ -90°</button>
+              <span id="wallAngleDisplay" class="angle-val">0°</span>
+              <button id="wallRotateRightBtn" class="cad-btn secondary" title="順時針 90°">↷ +90°</button>
+            </div>
           </div>
           <div class="prop-meta">
             <span>牆體長度: <strong id="propWallLength">0.00</strong> m</span>
           </div>
+          <p class="prop-hint">拖曳端點會以原位置為基準吸附；角度旋轉固定 P1 並保持牆長。</p>
         </div>
 
         <!-- Flow Route Specific Card -->
@@ -710,7 +723,7 @@
   </div>
 
   <!-- Load Application Logic -->
-  <script src="cloud-sync.js?v=2.6_eps1"></script>
-  <script src="app.js?v=2.6_eps1"></script>
+  <script src="cloud-sync.js?v=2.6.1_wall3"></script>
+  <script src="app.js?v=2.6.1_wall3"></script>
 </body>
 </html>
