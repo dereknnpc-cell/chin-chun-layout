@@ -326,6 +326,41 @@ body {
   margin: 0;
 }
 
+.layer-edit-level {
+  border-style: dashed;
+  color: #7C3AED;
+  cursor: default;
+}
+
+.layer-rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.layer-lock-btn {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.layer-lock-btn:hover,
+.layer-lock-btn:focus-visible {
+  background: rgba(245, 158, 11, 0.18);
+  outline: 1px solid #F59E0B;
+}
+
+.toggle-btn.layer-locked {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #F59E0B;
+}
+
 .hints-section {
   flex-shrink: 0;
 }
@@ -952,12 +987,31 @@ body.theme-cad-dark .wall-double-poly {
   stroke-width: 2;
   cursor: crosshair;
   transition: transform 0.15s ease;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 .wall-endpoint-handle:hover {
   transform: scale(1.35);
   fill: var(--cad-selection);
   stroke: #FFFFFF;
+}
+
+.wall-center-handle {
+  fill: #7C3AED;
+  stroke: #FFFFFF;
+  stroke-width: 2;
+  cursor: move;
+}
+
+.wall-center-handle:hover {
+  fill: #A855F7;
+  stroke-width: 3;
+}
+
+.svg-layer-locked {
+  pointer-events: none;
+  opacity: 0.82;
 }
 
 /* --- Aisles Interactive Styles --- */
@@ -2030,7 +2084,6 @@ body.theme-cad-dark .cloud-sync-tag[data-state="offline"] {
   }
 
   .cad-ribbon-bar > .tool-separator,
-  .layer-section,
   .hints-section,
   .ribbon-label {
     display: none;

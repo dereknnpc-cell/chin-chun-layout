@@ -6,13 +6,13 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>金讚科技 - 廠房正式工程圖與模組化設備配置系統 (V2.6.1)</title>
+  <title>金讚科技 - 廠房正式工程圖與模組化設備配置系統 (V2.7.0)</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1E40AF">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=2.6.1_wall3">
+  <link rel="stylesheet" href="style.css?v=2.7.0_layers">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -32,7 +32,7 @@
         <div class="brand-text">
           <div style="display: flex; align-items: center; gap: 6px;">
             <span class="brand-title">CHIN CHUN 金讚廠房工程平面配置系統</span>
-            <span class="cad-badge-version" style="background: #059669; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 12px; letter-spacing: 0.5px;">V2.6.1 牆面角度修正版</span>
+            <span class="cad-badge-version" style="background: #7C3AED; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 12px; letter-spacing: 0.5px;">V2.7.0 圖層鎖定版</span>
           </div>
           <span class="brand-subtitle">正式工程規範 · 140M×90M (含廠外車道與地磅站) · 自由動線規劃</span>
         </div>
@@ -140,13 +140,25 @@
 
       <!-- Center: Layer Controls -->
       <div class="ribbon-section layer-section">
-        <span class="ribbon-label">圖層顯示:</span>
+        <span class="ribbon-label">圖層（眼睛／鎖定）:</span>
         <div class="layer-toggles">
+          <span class="toggle-btn layer-edit-level" title="選取物件的端點與中心控制點永遠位於最上層">
+            <span class="layer-rank">L4</span> ◇ 控制點
+          </span>
+          <label class="toggle-btn active" data-layer="equipment">
+            <input type="checkbox" id="toggleEquipment" checked>
+            <span class="layer-rank">L3</span> 設備
+            <span class="layer-lock-btn" data-lock-layer="equipment" role="button" tabindex="0" title="鎖定設備圖層">🔓</span>
+          </label>
           <label class="toggle-btn active" data-layer="grid">
-            <input type="checkbox" id="toggleGrid" checked> 柱網
+            <input type="checkbox" id="toggleGrid" checked>
+            <span class="layer-rank">L2</span> 柱網／柱子
+            <span class="layer-lock-btn" data-lock-layer="columns" role="button" tabindex="0" title="解鎖柱子圖層">🔒</span>
           </label>
           <label class="toggle-btn active" data-layer="walls">
-            <input type="checkbox" id="toggleWalls" checked> 雙線牆
+            <input type="checkbox" id="toggleWalls" checked>
+            <span class="layer-rank">L1</span> 牆面
+            <span class="layer-lock-btn" data-lock-layer="walls" role="button" tabindex="0" title="鎖定牆面圖層">🔓</span>
           </label>
           <label class="toggle-btn active" data-layer="flows">
             <input type="checkbox" id="toggleFlows" checked> 動線
@@ -171,7 +183,7 @@
 
       <!-- Right: Live Hints -->
       <div class="ribbon-section hints-section">
-        <span class="cad-hint-badge">💡 選取按 <kbd>R</kbd> 旋轉 · <kbd>Del</kbd> 刪除 · 拖曳端點調長度 · 雙擊完成動線</span>
+        <span class="cad-hint-badge">💡 L4 控制點優先 · 🔒 鎖定防誤移 · 選取按 <kbd>R</kbd> 旋轉</span>
       </div>
     </div>
   </header>
@@ -723,7 +735,7 @@
   </div>
 
   <!-- Load Application Logic -->
-  <script src="cloud-sync.js?v=2.6.1_wall3"></script>
-  <script src="app.js?v=2.6.1_wall3"></script>
+  <script src="cloud-sync.js?v=2.7.0_layers"></script>
+  <script src="app.js?v=2.7.0_layers"></script>
 </body>
 </html>

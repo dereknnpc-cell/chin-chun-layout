@@ -3659,10 +3659,14 @@
       return;
     }
     const currentSnapshot = JSON.stringify(layoutData);
+    const activeLayerLocks = { ...ensureLayerSettings(layoutData).locks };
     const lastState = undoStack.pop();
     redoStack.push({ name: lastState.name, data: currentSnapshot, floor: currentFloor });
 
     layoutData = JSON.parse(lastState.data);
+    ensureLayerSettings(layoutData);
+    Object.assign(layoutData.layer_settings.locks, activeLayerLocks);
+    updateLayerLockControls();
     if (lastState.floor && lastState.floor !== currentFloor) {
       currentFloor = lastState.floor;
       renderFloorSelector();
@@ -3680,10 +3684,14 @@
       return;
     }
     const currentSnapshot = JSON.stringify(layoutData);
+    const activeLayerLocks = { ...ensureLayerSettings(layoutData).locks };
     const nextState = redoStack.pop();
     undoStack.push({ name: nextState.name, data: currentSnapshot, floor: currentFloor });
 
     layoutData = JSON.parse(nextState.data);
+    ensureLayerSettings(layoutData);
+    Object.assign(layoutData.layer_settings.locks, activeLayerLocks);
+    updateLayerLockControls();
     if (nextState.floor && nextState.floor !== currentFloor) {
       currentFloor = nextState.floor;
       renderFloorSelector();
@@ -3714,7 +3722,13 @@
   function findWallSnap(curWall, dragType, curX, curY) {
     const SNAP_THRESHOLD = 0.40; // 0.40 meters
     let bestSnap = null;
-    let minDist = SNAP_THRESHOLD;
+    const considerSnap = (candidate, distance, priority) => {
+      if (distance >= SNAP_THRESHOLD) return;
+      if (!bestSnap || priority < bestSnap.priority ||
+          (priority === bestSnap.priority && distance < bestSnap.distance)) {
+        bestSnap = { ...candidate, priority, distance };
+      }
+    };
 
     const allWalls = layoutData.walls || [];
     const otherWalls = allWalls.filter(w => w.id !== curWall.id);
@@ -3728,34 +3742,41 @@
 
       for (const ep of endpoints) {
         const d = Math.hypot(curX - ep.x, curY - ep.y);
-        if (d < minDist) {
-          minDist = d;
-          bestSnap = {
+        considerSnap({
             snapX: ep.x,
             snapY: ep.y,
-            desc: "端點自動吸附對齊",
+            desc: "① 牆面端點吸附",
             targetWall: ow
-          };
-        }
+        }, d, 1);
       }
 
-      // 2. T-junction Perpendicular Projection
+      // 2. Wall midpoint snap
       const dx = ow.x2 - ow.x1;
       const dy = ow.y2 - ow.y1;
       const lenSq = dx * dx + dy * dy;
       if (lenSq > 0.04) {
+        const midX = (ow.x1 + ow.x2) / 2;
+        const midY = (ow.y1 + ow.y2) / 2;
+        const dMid = Math.hypot(curX - midX, curY - midY);
+        considerSnap({
+          snapX: Math.round(midX * 100) / 100,
+          snapY: Math.round(midY * 100) / 100,
+          desc: "③ 牆面中心點吸附",
+          targetWall: ow
+        }, dMid, 3);
+
+        // 3. T-junction perpendicular projection
         const t = Math.max(0, Math.min(1, ((curX - ow.x1) * dx + (curY - ow.y1) * dy) / lenSq));
         const projX = ow.x1 + t * dx;
         const projY = ow.y1 + t * dy;
         const dProj = Math.hypot(curX - projX, curY - projY);
-        if (dProj < minDist && dProj < 0.35) {
-          minDist = dProj;
-          bestSnap = {
+        if (dProj < 0.35) {
+          considerSnap({
             snapX: Math.round(projX * 100) / 100,
             snapY: Math.round(projY * 100) / 100,
-            desc: "T型牆垂直接合",
+            desc: "④ 牆線垂直接合",
             targetWall: ow
-          };
+          }, dProj, 4);
         }
       }
 
@@ -3799,6 +3820,19 @@
           }
         }
       }
+    }
+
+    // Column centers rank after wall endpoints and before wall midpoints.
+    if (dragType !== "translate") {
+      (layoutData.columns || []).forEach(column => {
+        const distance = Math.hypot(curX - column.x, curY - column.y);
+        considerSnap({
+          snapX: column.x,
+          snapY: column.y,
+          desc: "② 柱中心點吸附",
+          targetColumn: column
+        }, distance, 2);
+      });
     }
 
     return bestSnap;
@@ -3877,6 +3911,7 @@
   const layerState = {
     grid: true,
     walls: true,
+    equipment: true,
     flows: true,
     dims: true,
     aisles: true,
@@ -3885,6 +3920,62 @@
     handrails: true,
     stairs: true
   };
+
+  function ensureLayerSettings(targetLayout) {
+    if (!targetLayout.layer_settings || typeof targetLayout.layer_settings !== "object") {
+      targetLayout.layer_settings = {};
+    }
+    if (!targetLayout.layer_settings.locks || typeof targetLayout.layer_settings.locks !== "object") {
+      targetLayout.layer_settings.locks = {};
+    }
+    const locks = targetLayout.layer_settings.locks;
+    if (typeof locks.columns !== "boolean") locks.columns = true;
+    if (typeof locks.walls !== "boolean") locks.walls = false;
+    if (typeof locks.equipment !== "boolean") locks.equipment = false;
+    return targetLayout.layer_settings;
+  }
+
+  ensureLayerSettings(layoutData);
+
+  function getRecordLayerKey(rec) {
+    if (!rec) return null;
+    if (rec.type === "column") return "columns";
+    if (rec.type === "wall") return "walls";
+    if (rec.type === "equipment") return "equipment";
+    return null;
+  }
+
+  function isLayerLocked(layerKey) {
+    return Boolean(layerKey && ensureLayerSettings(layoutData).locks[layerKey]);
+  }
+
+  function isRecordLayerLocked(rec) {
+    return isLayerLocked(getRecordLayerKey(rec));
+  }
+
+  function updateLayerLockControls() {
+    document.querySelectorAll(".layer-lock-btn[data-lock-layer]").forEach(button => {
+      const layerKey = button.getAttribute("data-lock-layer");
+      const locked = isLayerLocked(layerKey);
+      button.textContent = locked ? "🔒" : "🔓";
+      button.setAttribute("title", `${locked ? "解鎖" : "鎖定"}${layerKey === "columns" ? "柱子" : layerKey === "walls" ? "牆面" : "設備"}圖層`);
+      button.closest(".toggle-btn")?.classList.toggle("layer-locked", locked);
+    });
+  }
+
+  function toggleLayerLock(layerKey) {
+    const settings = ensureLayerSettings(layoutData);
+    settings.locks[layerKey] = !settings.locks[layerKey];
+    const selectedRecord = selectedId ? findItemRecord(selectedId) : null;
+    if (selectedRecord && getRecordLayerKey(selectedRecord) === layerKey && settings.locks[layerKey]) {
+      deselectAll();
+    }
+    updateLayerLockControls();
+    saveToLocalStorage();
+    renderSvg();
+    const label = layerKey === "columns" ? "柱子" : layerKey === "walls" ? "牆面" : "設備";
+    showToast(`${settings.locks[layerKey] ? "🔒 已鎖定" : "🔓 已解鎖"}${label}圖層`, "info", 1800);
+  }
 
   // DOM Elements
   const svgEl = document.getElementById("factorySvg");
@@ -4030,6 +4121,7 @@
           JSON.parse(JSON.stringify(remoteLayout))
         );
         layoutData = geometryResult.layout;
+        ensureLayerSettings(layoutData);
         customEquipmentLib = Array.isArray(remoteLibrary) ? JSON.parse(JSON.stringify(remoteLibrary)) : [];
         try {
           localStorage.setItem(STORAGE_KEY_LAYOUT, JSON.stringify(layoutData));
@@ -4040,6 +4132,7 @@
         if (!layoutData.floors?.some(floor => floor.id === currentFloor)) currentFloor = "1F";
         undoStack.length = 0;
         redoStack.length = 0;
+        updateLayerLockControls();
         deselectAll();
         renderFloorSelector();
         populateLibrary();
@@ -4384,7 +4477,7 @@
 
     // 2. Double-line Architectural Walls Layer (可選取、移動、調整端點與厚度、刪除之單面實體雙線牆)
     if (layerState.walls) {
-      html += `<g id="layerWalls" opacity="${is2F ? '0.35' : (isOverlay ? '0.55' : '1.0')}">`;
+      html += `<g id="layerWalls" class="${isLayerLocked('walls') ? 'svg-layer-locked' : ''}" opacity="${is2F ? '0.35' : (isOverlay ? '0.55' : '1.0')}">`;
       (layoutData.walls || []).forEach(w => {
         const poly = getWallPolygon(w);
         if (!poly) return;
@@ -4396,12 +4489,16 @@
             <line x1="${poly.c1.x}" y1="${poly.c1.y}" x2="${poly.c2.x}" y2="${poly.c2.y}" class="wall-centerline"/>
         `;
 
-        if (isSelected) {
+        if (isSelected && !isLayerLocked("walls")) {
+          const centerX = (poly.c1.x + poly.c2.x) / 2;
+          const centerY = (poly.c1.y + poly.c2.y) / 2;
           html += `
-            <!-- Wall Endpoint Handles (P1 & P2) -->
-            <circle cx="${poly.c1.x}" cy="${poly.c1.y}" r="6" class="wall-endpoint-handle" data-handle="p1" data-wall-id="${w.id}"/>
-            <circle cx="${poly.c2.x}" cy="${poly.c2.y}" r="6" class="wall-endpoint-handle" data-handle="p2" data-wall-id="${w.id}"/>
-            <text x="${(poly.c1.x + poly.c2.x) / 2}" y="${(poly.c1.y + poly.c2.y) / 2 - 10}" font-size="9" font-weight="700" fill="var(--cad-selection)" text-anchor="middle">L=${poly.lenM.toFixed(2)}m (T=${(w.thickness || 0.3).toFixed(2)}m)</text>
+            <!-- L4 Wall Edit Handles: endpoints stretch, diamond center translates -->
+            <circle cx="${poly.c1.x}" cy="${poly.c1.y}" r="6" class="wall-endpoint-handle" data-handle="p1" data-wall-id="${w.id}"><title>P1 端點 · L4 優先吸附</title></circle>
+            <circle cx="${poly.c2.x}" cy="${poly.c2.y}" r="6" class="wall-endpoint-handle" data-handle="p2" data-wall-id="${w.id}"><title>P2 端點 · L4 優先吸附</title></circle>
+            <rect x="${centerX - 5}" y="${centerY - 5}" width="10" height="10" transform="rotate(45 ${centerX} ${centerY})"
+                  class="wall-center-handle" data-wall-id="${w.id}"><title>牆面中心控制點 · 拖曳整面牆</title></rect>
+            <text x="${centerX}" y="${centerY - 13}" font-size="9" font-weight="700" fill="var(--cad-selection)" text-anchor="middle">L=${poly.lenM.toFixed(2)}m (T=${(w.thickness || 0.3).toFixed(2)}m)</text>
           `;
         }
 
@@ -4505,7 +4602,7 @@
           const isSelected = col.id === selectedId;
 
           html += `
-            <g id="${col.id}" class="svg-column-group svg-equipment-group svg-interactive-item ${isSelected ? 'selected' : ''}"
+            <g id="${col.id}" class="svg-column-group svg-equipment-group svg-interactive-item ${isSelected ? 'selected' : ''} ${isLayerLocked('columns') ? 'svg-layer-locked' : ''}"
                data-id="${col.id}" data-floor="1F" style="cursor: move;">
               <rect class="column-box main-box" x="${cx}" y="${cy}" width="${cw}" height="${ch}"
                     fill="${isSelected ? 'var(--cad-selection)' : (col.color || '#334155')}"
@@ -4855,10 +4952,10 @@
     }
 
     // 7. EQUIPMENT, FURNITURE, DOORS & WINDOWS LAYER
-    html += `<g id="layerEquipment">`;
+    if (layerState.equipment) html += `<g id="layerEquipment" class="${isLayerLocked('equipment') ? 'svg-layer-locked' : ''}">`;
 
     // 1F Equipment & Components
-    if (is1F || isOverlay) {
+    if (layerState.equipment && (is1F || isOverlay)) {
       const eq1List = layoutData.equipment || [];
       eq1List.forEach(eq => {
         html += renderSingleItemSvg(eq, "1F", isOverlay ? "0.38" : "1.0");
@@ -4866,14 +4963,14 @@
     }
 
     // 2F Equipment & Components
-    if (is2F || isOverlay) {
+    if (layerState.equipment && (is2F || isOverlay)) {
       const eq2List = layoutData.equipment_2f || [];
       eq2List.forEach(eq => {
         html += renderSingleItemSvg(eq, "2F", "1.0");
       });
     }
 
-    html += `</g>`;
+    if (layerState.equipment) html += `</g>`;
 
     // 8. Movable & Editable Engineering Title Block
     const tb = layoutData.title_block || {};
@@ -4923,7 +5020,7 @@
 
     svgEl.innerHTML = html;
     const selectedWall = selectedId ? findItemRecord(selectedId) : null;
-    if (selectedWall && selectedWall.type === "wall") {
+    if (selectedWall && selectedWall.type === "wall" && !isLayerLocked("walls")) {
       const selectedWallGroup = document.getElementById(selectedId);
       if (selectedWallGroup) svgEl.appendChild(selectedWallGroup);
     }
@@ -5444,6 +5541,10 @@
     if (!selectedId) return;
     const rec = findItemRecord(selectedId);
     if (!rec || !rec.collection) return;
+    if (isRecordLayerLocked(rec)) {
+      showToast("此圖層已鎖定，請先點擊圖層鎖頭解鎖", "info", 2200);
+      return;
+    }
 
     pushHistoryState(`刪除物件 ${rec.item.name || rec.item.code || ''}`);
     const idx = rec.collection.findIndex(item => item.id === selectedId);
@@ -5461,6 +5562,10 @@
     if (!selectedId) return;
     const rec = findItemRecord(selectedId);
     if (!rec) return;
+    if (isRecordLayerLocked(rec)) {
+      showToast("此圖層已鎖定，無法複製物件", "info", 2200);
+      return;
+    }
 
     const item = rec.item;
     const cloned = JSON.parse(JSON.stringify(item));
@@ -5513,6 +5618,10 @@
     if (!selectedId) return;
     const rec = findItemRecord(selectedId);
     if (!rec || !rec.item) return;
+    if (isRecordLayerLocked(rec)) {
+      showToast("此圖層已鎖定，無法旋轉", "info", 2200);
+      return;
+    }
     const item = rec.item;
 
     if (rec.type === "wall") {
@@ -6333,11 +6442,32 @@
       currentSnapM = parseFloat(e.target.value);
     });
 
+    document.querySelectorAll(".layer-lock-btn[data-lock-layer]").forEach(button => {
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleLayerLock(button.getAttribute("data-lock-layer"));
+      });
+      button.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          event.stopPropagation();
+          toggleLayerLock(button.getAttribute("data-lock-layer"));
+        }
+      });
+    });
+    updateLayerLockControls();
+
     document.querySelectorAll(".layer-toggles input[type='checkbox']").forEach(chk => {
       chk.addEventListener("change", (e) => {
         const layer = e.target.closest("label").getAttribute("data-layer");
         layerState[layer] = e.target.checked;
         e.target.closest("label").classList.toggle("active", e.target.checked);
+        const selectedRecord = selectedId ? findItemRecord(selectedId) : null;
+        const selectedLayer = getRecordLayerKey(selectedRecord);
+        if (!e.target.checked && ((layer === "grid" && selectedLayer === "columns") || layer === selectedLayer)) {
+          deselectAll();
+        }
         renderSvg();
       });
     });
@@ -6582,7 +6712,7 @@
         const wid = wallHandle.getAttribute("data-wall-id");
         const handle = wallHandle.getAttribute("data-handle");
         const rec = findItemRecord(wid);
-        if (!rec || rec.type !== "wall") return;
+        if (!rec || rec.type !== "wall" || isRecordLayerLocked(rec)) return;
         e.preventDefault();
         selectedId = wid;
         isDragging = true;
@@ -6593,6 +6723,20 @@
             ? { x: rec.item.x1, y: rec.item.y1 }
             : { x: rec.item.x2, y: rec.item.y2 }
         };
+        return;
+      }
+
+      // Explicit L4 wall center handle translates the whole wall.
+      const wallCenterHandle = e.target.closest(".wall-center-handle");
+      if (wallCenterHandle && e.button === 0) {
+        const wid = wallCenterHandle.getAttribute("data-wall-id");
+        const rec = findItemRecord(wid);
+        if (!rec || rec.type !== "wall" || isRecordLayerLocked(rec)) return;
+        e.preventDefault();
+        selectedId = wid;
+        isDragging = true;
+        dragMode = "translate";
+        dragStartM = { x: mPt.x, y: mPt.y };
         return;
       }
 
@@ -6612,9 +6756,13 @@
       const itemGroup = e.target.closest(".svg-interactive-item");
       if (itemGroup && e.button === 0) {
         const id = itemGroup.getAttribute("data-id");
+        const rec = findItemRecord(id);
+        if (isRecordLayerLocked(rec)) {
+          showToast("此圖層已鎖定，物件不會移動", "info", 1600);
+          return;
+        }
         selectItem(id);
 
-        const rec = findItemRecord(id);
         if (rec) {
           isDragging = true;
           dragMode = "translate";
@@ -7088,7 +7236,10 @@
           try {
             const imported = JSON.parse(evt.target.result);
             if (imported && (imported.equipment || imported.dimensions)) {
-              layoutData = imported;
+              const geometryResult = applySourceGeometryRevision(imported);
+              layoutData = geometryResult.layout;
+              ensureLayerSettings(layoutData);
+              updateLayerLockControls();
               saveToLocalStorage();
               deselectAll();
               renderSvg();
@@ -7152,6 +7303,8 @@
           localStorage.removeItem(STORAGE_KEY_LAYOUT);
         } catch (e) {}
         layoutData = JSON.parse(JSON.stringify(INITIAL_LAYOUT));
+        ensureLayerSettings(layoutData);
+        updateLayerLockControls();
         deselectAll();
         renderSvg();
         saveToLocalStorage();
