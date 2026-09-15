@@ -992,19 +992,6 @@
             <line x1="${poly.c1.x}" y1="${poly.c1.y}" x2="${poly.c2.x}" y2="${poly.c2.y}" class="wall-centerline"/>
         `;
 
-        if (isSelected && !isLayerLocked("walls")) {
-          const centerX = (poly.c1.x + poly.c2.x) / 2;
-          const centerY = (poly.c1.y + poly.c2.y) / 2;
-          html += `
-            <!-- L4 Wall Edit Handles: endpoints stretch, diamond center translates -->
-            <circle cx="${poly.c1.x}" cy="${poly.c1.y}" r="6" class="wall-endpoint-handle" data-handle="p1" data-wall-id="${w.id}"><title>P1 端點 · L4 優先吸附</title></circle>
-            <circle cx="${poly.c2.x}" cy="${poly.c2.y}" r="6" class="wall-endpoint-handle" data-handle="p2" data-wall-id="${w.id}"><title>P2 端點 · L4 優先吸附</title></circle>
-            <rect x="${centerX - 5}" y="${centerY - 5}" width="10" height="10" transform="rotate(45 ${centerX} ${centerY})"
-                  class="wall-center-handle" data-wall-id="${w.id}"><title>牆面中心控制點 · 拖曳整面牆</title></rect>
-            <text x="${centerX}" y="${centerY - 13}" font-size="9" font-weight="700" fill="var(--cad-selection)" text-anchor="middle">L=${poly.lenM.toFixed(2)}m (T=${(w.thickness || 0.3).toFixed(2)}m)</text>
-          `;
-        }
-
         html += `</g>`;
       });
 
@@ -1521,12 +1508,27 @@
       </g>
     `;
 
-    svgEl.innerHTML = html;
-    const selectedWall = selectedId ? findItemRecord(selectedId) : null;
-    if (selectedWall && selectedWall.type === "wall" && !isLayerLocked("walls")) {
-      const selectedWallGroup = document.getElementById(selectedId);
-      if (selectedWallGroup) svgEl.appendChild(selectedWallGroup);
+    // L4 edit controls stay above equipment/columns while the wall body remains in L1.
+    const selectedWallRecord = selectedId ? findItemRecord(selectedId) : null;
+    if (selectedWallRecord?.type === "wall" && !isLayerLocked("walls")) {
+      const selectedWall = selectedWallRecord.item;
+      const poly = getWallPolygon(selectedWall);
+      if (poly) {
+        const centerX = (poly.c1.x + poly.c2.x) / 2;
+        const centerY = (poly.c1.y + poly.c2.y) / 2;
+        html += `
+          <g id="layerControls" data-layer-rank="L4">
+            <circle cx="${poly.c1.x}" cy="${poly.c1.y}" r="6" class="wall-endpoint-handle" data-handle="p1" data-wall-id="${selectedWall.id}"><title>P1 端點 · L4 優先吸附</title></circle>
+            <circle cx="${poly.c2.x}" cy="${poly.c2.y}" r="6" class="wall-endpoint-handle" data-handle="p2" data-wall-id="${selectedWall.id}"><title>P2 端點 · L4 優先吸附</title></circle>
+            <rect x="${centerX - 5}" y="${centerY - 5}" width="10" height="10" transform="rotate(45 ${centerX} ${centerY})"
+                  class="wall-center-handle" data-wall-id="${selectedWall.id}"><title>牆面中心控制點 · 拖曳整面牆</title></rect>
+            <text x="${centerX}" y="${centerY - 13}" font-size="9" font-weight="700" fill="var(--cad-selection)" text-anchor="middle">L=${poly.lenM.toFixed(2)}m (T=${(selectedWall.thickness || 0.3).toFixed(2)}m)</text>
+          </g>
+        `;
+      }
     }
+
+    svgEl.innerHTML = html;
     attachSvgClickListeners();
   }
 
