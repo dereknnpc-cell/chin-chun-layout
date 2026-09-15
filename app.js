@@ -6720,11 +6720,37 @@
         selectedId = wid;
         isDragging = true;
         dragMode = handle === "p1" ? "wall-p1" : "wall-p2";
+        let startPoint = handle === "p1"
+          ? { x: rec.item.x1, y: rec.item.y1 }
+          : { x: rec.item.x2, y: rec.item.y2 };
+
+        // Normalize legacy endpoints that are already sitting on a column face.
+        // A sub-grid pointer movement would otherwise round to a zero delta and
+        // return before the magnetic snap engine gets a chance to center it.
+        const initialSnap = findWallSnap(rec.item, handle, startPoint.x, startPoint.y);
+        if (initialSnap?.targetColumn &&
+            (Math.abs(startPoint.x - initialSnap.snapX) > 0.0001 ||
+             Math.abs(startPoint.y - initialSnap.snapY) > 0.0001)) {
+          if (handle === "p1") {
+            rec.item.x1 = initialSnap.snapX;
+            rec.item.y1 = initialSnap.snapY;
+          } else {
+            rec.item.x2 = initialSnap.snapX;
+            rec.item.y2 = initialSnap.snapY;
+          }
+          startPoint = { x: initialSnap.snapX, y: initialSnap.snapY };
+          currentWallSnapInfo = {
+            snapX: initialSnap.snapX,
+            snapY: initialSnap.snapY,
+            desc: initialSnap.desc
+          };
+          dragHasMoved = true;
+          syncWallInspector(rec.item);
+          renderSvg();
+        }
         wallEndpointDrag = {
           startPointer: { x: mPt.x, y: mPt.y },
-          startPoint: handle === "p1"
-            ? { x: rec.item.x1, y: rec.item.y1 }
-            : { x: rec.item.x2, y: rec.item.y2 }
+          startPoint
         };
         return;
       }
