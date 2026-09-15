@@ -3734,7 +3734,8 @@
     const otherWalls = allWalls.filter(w => w.id !== curWall.id);
 
     for (const ow of otherWalls) {
-      // 1. Endpoint to Endpoint Snap
+      // Wall endpoints rank after structural column centers. This prevents an
+      // existing wall ending at a column face from stealing a center snap.
       const endpoints = [
         { x: ow.x1, y: ow.y1, name: "端點 P1" },
         { x: ow.x2, y: ow.y2, name: "端點 P2" }
@@ -3745,9 +3746,9 @@
         considerSnap({
             snapX: ep.x,
             snapY: ep.y,
-            desc: "① 牆面端點吸附",
+            desc: "② 牆面端點吸附",
             targetWall: ow
-        }, d, 1);
+        }, d, 2);
       }
 
       // 2. Wall midpoint snap
@@ -3822,16 +3823,16 @@
       }
     }
 
-    // Column centers rank after wall endpoints and before wall midpoints.
+    // Structural column centers always win inside the snap threshold.
     if (dragType !== "translate") {
       (layoutData.columns || []).forEach(column => {
         const distance = Math.hypot(curX - column.x, curY - column.y);
         considerSnap({
           snapX: column.x,
           snapY: column.y,
-          desc: "② 柱中心點吸附",
+          desc: "① 柱中心點吸附",
           targetColumn: column
-        }, distance, 2);
+        }, distance, 1);
       });
     }
 
