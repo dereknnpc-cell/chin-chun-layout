@@ -3888,6 +3888,24 @@
     }
   }
 
+  function persistCurrentStateBeforeLeave() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+    try {
+      localStorage.setItem(STORAGE_KEY_LAYOUT, JSON.stringify(layoutData));
+      localStorage.setItem(STORAGE_KEY_CUSTOM_LIB, JSON.stringify(customEquipmentLib));
+      window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
+      window.ChinChunCloud?.flushPendingSave();
+    } catch (error) {
+      console.warn("Could not preserve the latest layout before leaving:", error);
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") persistCurrentStateBeforeLeave();
+  });
+  window.addEventListener("pagehide", persistCurrentStateBeforeLeave);
+
   
   // Dragging & Editing state
   let isDragging = false;
@@ -4115,6 +4133,7 @@
     }
     window.ChinChunCloud.init({
       getLayout: () => layoutData,
+      getInitialLayout: () => JSON.parse(JSON.stringify(INITIAL_LAYOUT)),
       getCustomLibrary: () => customEquipmentLib,
       applyRemote: (remoteLayout, remoteLibrary) => {
         if (!remoteLayout || (!remoteLayout.equipment && !remoteLayout.dimensions)) return;

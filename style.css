@@ -1860,6 +1860,37 @@ body.theme-cad-dark .furniture-conf-top {
   color: #B91C1C;
 }
 
+.cloud-document-bar {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.cloud-document-bar[hidden] {
+  display: none !important;
+}
+
+.cloud-document-bar label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.cloud-document-bar .cad-select {
+  width: clamp(150px, 16vw, 230px);
+  min-height: 30px;
+  padding: 4px 28px 4px 8px;
+  font-size: 11px;
+}
+
+.cloud-document-bar .cad-btn {
+  min-height: 30px;
+  padding: 4px 9px;
+  font-size: 11px;
+}
+
 body.theme-cad-dark .cloud-account-btn,
 body.theme-cad-dark .cloud-sync-tag[data-state="offline"] {
   color: #7DD3FC;
@@ -1970,6 +2001,35 @@ body.theme-cad-dark .cloud-sync-tag[data-state="offline"] {
   font-weight: 800;
 }
 
+.cloud-active-document {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  border-radius: 10px;
+  background: rgba(14, 165, 233, 0.07);
+}
+
+.cloud-active-document > span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cloud-active-document strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.cloud-active-document p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .cloud-member-manager {
   margin-top: 18px;
   padding-top: 16px;
@@ -2070,6 +2130,14 @@ body.theme-cad-dark .cloud-sync-tag[data-state="offline"] {
   .autosave-tag,
   .cloud-sync-tag {
     display: none;
+  }
+
+  .cloud-document-bar label {
+    display: none;
+  }
+
+  .cloud-document-bar .cad-select {
+    width: 150px;
   }
 
   .cad-ribbon-bar {

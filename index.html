@@ -6,13 +6,13 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>金讚科技 - 廠房正式工程圖與模組化設備配置系統 (V2.7.3)</title>
+  <title>金讚科技 - 廠房正式工程圖與模組化設備配置系統 (V2.8.0)</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1E40AF">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=2.7.3_snap">
+  <link rel="stylesheet" href="style.css?v=2.8.0_cloudfiles">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -32,7 +32,7 @@
         <div class="brand-text">
           <div style="display: flex; align-items: center; gap: 6px;">
             <span class="brand-title">CHIN CHUN 金讚廠房工程平面配置系統</span>
-            <span class="cad-badge-version" style="background: #7C3AED; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 12px; letter-spacing: 0.5px;">V2.7.3 舊端點自動回正</span>
+            <span class="cad-badge-version" style="background: #7C3AED; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 12px; letter-spacing: 0.5px;">V2.8.0 全員同步・多檔案</span>
           </div>
           <span class="brand-subtitle">正式工程規範 · 140M×90M (含廠外車道與地磅站) · 自由動線規劃</span>
         </div>
@@ -53,7 +53,13 @@
         <button id="openCloudBtn" class="cad-btn cloud-account-btn" type="button" data-state="offline" title="登入後可跨裝置同步">
           <span class="btn-icon">☁</span> 雲端帳號
         </button>
-        <span id="cloudSyncIndicator" class="cloud-sync-tag" data-state="offline" title="登入後可跨裝置同步">☁ 本機模式</span>
+        <span id="cloudSyncIndicator" class="cloud-sync-tag" data-state="offline" title="登入後可跨裝置同步">⚠ 本機模式（不會同步）</span>
+
+        <div id="cloudDocumentBar" class="cloud-document-bar" hidden>
+          <label for="cloudDocumentSelect">共用檔案</label>
+          <select id="cloudDocumentSelect" class="cad-select" title="切換共用配置檔"></select>
+          <button id="cloudSaveAsBtn" class="cad-btn secondary" type="button" title="保留目前配置，另建立一份獨立雲端檔案">另存新檔</button>
+        </div>
 
         <button id="themeToggleBtn" class="cad-btn secondary" title="切換工程藍圖/經典圖紙底色">
           <span class="btn-icon">🌓</span> <span id="themeLabel">深色藍圖</span>
@@ -67,7 +73,7 @@
           </button>
           <span id="autoSaveIndicator" class="autosave-tag" title="配置變更已自動保存在本地瀏覽器">✓ 已自動儲存</span>
           <button id="saveJsonBtn" class="cad-btn secondary" title="下載當前擺放配置 JSON 檔">
-            <span class="btn-icon">💾</span> 儲存配置
+            <span class="btn-icon">💾</span> 下載備份
           </button>
           <label class="cad-btn secondary" title="匯入已儲存的配置 JSON 檔" style="cursor: pointer; margin-bottom: 0;">
             <span class="btn-icon">📂</span> 匯入配置
@@ -692,7 +698,7 @@
         <div id="cloudAuthMessage" class="cloud-message" hidden></div>
 
         <section id="cloudSignedOutPanel">
-          <p class="cloud-intro">輸入已加入員工名單的 Email。我們會寄送一次性安全登入連結，不需要設定密碼。</p>
+          <p class="cloud-intro">輸入已加入員工名單的 Email。我們會寄送一次性安全登入連結，不需要設定密碼。只有開啟網址但未登入時，修改不會同步給其他人。</p>
           <form id="cloudLoginForm" class="cloud-login-form">
             <div class="form-group">
               <label for="cloudEmail">公司／員工 Email</label>
@@ -700,7 +706,7 @@
             </div>
             <button id="cloudLoginBtn" class="cad-btn primary cloud-wide-btn" type="submit">寄送登入連結</button>
           </form>
-          <p class="cloud-privacy-note">未登入時仍可使用本機模式；登入後才會讀取與儲存公司的共用配置。</p>
+          <p class="cloud-privacy-note">看到上方「本機模式（不會同步）」時，資料只在目前瀏覽器；看到「已同步」才代表全員共用。</p>
         </section>
 
         <section id="cloudSignedInPanel" hidden>
@@ -711,6 +717,12 @@
             </div>
             <span id="cloudCurrentRole" class="cloud-role-badge">—</span>
             <button id="cloudLogoutBtn" class="cad-btn secondary btn-sm" type="button">登出</button>
+          </div>
+
+          <div class="cloud-active-document">
+            <span>目前雲端檔案</span>
+            <strong id="cloudCurrentDocumentName">—</strong>
+            <p>編輯同一檔案會即時同步給所有已登入員工；要自行試改，請按上方「另存新檔」。</p>
           </div>
 
           <div id="cloudMemberManager" class="cloud-member-manager" hidden>
@@ -735,7 +747,7 @@
   </div>
 
   <!-- Load Application Logic -->
-  <script src="cloud-sync.js?v=2.7.3_snap"></script>
-  <script src="app.js?v=2.7.3_snap"></script>
+  <script src="cloud-sync.js?v=2.8.0_cloudfiles"></script>
+  <script src="app.js?v=2.8.0_cloudfiles"></script>
 </body>
 </html>
