@@ -6,16 +6,16 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>金讚科技 - 廠房正式工程圖與模組化設備配置系統 (V2.8.0)</title>
+  <title>金讚科技 - 廠房正式工程圖與模組化設備配置系統 (V2.9.0)</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1E40AF">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=2.8.0_cloudfiles">
+  <link rel="stylesheet" href="style.css?v=2.9.0_thai">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body class="theme-cad-light">
   <!-- Top Navigation & Professional CAD Ribbon -->
@@ -32,7 +32,7 @@
         <div class="brand-text">
           <div style="display: flex; align-items: center; gap: 6px;">
             <span class="brand-title">CHIN CHUN 金讚廠房工程平面配置系統</span>
-            <span class="cad-badge-version" style="background: #7C3AED; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 12px; letter-spacing: 0.5px;">V2.8.0 全員同步・多檔案</span>
+            <span class="cad-badge-version" style="background: #7C3AED; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 12px; letter-spacing: 0.5px;">V2.9.0 繁中・ไทย</span>
           </div>
           <span class="brand-subtitle">正式工程規範 · 140M×90M (含廠外車道與地磅站) · 自由動線規劃</span>
         </div>
@@ -60,6 +60,10 @@
           <select id="cloudDocumentSelect" class="cad-select" title="切換共用配置檔"></select>
           <button id="cloudSaveAsBtn" class="cad-btn secondary" type="button" title="保留目前配置，另建立一份獨立雲端檔案">另存新檔</button>
         </div>
+
+        <button id="languageToggleBtn" class="cad-btn language-toggle-btn" type="button" title="切換繁體中文／泰文" aria-label="切換繁體中文／泰文">
+          <span aria-hidden="true">文</span> <strong id="languageToggleLabel">ไทย</strong>
+        </button>
 
         <button id="themeToggleBtn" class="cad-btn secondary" title="切換工程藍圖/經典圖紙底色">
           <span class="btn-icon">🌓</span> <span id="themeLabel">深色藍圖</span>
@@ -747,7 +751,8 @@
   </div>
 
   <!-- Load Application Logic -->
-  <script src="cloud-sync.js?v=2.8.0_cloudfiles"></script>
-  <script src="app.js?v=2.8.0_cloudfiles"></script>
+  <script src="i18n.js?v=2.9.0_thai"></script>
+  <script src="cloud-sync.js?v=2.9.0_thai"></script>
+  <script src="app.js?v=2.9.0_thai"></script>
 </body>
 </html>

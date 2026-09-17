@@ -1,7 +1,7 @@
 {
-  "name": "金讚科技 - 廠房工程平面配置系統",
-  "short_name": "金讚配置",
-  "description": "CHIN CHUN 廠房正式工程圖與模組化設備配置系統",
+  "name": "CHIN CHUN 金讚 - ระบบจัดผังโรงงาน",
+  "short_name": "CHIN CHUN Layout",
+  "description": "ระบบแบบวิศวกรรมและผังอุปกรณ์โรงงาน พร้อมอินเทอร์เฟซภาษาจีนและภาษาไทย",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0B1329",

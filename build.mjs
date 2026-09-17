@@ -8,6 +8,7 @@ const staticFiles = [
   "style.css",
   "manifest.json",
   "favicon.svg",
+  "i18n.js",
   "cloud-sync.js"
 ];
 
