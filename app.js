@@ -3940,6 +3940,12 @@
     stairs: true
   };
 
+  const LAYER_LOCK_BEHAVIOR_REVISION = "columns-editable-v1";
+
+  function needsLayerLockMigration(targetLayout) {
+    return targetLayout?.layer_settings?.lock_behavior_revision !== LAYER_LOCK_BEHAVIOR_REVISION;
+  }
+
   function ensureLayerSettings(targetLayout) {
     if (!targetLayout.layer_settings || typeof targetLayout.layer_settings !== "object") {
       targetLayout.layer_settings = {};
@@ -3948,13 +3954,29 @@
       targetLayout.layer_settings.locks = {};
     }
     const locks = targetLayout.layer_settings.locks;
-    if (typeof locks.columns !== "boolean") locks.columns = true;
+    // V2.9.2: the original layer-lock rollout made every existing column
+    // non-editable by default. Unlock once for old/local/cloud documents, then
+    // preserve any lock choice the user makes from this version onward.
+    if (needsLayerLockMigration(targetLayout)) {
+      locks.columns = false;
+      targetLayout.layer_settings.lock_behavior_revision = LAYER_LOCK_BEHAVIOR_REVISION;
+    } else if (typeof locks.columns !== "boolean") {
+      locks.columns = false;
+    }
     if (typeof locks.walls !== "boolean") locks.walls = false;
     if (typeof locks.equipment !== "boolean") locks.equipment = false;
     return targetLayout.layer_settings;
   }
 
+  const layerLockSettingsMigrated = needsLayerLockMigration(layoutData);
   ensureLayerSettings(layoutData);
+  if (layerLockSettingsMigrated) {
+    try {
+      localStorage.setItem(STORAGE_KEY_LAYOUT, JSON.stringify(layoutData));
+    } catch (error) {
+      console.warn("Could not preserve the column lock migration locally:", error);
+    }
+  }
 
   function getRecordLayerKey(rec) {
     if (!rec) return null;
@@ -4141,6 +4163,7 @@
           JSON.parse(JSON.stringify(remoteLayout))
         );
         layoutData = geometryResult.layout;
+        const layerLockMigrated = needsLayerLockMigration(layoutData);
         ensureLayerSettings(layoutData);
         customEquipmentLib = Array.isArray(remoteLibrary) ? JSON.parse(JSON.stringify(remoteLibrary)) : [];
         try {
@@ -4158,10 +4181,14 @@
         populateLibrary();
         renderSvg();
         updateUndoRedoButtons();
-        if (geometryResult.migrated) {
+        if (geometryResult.migrated || layerLockMigrated) {
           window.setTimeout(() => {
             window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
-            showToast("已套用 2026 EPS 精準尺寸、牆面與 152 支柱位", "success");
+            if (geometryResult.migrated) {
+              showToast("已套用 2026 EPS 精準尺寸、牆面與 152 支柱位", "success");
+            } else {
+              showToast("柱子圖層已恢復為可編輯；需要時仍可按鎖頭鎖定", "success");
+            }
           }, 0);
         }
       },
