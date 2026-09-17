@@ -6376,9 +6376,36 @@
     renderSvg();
   }
 
+  // Windows mouse wheels usually report vertical movement only. When the CAD
+  // ribbon overflows, translate that movement into horizontal scrolling while
+  // preserving native Magic Mouse and trackpad horizontal gestures.
+  function bindHorizontalWheelScroll(element) {
+    if (!element || element.dataset.horizontalWheelBound === "true") return;
+    element.dataset.horizontalWheelBound = "true";
+
+    element.addEventListener("wheel", (event) => {
+      if (element.scrollWidth <= element.clientWidth + 1) return;
+      if (event.ctrlKey || event.metaKey) return;
+      if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+
+      const atStart = element.scrollLeft <= 0;
+      const atEnd = element.scrollLeft + element.clientWidth >= element.scrollWidth - 1;
+      if ((event.deltaY < 0 && atStart) || (event.deltaY > 0 && atEnd)) return;
+
+      const unit = event.deltaMode === 1
+        ? 24
+        : event.deltaMode === 2
+          ? element.clientWidth
+          : 1;
+      event.preventDefault();
+      element.scrollLeft += event.deltaY * unit;
+    }, { passive: false });
+  }
+
   // --- Event Bindings ---
   function bindEvents() {
     bindMobileWorkspace();
+    bindHorizontalWheelScroll(document.querySelector(".cad-ribbon-bar"));
 
     if (btnFloor1F) btnFloor1F.addEventListener("click", () => switchFloor("1F"));
     if (btnFloor2F) btnFloor2F.addEventListener("click", () => switchFloor("2F"));
