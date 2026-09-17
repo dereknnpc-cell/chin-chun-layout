@@ -360,26 +360,51 @@ body.theme-cad-dark .language-toggle-btn {
 }
 
 .layer-lock-btn {
-  display: inline-grid;
-  place-items: center;
-  min-width: 20px;
-  height: 20px;
+  position: relative;
+  display: inline-block;
+  min-width: 24px;
+  height: 22px;
   margin-left: 2px;
   border-radius: 4px;
   cursor: pointer;
   line-height: 1;
+  color: #059669;
 }
 
 .layer-lock-btn::before {
-  content: "🔓";
-  display: block;
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-  font-size: 14px;
-  line-height: 1;
+  content: "";
+  position: absolute;
+  left: 6px;
+  bottom: 2px;
+  width: 12px;
+  height: 9px;
+  border-radius: 2px;
+  background: currentColor;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
 }
 
-.layer-lock-btn[data-locked="true"]::before {
-  content: "🔒";
+.layer-lock-btn::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  bottom: 10px;
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  transform: translate(6px, -2px) rotate(42deg);
+  transform-origin: 1px 8px;
+  transition: transform 0.15s ease;
+}
+
+.layer-lock-btn[data-locked="true"] {
+  color: #D97706;
+}
+
+.layer-lock-btn[data-locked="true"]::after {
+  transform: none;
 }
 
 .layer-lock-btn:hover,
