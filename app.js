@@ -3998,8 +3998,15 @@
     document.querySelectorAll(".layer-lock-btn[data-lock-layer]").forEach(button => {
       const layerKey = button.getAttribute("data-lock-layer");
       const locked = isLayerLocked(layerKey);
-      button.textContent = locked ? "🔒" : "🔓";
-      button.setAttribute("title", `${locked ? "解鎖" : "鎖定"}${layerKey === "columns" ? "柱子" : layerKey === "walls" ? "牆面" : "設備"}圖層`);
+      const layerLabel = layerKey === "columns" ? "柱子" : layerKey === "walls" ? "牆面" : "設備";
+      const actionLabel = `${locked ? "解鎖" : "鎖定"}${layerLabel}圖層`;
+      // The visible icon is rendered from data-locked in CSS so it cannot be
+      // removed by DOM translation or a subsequent SVG re-render.
+      button.textContent = "";
+      button.dataset.locked = String(locked);
+      button.setAttribute("title", actionLabel);
+      button.setAttribute("aria-label", actionLabel);
+      button.setAttribute("aria-pressed", String(locked));
       button.closest(".toggle-btn")?.classList.toggle("layer-locked", locked);
     });
   }

@@ -370,6 +370,18 @@ body.theme-cad-dark .language-toggle-btn {
   line-height: 1;
 }
 
+.layer-lock-btn::before {
+  content: "🔓";
+  display: block;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.layer-lock-btn[data-locked="true"]::before {
+  content: "🔒";
+}
+
 .layer-lock-btn:hover,
 .layer-lock-btn:focus-visible {
   background: rgba(245, 158, 11, 0.18);
