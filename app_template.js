@@ -2158,10 +2158,12 @@
       return;
     }
 
-    if (typeof item.rotation === "undefined") return;
+    if (!['equipment', 'column'].includes(rec.type)) return;
 
     pushHistoryState(`旋轉物件 ${item.code || item.name || ''}`);
-    item.rotation = ((item.rotation || 0) + delta + 360) % 360;
+    const storedRotation = Number(item.rotation);
+    const currentRotation = Number.isFinite(storedRotation) ? storedRotation : 0;
+    item.rotation = ((currentRotation + delta) % 360 + 360) % 360;
     rotationAngleDisplay.textContent = `${item.rotation}°`;
     saveToLocalStorage();
     renderSvg();
