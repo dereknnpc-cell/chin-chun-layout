@@ -1,5 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
+let passwordRecovery = new URLSearchParams(location.hash.slice(1)).get("type") === "recovery";
+let authBusy = false;
+
 const SUPABASE_URL = "https://ujmgrcwtafonhttuyvzc.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_wcb1jdo-QsA4oOMcc54zzA_31I20Ocf";
 const WORKSPACE_ID = "4b6e4e34-c332-4edc-9d06-a7c380272496";
@@ -139,7 +142,7 @@ function showMessage(text, type = "info") {
 }
 
 function setBusy(isBusy) {
-  ["cloudLoginBtn", "cloudAddMemberBtn", "cloudLogoutBtn", "cloudSaveAsBtn"].forEach((id) => {
+  ["cloudLoginBtn", "cloudMagicLinkBtn", "cloudForgotPasswordBtn", "cloudSetPasswordBtn", "cloudAddMemberBtn", "cloudLogoutBtn", "cloudSaveAsBtn"].forEach((id) => {
     if (byId(id)) byId(id).disabled = isBusy;
   });
 }
@@ -183,23 +186,82 @@ function closeModal() {
   byId("cloudModal")?.setAttribute("aria-hidden", "true");
 }
 
+function authError(error) {
+  if (/rate.limit|too many/i.test(`${error.code} ${error.message}`)) return "寄送或嘗試次數已達限制，請稍後再試。已設定密碼者可直接使用密碼登入。";
+  if (error.code === "invalid_credentials") return "Email 或密碼不正確。尚未設定密碼，請使用登入連結或首次設定密碼。";
+  if (error.code === "email_not_confirmed") return "請先完成 Email 驗證，再登入。";
+  return error.message || "操作失敗，請稍後再試。";
+}
+
+async function runAuth(action) {
+  if (authBusy) return;
+  authBusy = true;
+  setBusy(true);
+  try { await action(); }
+  catch (error) { showMessage(authError(error), "error"); }
+  finally { authBusy = false; setBusy(false); }
+}
+
+function loginEmail() {
+  const input = byId("cloudEmail");
+  if (!input.reportValidity()) return null;
+  return input.value.trim().toLowerCase();
+}
+
 async function signIn(event) {
   event.preventDefault();
-  const email = (byId("cloudEmail")?.value || "").trim().toLowerCase();
+  const email = loginEmail();
   if (!email) return;
-  setBusy(true);
+  await runAuth(async () => {
+    showMessage("正在登入…");
+    const { data, error } = await supabase.auth.signInWithPassword({email, password: byId("cloudPassword").value});
+    if (error) throw error;
+    byId("cloudPassword").value = "";
+    showMessage("帳號驗證成功，正在連接雲端配置…", "success");
+    await handleSession(data.session);
+  });
+}
+
+async function sendPasswordReset() {
+  const email = loginEmail();
+  if (!email) return;
+  await runAuth(async () => {
+    showMessage("正在寄送密碼設定連結…");
+    const {error} = await supabase.auth.resetPasswordForEmail(email, {redirectTo: `${location.origin}${location.pathname}`});
+    if(error) throw error;
+    showMessage("若此 Email 已註冊，將收到密碼設定信。請開啟最新連結，回到此頁設定密碼。", "success");
+  });
+}
+
+async function savePassword(event) {
+  event.preventDefault();
+  const password=byId("cloudNewPassword").value;
+  if(password.length<12) return showMessage("密碼至少需要 12 個字元。", "error");
+  if(password!==byId("cloudConfirmPassword").value) return showMessage("兩次輸入的密碼不一致。", "error");
+  await runAuth(async () => {
+    const {error}=await supabase.auth.updateUser({password});
+    if(error) throw error;
+    byId("cloudPasswordForm").reset();
+    passwordRecovery=false;
+    const {data}=await supabase.auth.getSession();
+    await handleSession(data.session);
+    showMessage("密碼已儲存。下次可直接使用 Email 與密碼登入。", "success");
+  });
+}
+
+async function sendMagicLink(event) {
+  event.preventDefault();
+  const email = loginEmail();
+  if (!email) return;
+  await runAuth(async () => {
   showMessage("正在寄送登入連結…");
-  try {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { shouldCreateUser: true, emailRedirectTo: `${location.origin}${location.pathname}` }
     });
-    showMessage(error ? `登入連結寄送失敗：${error.message}` : "登入連結已寄出。必須完成登入，這台裝置的修改才會同步。", error ? "error" : "success");
-  } catch (error) {
-    showMessage(`目前無法連上雲端：${error.message}`, "error");
-  } finally {
-    setBusy(false);
-  }
+    if(error) throw error;
+    showMessage("登入連結已寄出。登入後可在帳號內設定密碼。", "success");
+  });
 }
 
 async function signOut() {
@@ -432,7 +494,16 @@ function subscribeToChanges() {
 
 async function handleSession(session) {
   const user = session?.user || null;
+  if (user && passwordRecovery) {
+    currentUser = user;
+    updateAccountUi();
+    openModal();
+    showMessage("請設定新密碼，完成後即可連接雲端配置。");
+    byId("cloudNewPassword")?.focus();
+    return;
+  }
   if (!user) {
+    passwordRecovery = false;
     currentUser = currentRole = currentDocumentId = null;
     currentDocumentName = "";
     currentRevision = 0;
@@ -489,6 +560,7 @@ async function handleSession(session) {
     setCloudStatus("☁ 已同步", "synced", `${currentUser.email} · ${currentDocumentName} · 版本 ${currentRevision}`);
     adapter.notify(`已登入雲端並開啟「${currentDocumentName}」`, "success");
   } catch (error) {
+    lastHandledUserId = null;
     console.warn("Cloud initialization failed:", error);
     setCloudStatus("⚠ 同步失敗", "error", error.message);
     adapter.notify(`雲端連線失敗：${error.message}`, "error");
@@ -545,6 +617,9 @@ function bindUi() {
   byId("closeCloudModalBtn")?.addEventListener("click", closeModal);
   byId("cloudModal")?.addEventListener("click", (event) => { if (event.target.id === "cloudModal") closeModal(); });
   byId("cloudLoginForm")?.addEventListener("submit", signIn);
+  byId("cloudMagicLinkBtn")?.addEventListener("click", sendMagicLink);
+  byId("cloudForgotPasswordBtn")?.addEventListener("click", sendPasswordReset);
+  byId("cloudPasswordForm")?.addEventListener("submit", savePassword);
   byId("cloudLogoutBtn")?.addEventListener("click", signOut);
   byId("cloudMemberForm")?.addEventListener("submit", addMember);
   byId("cloudSaveAsBtn")?.addEventListener("click", saveAsNewDocument);
@@ -559,9 +634,12 @@ async function init(nextAdapter) {
   bindUi();
   updateAccountUi();
   setCloudStatus("⚠ 本機模式（不會同步）", "offline", "登入後才會同步到其他裝置");
+  supabase.auth.onAuthStateChange((event, session) => {
+    if(event === "PASSWORD_RECOVERY") passwordRecovery = true;
+    setTimeout(() => handleSession(session), 0);
+  });
   const { data } = await supabase.auth.getSession();
   await handleSession(data.session);
-  supabase.auth.onAuthStateChange((_event, session) => setTimeout(() => handleSession(session), 0));
 }
 
 window.ChinChunCloud = { init, scheduleSave, flushPendingSave, saveAsNewDocument };
