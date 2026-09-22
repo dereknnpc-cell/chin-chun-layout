@@ -1,0 +1,23 @@
+.twin-dialog { border:1px solid #688b78; padding:0; width:calc(100vw - 32px); height:calc(100dvh - 32px); max-width:none; max-height:none; background:#142d2b; color:#f5eed7; border-radius:16px; box-shadow:0 30px 100px #0009; font-family:system-ui,sans-serif; }
+.twin-dialog::backdrop { background:#071a1bea; }
+.twin-shell { height:100%; display:flex; flex-direction:column; }
+.twin-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 22px; border-bottom:1px solid #78987c44; }
+.twin-eyebrow { color:#bfdba5; font-size:10px; letter-spacing:3px; margin-bottom:5px; }
+.twin-header h2 { margin:0; font-size:20px; font-weight:600; letter-spacing:1px; }
+.twin-dialog button,.twin-dialog select { font:inherit; color:#f5eed7; border:1px solid #658473; background:#29463e; border-radius:6px; padding:8px 12px; cursor:pointer; }
+.twin-dialog button:hover { background:#46624b; }
+.twin-dialog button:focus-visible,.twin-dialog select:focus-visible { outline:3px solid #ead48a; outline-offset:2px; }
+.twin-toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 22px; background:#1d3931; }
+.twin-toolbar label { display:flex; align-items:center; gap:8px; font-size:12px; }
+.twin-toolbar button { min-width:38px; }
+.twin-stage { position:relative; flex:1; min-height:100px; overflow:hidden; background:radial-gradient(ellipse at 50% 45%,#648471,#304c44 75%); }
+.twin-stage canvas { width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+.twin-stage canvas:active { cursor:grabbing; }
+.twin-plaque { position:absolute; top:18px; left:20px; pointer-events:none; color:#f5eed7; font-size:11px; letter-spacing:2px; text-shadow:0 2px 4px #142d2b; }
+.twin-info { position:absolute; right:18px; bottom:18px; width:260px; max-width:calc(100% - 36px); padding:18px; box-sizing:border-box; background:#18332eee; border:1px solid #91a981; border-radius:10px; box-shadow:5px 5px 0 #10282366; }
+.twin-info h3 { font-size:16px; margin:0 0 10px; color:#ead48a; }
+.twin-info p { font-size:12px; line-height:1.8; white-space:pre-line; margin:0 0 12px; color:#d6e0cf; }
+.twin-info button { width:100%; }
+.twin-footer { display:flex; gap:10px; justify-content:space-between; padding:10px 22px; font-size:11px; color:#c7d4bd; border-top:1px solid #78987c44; }
+.twin-dialog [hidden] { display:none!important; }
+@media(max-width:700px) { .twin-dialog { width:100vw; height:100dvh; border-radius:0; max-height:100dvh; } .twin-header { padding:12px; } .twin-header h2 { font-size:15px; } .twin-toolbar { padding:8px; gap:5px; } .twin-footer { padding:8px; font-size:10px; } .twin-info { width:220px; padding:12px; } }

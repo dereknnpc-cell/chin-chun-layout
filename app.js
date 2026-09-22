@@ -4434,6 +4434,7 @@
 
   // --- Render Full Layout SVG ---
   function renderSvg() {
+    window.ChinChunTwin?.update(layoutData, currentFloor);
     let html = `
       <defs>
         <!-- Fine Grid Pattern -->
@@ -6406,6 +6407,13 @@
 
   // --- Event Bindings ---
   function bindEvents() {
+    window.ChinChunTwin?.connect({
+      edit(id, floor) {
+        if (floor !== currentFloor) switchFloor(floor);
+        selectItem(id);
+        renderSvg();
+      }
+    });
     bindMobileWorkspace();
     bindHorizontalWheelScroll(document.querySelector(".cad-ribbon-bar"));
 
