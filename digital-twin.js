@@ -268,9 +268,9 @@
     const [a,b,c,d]=s.points;
     const center=[n(data?.grid?.factory_width,100)/2,n(data?.grid?.factory_depth,40)/2];
     const distance=p=>Math.hypot(p[0]-center[0],p[1]-center[1]);
-    // The five-metre dimension is the run of the slope; the 2.5-metre dimension is its width.
-    const firstInside=distance([(a[0]+d[0])/2,(a[1]+d[1])/2])<=distance([(b[0]+c[0])/2,(b[1]+c[1])/2]);
-    return s.points.map((p,i)=>[...p,(firstInside ? i===0 || i===3 : i===1 || i===2) ? s.z : 0]);
+    // Preserve the original RAMP-5M orientation: its rise follows the short side.
+    const firstInside=distance([(a[0]+b[0])/2,(a[1]+b[1])/2])<=distance([(c[0]+d[0])/2,(c[1]+d[1])/2]);
+    return s.points.map((p,i)=>[...p,(firstInside ? i<2 : i>=2) ? s.z : 0]);
   }
   function rampFaces(s) {
     const top=rampTopPoints(s),bottom=s.points.map(p=>[...p,0]),faces=[];
@@ -283,7 +283,7 @@
     }
     const topDepth=faceDepth(top);
     faces.push({s,points:top,color:'#dca84f',depth:topDepth});
-    const highFirst=top[0][2]>0,[highLeft,highRight,lowLeft,lowRight]=highFirst?[top[0],top[3],top[1],top[2]]:[top[1],top[2],top[0],top[3]];
+    const highFirst=top[0][2]>0,[highLeft,highRight,lowLeft,lowRight]=highFirst?[top[0],top[1],top[3],top[2]]:[top[3],top[2],top[0],top[1]];
     const lerp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
     for(const t of [.2,.4,.6,.8]){
       const stripe=[lerp(highLeft,lowLeft,t),lerp(highRight,lowRight,t),lerp(highRight,lowRight,t+.018),lerp(highLeft,lowLeft,t+.018)];
