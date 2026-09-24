@@ -4952,8 +4952,10 @@
           const displayName = f.name || "動線";
           const labelW = Math.max(70, displayName.length * 12 + 16);
           html += `
-            <rect x="${pMid.x - labelW / 2}" y="${pMid.y - 11}" width="${labelW}" height="22" rx="4" fill="var(--bg-panel)" stroke="${strokeCol}" stroke-width="1.2" fill-opacity="0.95"/>
-            <text x="${pMid.x}" y="${pMid.y}" font-size="9" font-weight="700" fill="${strokeCol}" text-anchor="middle" dominant-baseline="central">${displayName}</text>
+            <g class="cad-flow-label">
+              <rect x="${pMid.x - labelW / 2}" y="${pMid.y - 11}" width="${labelW}" height="22" rx="4" fill="var(--bg-panel)" stroke="${strokeCol}" stroke-width="1.2" fill-opacity="0.95"/>
+              <text x="${pMid.x}" y="${pMid.y}" font-size="9" font-weight="700" fill="${strokeCol}" text-anchor="middle" dominant-baseline="central">${displayName}</text>
+            </g>
           `;
         }
 
@@ -5082,6 +5084,62 @@
 
     svgEl.innerHTML = html;
     attachSvgClickListeners();
+    refreshAnnotationVisibility();
+  }
+
+  function refreshAnnotationVisibility() {
+    if (!svgEl || !viewportEl || !viewBox.width) return;
+    const matrix = svgEl.getScreenCTM();
+    const scale = matrix ? Math.hypot(matrix.a,matrix.b) : svgEl.getBoundingClientRect().width / viewBox.width;
+    const accepted = [];
+    const overlaps = (rect, group) => accepted.some(entry => entry.group !== group &&
+      rect.left < entry.rect.right + 2 && rect.right + 2 > entry.rect.left &&
+      rect.top < entry.rect.bottom + 2 && rect.bottom + 2 > entry.rect.top);
+    const place = (element, group, force=false) => {
+      element.style.visibility = '';
+      const rect = element.getBoundingClientRect();
+      if (!force && overlaps(rect, group)) {
+        element.style.visibility = 'hidden';
+        return;
+      }
+      accepted.push({rect,group});
+    };
+    const groups = Array.from(svgEl.querySelectorAll('.svg-equipment-group.svg-interactive-item')).filter(group => !group.classList.contains('svg-column-group'));
+    groups.sort((a,b) => Number(b.classList.contains('selected'))-Number(a.classList.contains('selected')) ||
+      (b.querySelector('.main-box')?.getBoundingClientRect().width || 0)-(a.querySelector('.main-box')?.getBoundingClientRect().width || 0));
+    for (const group of groups) {
+      const labels = Array.from(group.querySelectorAll('text')).filter(el => el.parentElement === group);
+      if (!labels.length) continue;
+      const selected = group.classList.contains('selected');
+      const footprint = (group.querySelector('.main-box') || group.querySelector('rect'))?.getBoundingClientRect();
+      const enoughRoom = footprint && footprint.width >= 30 && footprint.height >= 12;
+      if (selected || enoughRoom || scale >= .95 && footprint?.width >= 20) place(labels[0],group,selected);
+      else labels[0].style.visibility = 'hidden';
+      for (const label of labels.slice(1)) {
+        label.style.visibility = '';
+        const rect = label.getBoundingClientRect();
+        if (selected || scale >= .95 && footprint && rect.width <= footprint.width * 1.05 && !overlaps(rect,group)) place(label,group,selected);
+        else label.style.visibility = 'hidden';
+      }
+    }
+    for (const group of svgEl.querySelectorAll('.svg-aisle-group, .svg-flow-group')) {
+      const selected = group.classList.contains('selected');
+      const label = group.querySelector('.cad-flow-label') || Array.from(group.children).find(el => el.tagName.toLowerCase() === 'text');
+      if (!label) continue;
+      if (selected || scale >= .95) place(label,group,selected);
+      else label.style.visibility = 'hidden';
+    }
+    for (const group of svgEl.querySelectorAll('.svg-column-group')) {
+      const label = group.querySelector('.col-tag');
+      if (!label) continue;
+      const selected = group.classList.contains('selected');
+      if (selected || scale >= 1.2) place(label,group,selected);
+      else label.style.visibility = 'hidden';
+    }
+    const titleSelected = svgEl.querySelector('#layerTitleBlock')?.classList.contains('selected');
+    svgEl.querySelectorAll('#layerTitleBlock text').forEach((label,index) => {
+      label.style.visibility = titleSelected || index === 0 || scale >= .65 ? '' : 'hidden';
+    });
   }
 
   // --- Specialized Architectural Component SVG Renderer ---
@@ -6146,6 +6204,7 @@
       zoomResetBtn.textContent = `${zoomPct}%`;
       zoomResetBtn.title = `當前縮放 ${zoomPct}% · 點擊或單按 Control 鍵恢復 100% 置中`;
     }
+    refreshAnnotationVisibility();
   }
 
   function resetToCenter100() {
@@ -7378,7 +7437,10 @@
     // Export & Persistence Actions
     document.getElementById("exportDxfBtn").addEventListener("click", generateAndDownloadDxf);
     document.getElementById("exportSvgBtn").addEventListener("click", () => {
-      const blob = new Blob([svgEl.outerHTML], { type: "image/svg+xml" });
+      // Screen decluttering is temporary; the vector drawing retains every annotation.
+      const exportSvg = svgEl.cloneNode(true);
+      exportSvg.querySelectorAll('[style*="visibility"]').forEach(el => el.style.removeProperty('visibility'));
+      const blob = new Blob([exportSvg.outerHTML], { type: "image/svg+xml" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
