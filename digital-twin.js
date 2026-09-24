@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   let data, bridge, dialog, canvas, ctx, floor = '1F', scene = [], hits = [];
-  let zoom = 1, pan = { x:0, y:0 }, angle = 0, selected = null, frame = 0;
+  let zoom = 1, pan = { x:0, y:0 }, angle = 0, pitch = Math.atan(1/Math.SQRT2), selected = null, frame = 0;
   let width = 1, height = 1, baseScale = 1, bounds, labels = true;
   const baseHeight = .22;
   const pointers = new Map();
@@ -11,19 +11,20 @@
   const zh = {
     title:'廠房數位孿生', close:'返回平面圖', floor:'樓層', fit:'全覽', rotate:'旋轉視角', labels:'設備標籤',
     select:'選取物件', all:'選擇設備／柱子／牆面', empty:'點選場景中的物件，查看尺寸與位置。', edit:'在平面圖編輯',
-    note:'配置同步 · 高度為示意 · 未接入即時機台訊號', help:'拖曳巡覽 · 滾輪／雙指縮放 · Esc 返回',
+    note:'配置同步 · 高度為示意 · 未接入即時機台訊號', help:'拖曳巡覽 · 滾輪縮放 · ⌘＋橫滾旋轉、縱滾傾斜（Shift＋縱滾旋轉） · Esc 返回',
     equipment:'設備', column:'柱子', wall:'牆面', aisle:'走道', zone:'夾層區域', size:'平面尺寸', position:'座標', rotation:'角度', count:'物件',
-    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', feed:'入料（兩人端）', collect:'收料（一人端）'
+    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m'
   };
   const th = {
     title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'หมุนมุมมอง', labels:'ป้ายอุปกรณ์',
     select:'เลือกวัตถุ', all:'เลือกอุปกรณ์ / เสา / ผนัง', empty:'คลิกวัตถุเพื่อดูขนาดและตำแหน่ง', edit:'แก้ไขในแปลน',
-    note:'ใช้ข้อมูลแปลนเดียวกัน · ความสูงสมมติ · ยังไม่มีข้อมูลเครื่องจักรสด', help:'ลากเพื่อเลื่อน · ล้อเมาส์ / สองนิ้วเพื่อซูม · Esc กลับ',
+    note:'ใช้ข้อมูลแปลนเดียวกัน · ความสูงสมมติ · ยังไม่มีข้อมูลเครื่องจักรสด', help:'ลากเพื่อเลื่อน · ล้อเมาส์ซูม · ⌘ + เลื่อนแนวนอนหมุน แนวตั้งปรับมุมก้ม · Esc กลับ',
     equipment:'อุปกรณ์', column:'เสา', wall:'ผนัง', aisle:'ทางเดิน', zone:'พื้นที่ชั้นลอย', size:'ขนาดแปลน', position:'พิกัด', rotation:'มุม', count:'วัตถุ',
-    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)'
+    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.'
   };
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
   const n = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
+  const isRamp = item => /^RAMP(?:-|$)/i.test(String(item?.code || ''));
   function localize() {
     dialog.querySelectorAll('[data-twin-text]').forEach(el => { el.textContent = t(el.dataset.twinText); });
   }
@@ -41,7 +42,7 @@
     if(floor==='2F') (data.mezzanine_2f?.zones || []).forEach(item=>add(item,'zone',rect(item),.04,'#91afac'));
     (floor==='2F' ? data.equipment_2f || [] : data.equipment || []).forEach(item => {
       const category = item.category || '';
-      const z = category==='Door' ? (/ROLL/i.test(item.code || '') ? 2.7 : 2.1) : category==='Window' ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
+      const z = isRamp(item) ? 1.5 : category==='Door' ? (/ROLL/i.test(item.code || '') ? 2.7 : 2.1) : category==='Window' ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
       add(item,'equipment',rect(item),z,item.color || '#719f95');
     });
     (data.columns || []).filter(item => !item.floor || item.floor===floor).forEach(item => add(item,'column',rect(item,true),3.2,'#b7c8b9'));
@@ -66,7 +67,8 @@
   }
   function iso(x,y,z=0) {
     const a=angle*Math.PI/2,c=Math.cos(a),s=Math.sin(a),u=x*c-y*s,v=x*s+y*c;
-    return [(u-v)*.866,(u+v)*.5-z];
+    const scale=Math.sqrt(3/2),horizontal=scale/Math.SQRT2;
+    return [(u-v)*horizontal,(u+v)*horizontal*Math.sin(pitch)-z*scale*Math.cos(pitch)];
   }
   function project(p,z=0) {
     const b=viewBounds(),v=iso(p[0],p[1],z), center=iso((b.x0+b.x1)/2,(b.y0+b.y1)/2,detail?1.3:0);
@@ -88,7 +90,8 @@
   }
   function viewDepth(p) {
     const a=angle*Math.PI/2,c=Math.cos(a),sn=Math.sin(a);
-    return p[0]*(c+sn)+p[1]*(c-sn)+p[2];
+    const u=p[0]*c-p[1]*sn,v=p[0]*sn+p[1]*c;
+    return (u+v)*Math.cos(pitch)/Math.SQRT2+p[2]*Math.sin(pitch);
   }
   function faceDepth(points) { return points.reduce((sum,p)=>sum+viewDepth(p),0)/points.length; }
   function drawFace(f) {
@@ -213,11 +216,38 @@
     faces.push({s,points:top,color:shade(s.color,28),depth:faceDepth(top)});
     return faces;
   }
+  function rampTopPoints(s) {
+    const [a,b,c,d]=s.points;
+    const center=[n(data?.grid?.factory_width,100)/2,n(data?.grid?.factory_depth,40)/2];
+    const distance=p=>Math.hypot(p[0]-center[0],p[1]-center[1]);
+    const firstInside=distance([(a[0]+b[0])/2,(a[1]+b[1])/2])<=distance([(c[0]+d[0])/2,(c[1]+d[1])/2]);
+    return s.points.map((p,i)=>[...p,(firstInside ? i<2 : i>=2) ? s.z : 0]);
+  }
+  function rampFaces(s) {
+    const top=rampTopPoints(s),bottom=s.points.map(p=>[...p,0]),faces=[];
+    for(let i=0;i<4;i++){
+      const j=(i+1)%4;
+      if(top[i][2]===0 && top[j][2]===0)continue;
+      if(project(s.points[j],top[j][2])[0]>=project(s.points[i],top[i][2])[0])continue;
+      const points=[bottom[i],bottom[j],top[j],top[i]];
+      faces.push({s,points,color:shade(s.color,i%2?-55:-30),depth:faceDepth(points)});
+    }
+    const topDepth=faceDepth(top);
+    faces.push({s,points:top,color:'#dca84f',depth:topDepth});
+    const highFirst=top[0][2]>0,[highLeft,highRight,lowLeft,lowRight]=highFirst?[top[0],top[1],top[3],top[2]]:[top[3],top[2],top[0],top[1]];
+    const lerp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+    for(const t of [.2,.4,.6,.8]){
+      const stripe=[lerp(highLeft,lowLeft,t),lerp(highRight,lowRight,t),lerp(highRight,lowRight,t+.018),lerp(highLeft,lowLeft,t+.018)];
+      faces.push({s,points:stripe,color:'#f8ddb1',stroke:'#f8ddb1',depth:topDepth+.03+t*.001});
+    }
+    return faces;
+  }
   function objectFaces(s) {
     if(s.model)return s.model.map(f=>({s,points:f.points,color:f.color,model:true,depth:faceDepth(f.points)}));
     if(s.type==='wall')return wallFaces(s);
     if(s.type==='column')return columnFaces(s);
     if(s.item.category==='Door')return doorFaces(s);
+    if(isRamp(s.item))return rampFaces(s);
     const hasBase=s.type==='equipment' && !/Window|Furniture|Office/.test(s.item.category || '');
     const bottom=s.points.map(p=>[...p,hasBase ? baseHeight : 0]),top=s.points.map(p=>[...p,s.z]);
     const faces=hasBase?equipmentBaseFaces(s):[];
@@ -274,7 +304,7 @@
       hits.push({path,s});
     });
     // Machine roofs are uninterrupted surfaces; redraw only their tops above columns.
-    solids.filter(s=>s.type==='equipment' && !s.model && s.item.category!=='Door').forEach(s=>{
+    solids.filter(s=>s.type==='equipment' && !s.model && s.item.category!=='Door' && !isRamp(s.item)).forEach(s=>{
       const top=s.points.map(p=>project(p,s.z));
       hits.push({path:polygon(top,shade(s.color,25),'#42574c'),s});
       const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
@@ -284,12 +314,20 @@
     solids.forEach(s=>{
       if(s.model){drawModelAnnotations(s);return;}
       if(s.type==='equipment'){
-        const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,s.z+.1);
+        const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,isRamp(s.item)?s.z/2+.12:s.z+.1);
         ctx.fillStyle='#e4e5b3';ctx.fillRect(p[0]-2,p[1]-2,4,4);
         if((labels && baseScale*zoom>6)||s===selected){ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#243f36';ctx.strokeText(s.item.code || s.item.name || '',p[0],p[1]-10);ctx.fillStyle='#fff8df';ctx.fillText(s.item.code || s.item.name || '',p[0],p[1]-10);}
+        if(isRamp(s.item) && detail){
+          const top=rampTopPoints(s),high=top.filter(q=>q[2]>0),low=top.filter(q=>q[2]===0);
+          [[high,'rampInside'],[low,'rampOutside']].forEach(([edge,key])=>{
+            const q=project([(edge[0][0]+edge[1][0])/2,(edge[0][1]+edge[1][1])/2],edge[0][2]+.2);
+            ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#3e392b';ctx.strokeText(t(key),q[0],q[1]);ctx.fillStyle='#fff1c8';ctx.fillText(t(key),q[0],q[1]);
+          });
+        }
       }
       if(s===selected){
-        const outline=new Path2D();s.points.forEach((p,i)=>i?outline.lineTo(...project(p,s.z)):outline.moveTo(...project(p,s.z)));outline.closePath();
+        const outline=new Path2D(),outlinePoints=isRamp(s.item)?rampTopPoints(s):s.points.map(p=>[...p,s.z]);
+        outlinePoints.forEach((p,i)=>i?outline.lineTo(...project(p,p[2])):outline.moveTo(...project(p,p[2])));outline.closePath();
         ctx.strokeStyle='#fff1a1';ctx.lineWidth=3;ctx.stroke(outline);
       }
     });
@@ -302,6 +340,7 @@
     dialog.querySelector('#twinEdit').hidden=!s;
     dialog.querySelector('#twinFocus').hidden=!s;
     if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t('photo');
+    if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
     dialog.querySelector('#twinObjects').value=item?.id || '';
   }
   function fit(){zoom=detail?1.5:1;pan={x:0,y:0};requestDraw();}
@@ -326,7 +365,21 @@
     dialog.querySelector('#twinLabels').onchange=e=>{labels=e.target.checked;requestDraw();};
     dialog.querySelector('#twinObjects').onchange=e=>{selected=scene.find(s=>s.item.id===e.target.value)||null;if(!selected)detail=false;updateInfo();if(detail)fit();else requestDraw();};
     dialog.querySelector('#twinEdit').onclick=()=>{if(selected){const id=selected.item.id;dialog.close();bridge?.edit(id,floor);}};
-    canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.001),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+    canvas.addEventListener('wheel',e=>{
+      e.preventDefault();
+      const unit=e.deltaMode===1?16:e.deltaMode===2?height:1;
+      let dx=e.deltaX*unit,dy=e.deltaY*unit;
+      if(e.metaKey){
+        // Trackpad/Magic Mouse: horizontal orbit, vertical tilt. Shift+wheel orbits on a regular mouse.
+        if(e.shiftKey && Math.abs(dx)<.01){dx=dy;dy=0;}
+        angle=((angle+dx*.0035)%4+4)%4;
+        pitch=Math.max(Math.PI/10,Math.min(Math.PI*7/18,pitch+dy*.0025));
+        requestDraw();
+      } else {
+        const r=canvas.getBoundingClientRect();
+        zoomAt(Math.exp(-dy*.001),e.clientX-r.left,e.clientY-r.top);
+      }
+    },{passive:false});
     canvas.onpointerdown=e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});gesture={x:e.clientX,y:e.clientY,moved:false};};
     canvas.onpointermove=e=>{
       const old=pointers.get(e.pointerId);if(!old || !gesture)return;
