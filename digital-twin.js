@@ -303,6 +303,55 @@
     faces.push({s,points,color:shade(color,18),depth:faceDepth(points)});
     return faces;
   }
+  function equipmentFaces(s) {
+    const hasBase=!/Window|Furniture|Office/.test(s.item.category || '');
+    const faces=hasBase?equipmentBaseFaces(s):[];
+    const [a,b,,d]=s.points;
+    const along=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    const across=Math.hypot(d[0]-a[0],d[1]-a[1]);
+    const axisBreaks=length=>{
+      const breaks=[0];
+      for(const [start,end] of [[0,.175],[.175,.825],[.825,1]]){
+        const count=Math.max(1,Math.ceil(length*(end-start)/1.5));
+        for(let i=1;i<=count;i++)breaks.push(start+(end-start)*i/count);
+      }
+      return breaks;
+    };
+    const uBreaks=axisBreaks(along),vBreaks=axisBreaks(across);
+    const point=(u,v,z)=>[
+      a[0]+(b[0]-a[0])*u+(d[0]-a[0])*v,
+      a[1]+(b[1]-a[1])*u+(d[1]-a[1])*v,z
+    ];
+    // Small faces let nearby columns and walls pass in front of or behind a long machine.
+    // Repainting one complete roof after sorting incorrectly hides every intervening column.
+    const surface=(u0,u1,v0,v1,z,color)=>{
+      const points=[point(u0,v0,z),point(u1,v0,z),point(u1,v1,z),point(u0,v1,z)];
+      faces.push({s,points,color,stroke:color,depth:faceDepth(points)});
+    };
+    for(let row=0;row<vBreaks.length-1;row++)for(let column=0;column<uBreaks.length-1;column++){
+      const u0=uBreaks[column],u1=uBreaks[column+1],v0=vBreaks[row],v1=vBreaks[row+1];
+      const inset=u0>=.175-1e-9 && u1<=.825+1e-9 && v0>=.175-1e-9 && v1<=.825+1e-9;
+      surface(u0,u1,v0,v1,s.z+(inset?.03:0),shade(s.color,inset?-14:25));
+    }
+    for(let edge=0;edge<4;edge++){
+      const next=(edge+1)%4;
+      if(project(s.points[next],s.z)[0]>=project(s.points[edge],s.z)[0])continue;
+      const length=Math.hypot(s.points[next][0]-s.points[edge][0],s.points[next][1]-s.points[edge][1]);
+      const count=Math.max(1,Math.ceil(length/1.5));
+      const bottom=hasBase?baseHeight:0;
+      const edgePoint=(t,z)=>[
+        s.points[edge][0]*(1-t)+s.points[next][0]*t,
+        s.points[edge][1]*(1-t)+s.points[next][1]*t,z
+      ];
+      for(let i=0;i<count;i++){
+        const start=i/count,end=(i+1)/count;
+        const points=[edgePoint(start,bottom),edgePoint(end,bottom),edgePoint(end,s.z),edgePoint(start,s.z)];
+        const color=shade(s.color,edge%2?-45:-25);
+        faces.push({s,points,color,stroke:color,depth:faceDepth(points)});
+      }
+    }
+    return faces;
+  }
   function officeEntrance(s) {
     const xs=s.points.map(p=>p[0]),ys=s.points.map(p=>p[1]);
     const horizontal=Math.max(...xs)-Math.min(...xs)>=Math.max(...ys)-Math.min(...ys);
@@ -355,23 +404,8 @@
     if(s.type==='column')return lift(columnFaces(s));
     if(s.item.category==='Door')return lift(doorFaces(s));
     if(isRamp(s.item))return rampFaces(s);
-    const hasBase=s.type==='equipment' && !/Window|Furniture|Office/.test(s.item.category || '');
-    const bottom=s.points.map(p=>[...p,hasBase ? baseHeight : 0]),top=s.points.map(p=>[...p,s.z]);
-    const faces=hasBase?equipmentBaseFaces(s):[];
-    for(let i=0;i<4;i++){const j=(i+1)%4;
-      // Only camera-facing sides are visible; sort each side independently of other objects.
-      if(project(s.points[j],s.z)[0]<project(s.points[i],s.z)[0]){
-        const points=[bottom[i],bottom[j],top[j],top[i]];
-        faces.push({s,points,color:shade(s.color,i%2?-45:-25),depth:faceDepth(points)});
-      }
-    }
-    faces.push({s,points:top,color:shade(s.color,25),depth:faceDepth(top)});
-    if(s.type==='equipment'){
-      const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
-      const points=s.points.map(p=>[center[0]+(p[0]-center[0])*.65,center[1]+(p[1]-center[1])*.65,s.z+.03]);
-      faces.push({s,points,color:shade(s.color,-14),depth:faceDepth(points)});
-    }
-    return lift(faces);
+    if(s.type==='equipment')return lift(equipmentFaces(s));
+    return [];
   }
   function draw() {
     frame=0;if(!dialog?.open || !bounds)return;
@@ -418,23 +452,6 @@
     solids.filter(s=>s.type==='equipment' || s.type==='wall').forEach(drawGroundContact);
     // Painter order must be per face: a whole long machine can straddle a column.
     [...solids.flatMap(objectFaces),...siteFaces()].sort((a,b)=>a.depth-b.depth).forEach(drawFace);
-    // Continuous wall crowns prevent gaps where independently sorted wall sections meet.
-    solids.filter(s=>s.type==='wall').forEach(s=>{
-      const path=polygon(s.points.map(p=>project(p,elevation(s)+s.z)),shade(s.color,25),'#f1e6ca');
-      hits.push({path,s});
-    });
-    solids.filter(s=>s.type==='column').forEach(s=>{
-      const path=polygon(s.points.map(p=>project(p,elevation(s)+s.z)),shade(s.color,25),'#42574c');
-      hits.push({path,s});
-    });
-    // Machine roofs are uninterrupted surfaces; redraw only their tops above columns.
-    solids.filter(s=>s.type==='equipment' && !s.model && s.item.category!=='Door' && !isRamp(s.item)).forEach(s=>{
-      const top=s.points.map(p=>project(p,elevation(s)+s.z));
-      hits.push({path:polygon(top,shade(s.color,25),'#42574c'),s});
-      const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
-      const inset=s.points.map(p=>[center[0]+(p[0]-center[0])*.65,center[1]+(p[1]-center[1])*.65]);
-      polygon(inset.map(p=>project(p,elevation(s)+s.z+.03)),shade(s.color,-14),shade(s.color,-35));
-    });
     drawOfficeFacade();
     solids.forEach(s=>{
       if(s.model){drawModelAnnotations(s);return;}
