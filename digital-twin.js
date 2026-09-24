@@ -4,6 +4,7 @@
   let data, bridge, dialog, canvas, ctx, floor = '1F', scene = [], hits = [];
   let zoom = 1, pan = { x:0, y:0 }, angle = 0, selected = null, frame = 0;
   let width = 1, height = 1, baseScale = 1, bounds, labels = true;
+  const baseHeight = .22;
   const pointers = new Map();
   let gesture = null;
   let detail = false;
@@ -40,7 +41,7 @@
     if(floor==='2F') (data.mezzanine_2f?.zones || []).forEach(item=>add(item,'zone',rect(item),.04,'#91afac'));
     (floor==='2F' ? data.equipment_2f || [] : data.equipment || []).forEach(item => {
       const category = item.category || '';
-      const z = /Door|Window/.test(category) ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
+      const z = category==='Door' ? (/ROLL/i.test(item.code || '') ? 2.7 : 2.1) : category==='Window' ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
       add(item,'equipment',rect(item),z,item.color || '#719f95');
     });
     (data.columns || []).filter(item => !item.floor || item.floor===floor).forEach(item => add(item,'column',rect(item,true),3.2,'#b7c8b9'));
@@ -48,7 +49,7 @@
       const dx=n(item.x2)-n(item.x1), dy=n(item.y2)-n(item.y1), len=Math.hypot(dx,dy);
       if (len<.001) return;
       const a=dy/len*n(item.thickness,.2)/2,b=-dx/len*n(item.thickness,.2)/2;
-      add(item,'wall',[[n(item.x1)+a,n(item.y1)+b],[n(item.x2)+a,n(item.y2)+b],[n(item.x2)-a,n(item.y2)-b],[n(item.x1)-a,n(item.y1)-b]],1.2,'#ddd4b9');
+      add(item,'wall',[[n(item.x1)+a,n(item.y1)+b],[n(item.x2)+a,n(item.y2)+b],[n(item.x2)-a,n(item.y2)-b],[n(item.x1)-a,n(item.y1)-b]],item.type==='exterior'?2.8:2.4,'#ddd4b9');
     });
     (data.aisles || []).filter(item => (item.floor || '1F')===floor).forEach(item=>add(item,'aisle',rect(item),.02,'#b7bd85'));
     const points=scene.flatMap(s=>s.points);
@@ -99,7 +100,7 @@
       color=shade(color,Math.round(light*32)-8);
     }
     // Segmented walls need seamless joints; their selection outline is drawn once below.
-    const stroke=f.s.type==='wall' ? f.stroke : f.s===selected?'#fff5ac':f.stroke || '#42574c';
+    const stroke=f.stroke || (f.s===selected?'#fff5ac':'#42574c');
     hits.push({path:polygon(f.points.map(p=>project(p,p[2])),color,stroke),s:f.s});
   }
   function drawModelAnnotations(s) {
@@ -133,7 +134,8 @@
     const lerp=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
     const faces=[];
     for(let k=0;k<count;k++){
-      const start=k/count,end=(k+1)/count;
+      // A tiny overlap prevents antialiased seams from showing as holes.
+      const start=Math.max(0,(k-.015)/count),end=Math.min(1,(k+1+.015)/count);
       const footprint=[lerp(a,b,start),lerp(a,b,end),lerp(d,c,end),lerp(d,c,start)];
       const bottom=footprint.map(p=>[...p,0]),top=footprint.map(p=>[...p,s.z]);
       for(let i=0;i<4;i++){
@@ -148,11 +150,77 @@
     }
     return faces;
   }
+  function columnFaces(s) {
+    const faces=[],bands=[0,.8,1.6,2.4,s.z];
+    for(let band=0;band<bands.length-1;band++){
+      for(let i=0;i<4;i++){
+        const j=(i+1)%4;
+        if(project(s.points[j],s.z)[0]>=project(s.points[i],s.z)[0])continue;
+        const points=[[...s.points[i],bands[band]],[...s.points[j],bands[band]],[...s.points[j],bands[band+1]],[...s.points[i],bands[band+1]]];
+        const color=shade(s.color,i%2?-45:-25);
+        faces.push({s,points,color,stroke:color,depth:faceDepth(points)});
+      }
+    }
+    const points=s.points.map(p=>[...p,s.z]);
+    faces.push({s,points,color:shade(s.color,25),depth:faceDepth(points)});
+    return faces;
+  }
+  function equipmentBaseFaces(s) {
+    const [a,b,,d]=s.points,along=[b[0]-a[0],b[1]-a[1]],across=[d[0]-a[0],d[1]-a[1]];
+    const al=Math.hypot(...along)||1,bl=Math.hypot(...across)||1;
+    const u=along.map(v=>v/al*.14),v=across.map(n=>n/bl*.14);
+    const signs=[[-1,-1],[1,-1],[1,1],[-1,1]];
+    const footprint=s.points.map((p,i)=>[p[0]+signs[i][0]*u[0]+signs[i][1]*v[0],p[1]+signs[i][0]*u[1]+signs[i][1]*v[1]]);
+    const bottom=footprint.map(p=>[...p,0]),top=footprint.map(p=>[...p,baseHeight]),faces=[];
+    for(let i=0;i<4;i++){
+      const j=(i+1)%4;
+      if(project(footprint[j],baseHeight)[0]>=project(footprint[i],baseHeight)[0])continue;
+      const points=[bottom[i],bottom[j],top[j],top[i]];
+      const color=shade(s.color,-80);
+      faces.push({s,points,color,stroke:color,depth:faceDepth(points)});
+    }
+    const color=shade(s.color,-58);
+    faces.push({s,points:top,color,stroke:color,depth:faceDepth(top)});
+    return faces;
+  }
+  function doorFaces(s) {
+    const roll=/ROLL/i.test(s.item.code || ''),bottom=s.points.map(p=>[...p,0]),top=s.points.map(p=>[...p,s.z]),faces=[];
+    for(let i=0;i<4;i++){
+      const j=(i+1)%4;
+      if(project(s.points[j],s.z)[0]>=project(s.points[i],s.z)[0])continue;
+      const points=[bottom[i],bottom[j],top[j],top[i]];
+      faces.push({s,points,color:shade(s.color,roll?10:-10),depth:faceDepth(points)});
+      if(i!==0 && i!==2)continue;
+      const edge=(t,z)=>[s.points[i][0]*(1-t)+s.points[j][0]*t,s.points[i][1]*(1-t)+s.points[j][1]*t,z];
+      const panel=[edge(.06,.1),edge(.94,.1),edge(.94,s.z-.1),edge(.06,s.z-.1)];
+      const panelColor=roll?'#94a3b8':'#b7793e';
+      const panelDepth=faceDepth(panel)+.02;
+      faces.push({s,points:panel,color:panelColor,stroke:panelColor,depth:panelDepth});
+      if(roll){
+        for(let z=.35;z<s.z-.1;z+=.31){
+          const slat=[edge(.07,z),edge(.93,z),edge(.93,z+.045),edge(.07,z+.045)];
+          faces.push({s,points:slat,color:'#526477',stroke:'#526477',depth:panelDepth+.04+z*.001});
+        }
+      } else {
+        [[.3,.85],[1.22,1.88]].forEach(([low,high])=>{
+          const inset=[edge(.17,low),edge(.83,low),edge(.83,high),edge(.17,high)];
+          faces.push({s,points:inset,color:'#8f562d',stroke:'#8f562d',depth:panelDepth+.04+low*.001});
+        });
+        const knob=[edge(.76,.98),edge(.82,.98),edge(.82,1.05),edge(.76,1.05)];
+        faces.push({s,points:knob,color:'#f5d373',stroke:'#f5d373',depth:panelDepth+.06});
+      }
+    }
+    faces.push({s,points:top,color:shade(s.color,28),depth:faceDepth(top)});
+    return faces;
+  }
   function objectFaces(s) {
     if(s.model)return s.model.map(f=>({s,points:f.points,color:f.color,model:true,depth:faceDepth(f.points)}));
     if(s.type==='wall')return wallFaces(s);
-    const bottom=s.points.map(p=>[...p,0]),top=s.points.map(p=>[...p,s.z]);
-    const faces=[];
+    if(s.type==='column')return columnFaces(s);
+    if(s.item.category==='Door')return doorFaces(s);
+    const hasBase=s.type==='equipment' && !/Window|Furniture|Office/.test(s.item.category || '');
+    const bottom=s.points.map(p=>[...p,hasBase ? baseHeight : 0]),top=s.points.map(p=>[...p,s.z]);
+    const faces=hasBase?equipmentBaseFaces(s):[];
     for(let i=0;i<4;i++){const j=(i+1)%4;
       // Only camera-facing sides are visible; sort each side independently of other objects.
       if(project(s.points[j],s.z)[0]<project(s.points[i],s.z)[0]){
@@ -196,6 +264,23 @@
     solids.filter(s=>s.type==='equipment' || s.type==='wall').forEach(drawGroundContact);
     // Painter order must be per face: a whole long machine can straddle a column.
     solids.flatMap(objectFaces).sort((a,b)=>a.depth-b.depth).forEach(drawFace);
+    // Continuous wall crowns prevent gaps where independently sorted wall sections meet.
+    solids.filter(s=>s.type==='wall').forEach(s=>{
+      const path=polygon(s.points.map(p=>project(p,s.z)),shade(s.color,25),'#f1e6ca');
+      hits.push({path,s});
+    });
+    solids.filter(s=>s.type==='column').forEach(s=>{
+      const path=polygon(s.points.map(p=>project(p,s.z)),shade(s.color,25),'#42574c');
+      hits.push({path,s});
+    });
+    // Machine roofs are uninterrupted surfaces; redraw only their tops above columns.
+    solids.filter(s=>s.type==='equipment' && !s.model && s.item.category!=='Door').forEach(s=>{
+      const top=s.points.map(p=>project(p,s.z));
+      hits.push({path:polygon(top,shade(s.color,25),'#42574c'),s});
+      const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
+      const inset=s.points.map(p=>[center[0]+(p[0]-center[0])*.65,center[1]+(p[1]-center[1])*.65]);
+      polygon(inset.map(p=>project(p,s.z+.03)),shade(s.color,-14),shade(s.color,-35));
+    });
     solids.forEach(s=>{
       if(s.model){drawModelAnnotations(s);return;}
       if(s.type==='equipment'){
