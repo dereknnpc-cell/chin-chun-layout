@@ -5,26 +5,29 @@
   let zoom = 1, pan = { x:0, y:0 }, angle = 0, pitch = Math.atan(1/Math.SQRT2), selected = null, frame = 0;
   let width = 1, height = 1, baseScale = 1, bounds, labels = true;
   const baseHeight = .22;
+  const factoryRise = 1.5;
   const pointers = new Map();
   let gesture = null;
   let detail = false;
   const zh = {
     title:'廠房數位孿生', close:'返回平面圖', floor:'樓層', fit:'全覽', rotate:'旋轉視角', labels:'設備標籤',
     select:'選取物件', all:'選擇設備／柱子／牆面', empty:'點選場景中的物件，查看尺寸與位置。', edit:'在平面圖編輯',
-    note:'配置同步 · 高度為示意 · 未接入即時機台訊號', help:'拖曳巡覽 · 滾輪縮放 · ⌘＋橫滾旋轉、縱滾傾斜（Shift＋縱滾旋轉） · Esc 返回',
+    note:'配置同步 · 廠內外高差約 1.5 m；台階與月台細節為照片示意 · 未接入即時機台訊號', help:'拖曳巡覽 · 滾輪縮放 · ⌘＋橫滾旋轉、縱滾傾斜（Shift＋縱滾旋轉） · Esc 返回',
     equipment:'設備', column:'柱子', wall:'牆面', aisle:'走道', zone:'夾層區域', size:'平面尺寸', position:'座標', rotation:'角度', count:'物件',
-    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m'
+    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'南側入口台階為照片示意；實際階高待量測。', dockSite:'西側上貨月台與旁側斜坡依照片示意；廠內高於外側約 1.5 m。'
   };
   const th = {
     title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'หมุนมุมมอง', labels:'ป้ายอุปกรณ์',
     select:'เลือกวัตถุ', all:'เลือกอุปกรณ์ / เสา / ผนัง', empty:'คลิกวัตถุเพื่อดูขนาดและตำแหน่ง', edit:'แก้ไขในแปลน',
-    note:'ใช้ข้อมูลแปลนเดียวกัน · ความสูงสมมติ · ยังไม่มีข้อมูลเครื่องจักรสด', help:'ลากเพื่อเลื่อน · ล้อเมาส์ซูม · ⌘ + เลื่อนแนวนอนหมุน แนวตั้งปรับมุมก้ม · Esc กลับ',
+    note:'ใช้ข้อมูลแปลนเดียวกัน · พื้นโรงงานสูงกว่าภายนอกประมาณ 1.5 ม.; ขั้นบันไดและท่าโหลดอ้างอิงภาพ · ยังไม่มีข้อมูลเครื่องจักรสด', help:'ลากเพื่อเลื่อน · ล้อเมาส์ซูม · ⌘ + เลื่อนแนวนอนหมุน แนวตั้งปรับมุมก้ม · Esc กลับ',
     equipment:'อุปกรณ์', column:'เสา', wall:'ผนัง', aisle:'ทางเดิน', zone:'พื้นที่ชั้นลอย', size:'ขนาดแปลน', position:'พิกัด', rotation:'มุม', count:'วัตถุ',
-    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.'
+    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นบันไดทางเข้าด้านใต้เป็นภาพจำลองจากรูปถ่าย; ต้องวัดความสูงจริง', dockSite:'ท่าโหลดฝั่งตะวันตกและทางลาดข้างเคียงจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
   };
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
   const n = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
   const isRamp = item => /^RAMP(?:-|$)/i.test(String(item?.code || ''));
+  const inFactory = p => p[0]>=0 && p[0]<=n(data?.grid?.factory_width,100) && p[1]>=0 && p[1]<=n(data?.grid?.factory_depth,40);
+  const elevation = s => floor==='1F' && !isRamp(s.item) && inFactory(s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0])) ? factoryRise : 0;
   function localize() {
     dialog.querySelectorAll('[data-twin-text]').forEach(el => { el.textContent = t(el.dataset.twinText); });
   }
@@ -42,15 +45,36 @@
     if(floor==='2F') (data.mezzanine_2f?.zones || []).forEach(item=>add(item,'zone',rect(item),.04,'#91afac'));
     (floor==='2F' ? data.equipment_2f || [] : data.equipment || []).forEach(item => {
       const category = item.category || '';
-      const z = isRamp(item) ? 1.5 : category==='Door' ? (/ROLL/i.test(item.code || '') ? 2.7 : 2.1) : category==='Window' ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
-      add(item,'equipment',rect(item),z,item.color || '#719f95');
+      const z = isRamp(item) ? factoryRise : item.id==='eq_office' ? 2.8 : category==='Door' ? (/ROLL/i.test(item.code || '') ? 2.7 : 2.1) : category==='Window' ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
+      const points=rect(item);
+      if(floor==='1F' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1){
+        const center=points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
+        points.forEach(p=>{p[0]-=center[0];});
+      }
+      add(item,'equipment',points,z,item.color || '#719f95');
     });
     (data.columns || []).filter(item => !item.floor || item.floor===floor).forEach(item => add(item,'column',rect(item,true),3.2,'#b7c8b9'));
     (data.walls || []).filter(item => (item.floor || '1F')===floor).forEach(item => {
       const dx=n(item.x2)-n(item.x1), dy=n(item.y2)-n(item.y1), len=Math.hypot(dx,dy);
       if (len<.001) return;
       const a=dy/len*n(item.thickness,.2)/2,b=-dx/len*n(item.thickness,.2)/2;
-      add(item,'wall',[[n(item.x1)+a,n(item.y1)+b],[n(item.x2)+a,n(item.y2)+b],[n(item.x2)-a,n(item.y2)-b],[n(item.x1)-a,n(item.y1)-b]],item.type==='exterior'?2.8:2.4,'#ddd4b9');
+      let segments=[[0,1]];
+      // A loading shutter must be an opening in the west wall, not painted over a solid wall.
+      if(floor==='1F' && Math.abs(n(item.x1))<.35 && Math.abs(n(item.x2))<.35){
+        const shutters=(data.equipment || []).filter(q=>q.category==='Door' && /ROLL/i.test(q.code || '') && Math.abs(n(q.x))<1);
+        const cuts=shutters.flatMap(q=>{
+          const ys=rect(q).map(p=>p[1]),lo=Math.min(...ys),hi=Math.max(...ys);
+          return [[(lo-n(item.y1))/dy,(hi-n(item.y1))/dy],[(lo-3-n(item.y1))/dy,(lo-.5-n(item.y1))/dy]];
+        }).filter(([lo,hi])=>hi>0 && lo<1).sort((l,r)=>l[0]-r[0]);
+        for(const [lo,hi] of cuts)segments=segments.flatMap(([a,b])=>{
+          const start=Math.max(a,lo),end=Math.min(b,hi);
+          return end<=start?[[a,b]]:[...(a<start?[[a,start]]:[]),...(end<b?[[end,b]]:[])];
+        });
+      }
+      segments.forEach(([start,end],index)=>{
+        const p=(t,side)=>[n(item.x1)+dx*t+a*side,n(item.y1)+dy*t+b*side];
+        add(index?{...item,id:`${item.id}_part_${index}`}:item,'wall',[p(start,1),p(end,1),p(end,-1),p(start,-1)],item.type==='exterior'?2.8:2.4,'#ddd4b9');
+      });
     });
     (data.aisles || []).filter(item => (item.floor || '1F')===floor).forEach(item=>add(item,'aisle',rect(item),.02,'#b7bd85'));
     const points=scene.flatMap(s=>s.points);
@@ -85,8 +109,10 @@
   function requestDraw() { if(dialog?.open && !frame) frame=requestAnimationFrame(draw); }
   function viewBounds() {
     if(!detail || !selected)return bounds;
-    return {x0:Math.min(...selected.points.map(p=>p[0]))-1,y0:Math.min(...selected.points.map(p=>p[1]))-1,
-      x1:Math.max(...selected.points.map(p=>p[0]))+1,y1:Math.max(...selected.points.map(p=>p[1]))+1};
+    const xs=selected.points.map(p=>p[0]),ys=selected.points.map(p=>p[1]);
+    if(selected.item.id==='eq_office')ys.push(n(selected.item.y)+n(selected.item.height)+2.6);
+    if(selected.item.category==='Door' && /ROLL/i.test(selected.item.code || '') && Math.abs(n(selected.item.x))<1){xs.push(-5);ys.push(Math.min(...ys)-3);}
+    return {x0:Math.min(...xs)-1,y0:Math.min(...ys)-1,x1:Math.max(...xs)+1,y1:Math.max(...ys)+1};
   }
   function viewDepth(p) {
     const a=angle*Math.PI/2,c=Math.cos(a),sn=Math.sin(a);
@@ -107,12 +133,13 @@
     hits.push({path:polygon(f.points.map(p=>project(p,p[2])),color,stroke),s:f.s});
   }
   function drawModelAnnotations(s) {
-    if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,.02)):path.moveTo(...project(p,.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
-    if(labels || s===selected){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,2.7);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
+    const z=elevation(s);
+    if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,z+.02)):path.moveTo(...project(p,z+.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
+    if(labels || s===selected){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,z+2.7);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
     if(detail){
       // Labels follow local CAD ends through both equipment and camera rotation.
       [[0,3,'collect'],[1,2,'feed']].forEach(([i,j,key])=>{
-        const p=project([(s.points[i][0]+s.points[j][0])/2,(s.points[i][1]+s.points[j][1])/2],1.55);
+        const p=project([(s.points[i][0]+s.points[j][0])/2,(s.points[i][1]+s.points[j][1])/2],z+1.55);
         ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#18332e';ctx.strokeText(t(key),p[0],p[1]);ctx.fillStyle='#fff5d7';ctx.fillText(t(key),p[0],p[1]);
       });
     }
@@ -128,7 +155,7 @@
       const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
       contact=s.points.map(p=>[center[0]+(p[0]-center[0])*1.035,center[1]+(p[1]-center[1])*1.035]);
     }
-    const path=new Path2D();contact.forEach((p,i)=>i?path.lineTo(...project(p,.012)):path.moveTo(...project(p,.012)));path.closePath();
+    const path=new Path2D();contact.forEach((p,i)=>i?path.lineTo(...project(p,elevation(s)+.012)):path.moveTo(...project(p,elevation(s)+.012)));path.closePath();
     ctx.fillStyle='#263a35';ctx.globalAlpha=.35;ctx.fill(path);ctx.globalAlpha=1;
   }
   function wallFaces(s) {
@@ -220,8 +247,9 @@
     const [a,b,c,d]=s.points;
     const center=[n(data?.grid?.factory_width,100)/2,n(data?.grid?.factory_depth,40)/2];
     const distance=p=>Math.hypot(p[0]-center[0],p[1]-center[1]);
-    const firstInside=distance([(a[0]+b[0])/2,(a[1]+b[1])/2])<=distance([(c[0]+d[0])/2,(c[1]+d[1])/2]);
-    return s.points.map((p,i)=>[...p,(firstInside ? i<2 : i>=2) ? s.z : 0]);
+    // The five-metre dimension is the run of the slope; the 2.5-metre dimension is its width.
+    const firstInside=distance([(a[0]+d[0])/2,(a[1]+d[1])/2])<=distance([(b[0]+c[0])/2,(b[1]+c[1])/2]);
+    return s.points.map((p,i)=>[...p,(firstInside ? i===0 || i===3 : i===1 || i===2) ? s.z : 0]);
   }
   function rampFaces(s) {
     const top=rampTopPoints(s),bottom=s.points.map(p=>[...p,0]),faces=[];
@@ -234,7 +262,7 @@
     }
     const topDepth=faceDepth(top);
     faces.push({s,points:top,color:'#dca84f',depth:topDepth});
-    const highFirst=top[0][2]>0,[highLeft,highRight,lowLeft,lowRight]=highFirst?[top[0],top[1],top[3],top[2]]:[top[3],top[2],top[0],top[1]];
+    const highFirst=top[0][2]>0,[highLeft,highRight,lowLeft,lowRight]=highFirst?[top[0],top[3],top[1],top[2]]:[top[1],top[2],top[0],top[3]];
     const lerp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
     for(const t of [.2,.4,.6,.8]){
       const stripe=[lerp(highLeft,lowLeft,t),lerp(highRight,lowRight,t),lerp(highRight,lowRight,t+.018),lerp(highLeft,lowLeft,t+.018)];
@@ -242,11 +270,66 @@
     }
     return faces;
   }
+  function blockFaces(s,footprint,bottom,top,color) {
+    const faces=[];
+    for(let i=0;i<4;i++){
+      const j=(i+1)%4;
+      if(project(footprint[j],top)[0]>=project(footprint[i],top)[0])continue;
+      const points=[[...footprint[i],bottom],[...footprint[j],bottom],[...footprint[j],top],[...footprint[i],top]];
+      faces.push({s,points,color:shade(color,i%2?-45:-25),depth:faceDepth(points)});
+    }
+    const points=footprint.map(p=>[...p,top]);
+    faces.push({s,points,color:shade(color,18),depth:faceDepth(points)});
+    return faces;
+  }
+  function siteFaces() {
+    if(floor!=='1F')return [];
+    const faces=[];
+    const office=scene.find(s=>s.item.id==='eq_office');
+    if(office && (!detail || selected===office)){
+      const item=office.item,front=n(item.y)+n(item.height),mid=n(item.x)+n(item.width)/2;
+      const left=mid-1.6,right=mid+1.6,steps=6,depth=.42;
+      for(let k=0;k<steps;k++){
+        const near=front+k*depth,far=near+depth;
+        faces.push(...blockFaces(office,[[left,near],[right,near],[right,far],[left,far]],0,factoryRise*(steps-k)/steps,'#aeb8af'));
+      }
+    }
+    const shutter=scene.find(s=>s.item.category==='Door' && /ROLL/i.test(s.item.code || '') && Math.abs(n(s.item.x))<1);
+    if(shutter && (!detail || selected===shutter)){
+      const ys=shutter.points.map(p=>p[1]),lo=Math.min(...ys),hi=Math.max(...ys);
+      const rampLow=lo-3,rampHigh=lo-.5;
+      const nearbyRamp=scene.some(s=>isRamp(s.item) && Math.abs(s.points.reduce((sum,p)=>sum+p[0]/4,0)+2.5)<3 && Math.abs(s.points.reduce((sum,p)=>sum+p[1]/4,0)-(rampLow+rampHigh)/2)<3);
+      if(!nearbyRamp){
+        const ramp={...shutter,points:[[-5,rampLow],[0,rampLow],[0,rampHigh],[-5,rampHigh]],z:factoryRise,color:'#D97706'};
+        faces.push(...rampFaces(ramp).map(f=>({...f,s:shutter})));
+      }
+      const landing=[[-2,lo-.45],[.05,lo-.45],[.05,hi+.45],[-2,hi+.45]];
+      faces.push(...blockFaces(shutter,landing,0,factoryRise,'#a6a79c'));
+      const line=[[-2,lo-.36,factoryRise+.025],[-1.86,lo-.36,factoryRise+.025],[-1.86,hi+.36,factoryRise+.025],[-2,hi+.36,factoryRise+.025]];
+      faces.push({s:shutter,points:line,color:'#f0c35b',stroke:'#f0c35b',depth:faceDepth(line)+.05});
+    }
+    return faces;
+  }
+  function drawOfficeFacade() {
+    if(floor!=='1F')return;
+    const office=scene.find(s=>s.item.id==='eq_office');
+    if(!office || (detail && selected!==office))return;
+    const item=office.item,front=n(item.y)+n(item.height),mid=n(item.x)+n(item.width)/2,centerY=n(item.y)+n(item.height)/2;
+    if(viewDepth([mid,front,0])<=viewDepth([mid,centerY,0]))return;
+    const z=factoryRise,glass=[[mid-1.25,front+.05,z+.12],[mid+1.25,front+.05,z+.12],[mid+1.25,front+.05,z+2.45],[mid-1.25,front+.05,z+2.45]];
+    hits.push({path:polygon(glass.map(p=>project(p,p[2])),'#6d9ba4','#e9eee4'),s:office});
+    const mullion=[[mid-.035,front+.06,z+.12],[mid+.035,front+.06,z+.12],[mid+.035,front+.06,z+2.45],[mid-.035,front+.06,z+2.45]];
+    polygon(mullion.map(p=>project(p,p[2])),'#e3e8dc','#e3e8dc');
+    const canopy=[[mid-2.3,front-.05,z+2.67],[mid+2.3,front-.05,z+2.67],[mid+2.3,front+.72,z+2.67],[mid-2.3,front+.72,z+2.67]];
+    polygon(canopy.map(p=>project(p,p[2])),'#cfd7cf','#edf1e7');
+  }
   function objectFaces(s) {
-    if(s.model)return s.model.map(f=>({s,points:f.points,color:f.color,model:true,depth:faceDepth(f.points)}));
-    if(s.type==='wall')return wallFaces(s);
-    if(s.type==='column')return columnFaces(s);
-    if(s.item.category==='Door')return doorFaces(s);
+    const rise=elevation(s);
+    const lift=faces=>rise?faces.map(f=>{const points=f.points.map(p=>[p[0],p[1],p[2]+rise]);return {...f,points,depth:faceDepth(points)};}):faces;
+    if(s.model)return lift(s.model.map(f=>({s,points:f.points,color:f.color,model:true,depth:faceDepth(f.points)})));
+    if(s.type==='wall')return lift(wallFaces(s));
+    if(s.type==='column')return lift(columnFaces(s));
+    if(s.item.category==='Door')return lift(doorFaces(s));
     if(isRamp(s.item))return rampFaces(s);
     const hasBase=s.type==='equipment' && !/Window|Furniture|Office/.test(s.item.category || '');
     const bottom=s.points.map(p=>[...p,hasBase ? baseHeight : 0]),top=s.points.map(p=>[...p,s.z]);
@@ -264,7 +347,7 @@
       const points=s.points.map(p=>[center[0]+(p[0]-center[0])*.65,center[1]+(p[1]-center[1])*.65,s.z+.03]);
       faces.push({s,points,color:shade(s.color,-14),depth:faceDepth(points)});
     }
-    return faces;
+    return lift(faces);
   }
   function draw() {
     frame=0;if(!dialog?.open || !bounds)return;
@@ -282,39 +365,57 @@
     for(let x=x0;x<b.x1-5;x+=5)for(let y=y0;y<b.y1-5;y+=5){
       polygon([[x,y],[x+5,y],[x+5,y+5],[x,y+5]].map(p=>project(p)),(Math.round(x/5+y/5)%2)?'#bdc6ac':'#c8ceb6','#a6b499');
     }
-    visible.filter(s=>s.type==='aisle' || s.type==='zone').forEach(s=>{const path=polygon(s.points.map(p=>project(p,.03)),s.color,'#e5dca2');hits.push({path,s});});
+    if(floor==='1F'){
+      const slabWidth=n(data.grid?.factory_width,100),slabDepth=n(data.grid?.factory_depth,40);
+      const left=Math.max(0,b.x0),right=Math.min(slabWidth,b.x1),top=Math.max(0,b.y0),bottom=Math.min(slabDepth,b.y1);
+      const slab=[[left,top],[right,top],[right,bottom],[left,bottom]];
+      if(right>left && bottom>top){
+      for(let i=0;i<4;i++){
+        const j=(i+1)%4;
+        if(project(slab[j],factoryRise)[0]>=project(slab[i],factoryRise)[0])continue;
+        polygon([[...slab[i],0],[...slab[j],0],[...slab[j],factoryRise],[...slab[i],factoryRise]].map(p=>project(p,p[2])),'#68766f','#52625a');
+      }
+      polygon(slab.map(p=>project(p,factoryRise)),'#c3c6af','#697b6c');
+      for(let x=Math.floor(left/5)*5;x<right;x+=5)for(let y=Math.floor(top/5)*5;y<bottom;y+=5){
+        polygon([[x,y],[x+5,y],[x+5,y+5],[x,y+5]].map(p=>project(p,factoryRise)),(Math.round(x/5+y/5)%2)?'#c4c8b4':'#cdd0bc','#aeb7a4');
+      }
+      }
+    }
+    visible.filter(s=>s.type==='aisle' || s.type==='zone').forEach(s=>{const path=polygon(s.points.map(p=>project(p,elevation(s)+.03)),s.color,'#e5dca2');hits.push({path,s});});
     (detail?[]:data.flows || []).filter(f=>(f.floor || '1F')===floor).forEach(f=>{
       if(!Array.isArray(f.points) || f.points.length<2)return;
-      ctx.beginPath();f.points.forEach((p,i)=>{const v=project([n(p.x),n(p.y)],.08);i?ctx.lineTo(...v):ctx.moveTo(...v);});
+      ctx.beginPath();f.points.forEach((p,i)=>{const xy=[n(p.x),n(p.y)],v=project(xy,.08+(floor==='1F' && inFactory(xy)?factoryRise:0));i?ctx.lineTo(...v):ctx.moveTo(...v);});
       ctx.strokeStyle='#f8e7a1';ctx.lineWidth=3;ctx.setLineDash([7,5]);ctx.stroke();ctx.setLineDash([]);
-      const end=project([n(f.points.at(-1).x),n(f.points.at(-1).y)],.08),prev=project([n(f.points.at(-2).x),n(f.points.at(-2).y)],.08),a=Math.atan2(end[1]-prev[1],end[0]-prev[0]);
+      const endPoint=[n(f.points.at(-1).x),n(f.points.at(-1).y)],prevPoint=[n(f.points.at(-2).x),n(f.points.at(-2).y)];
+      const end=project(endPoint,.08+(floor==='1F' && inFactory(endPoint)?factoryRise:0)),prev=project(prevPoint,.08+(floor==='1F' && inFactory(prevPoint)?factoryRise:0)),a=Math.atan2(end[1]-prev[1],end[0]-prev[0]);
       polygon([end,[end[0]-9*Math.cos(a-.45),end[1]-9*Math.sin(a-.45)],[end[0]-9*Math.cos(a+.45),end[1]-9*Math.sin(a+.45)]],'#f8e7a1','#927d3b');
     });
     const solids=visible.filter(s=>s.type!=='aisle' && s.type!=='zone');
     solids.filter(s=>s.type==='equipment' || s.type==='wall').forEach(drawGroundContact);
     // Painter order must be per face: a whole long machine can straddle a column.
-    solids.flatMap(objectFaces).sort((a,b)=>a.depth-b.depth).forEach(drawFace);
+    [...solids.flatMap(objectFaces),...siteFaces()].sort((a,b)=>a.depth-b.depth).forEach(drawFace);
     // Continuous wall crowns prevent gaps where independently sorted wall sections meet.
     solids.filter(s=>s.type==='wall').forEach(s=>{
-      const path=polygon(s.points.map(p=>project(p,s.z)),shade(s.color,25),'#f1e6ca');
+      const path=polygon(s.points.map(p=>project(p,elevation(s)+s.z)),shade(s.color,25),'#f1e6ca');
       hits.push({path,s});
     });
     solids.filter(s=>s.type==='column').forEach(s=>{
-      const path=polygon(s.points.map(p=>project(p,s.z)),shade(s.color,25),'#42574c');
+      const path=polygon(s.points.map(p=>project(p,elevation(s)+s.z)),shade(s.color,25),'#42574c');
       hits.push({path,s});
     });
     // Machine roofs are uninterrupted surfaces; redraw only their tops above columns.
     solids.filter(s=>s.type==='equipment' && !s.model && s.item.category!=='Door' && !isRamp(s.item)).forEach(s=>{
-      const top=s.points.map(p=>project(p,s.z));
+      const top=s.points.map(p=>project(p,elevation(s)+s.z));
       hits.push({path:polygon(top,shade(s.color,25),'#42574c'),s});
       const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
       const inset=s.points.map(p=>[center[0]+(p[0]-center[0])*.65,center[1]+(p[1]-center[1])*.65]);
-      polygon(inset.map(p=>project(p,s.z+.03)),shade(s.color,-14),shade(s.color,-35));
+      polygon(inset.map(p=>project(p,elevation(s)+s.z+.03)),shade(s.color,-14),shade(s.color,-35));
     });
+    drawOfficeFacade();
     solids.forEach(s=>{
       if(s.model){drawModelAnnotations(s);return;}
       if(s.type==='equipment'){
-        const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,isRamp(s.item)?s.z/2+.12:s.z+.1);
+        const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,elevation(s)+(isRamp(s.item)?s.z/2+.12:s.z+.1));
         ctx.fillStyle='#e4e5b3';ctx.fillRect(p[0]-2,p[1]-2,4,4);
         if((labels && baseScale*zoom>6)||s===selected){ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#243f36';ctx.strokeText(s.item.code || s.item.name || '',p[0],p[1]-10);ctx.fillStyle='#fff8df';ctx.fillText(s.item.code || s.item.name || '',p[0],p[1]-10);}
         if(isRamp(s.item) && detail){
@@ -326,7 +427,7 @@
         }
       }
       if(s===selected){
-        const outline=new Path2D(),outlinePoints=isRamp(s.item)?rampTopPoints(s):s.points.map(p=>[...p,s.z]);
+        const outline=new Path2D(),outlinePoints=isRamp(s.item)?rampTopPoints(s):s.points.map(p=>[...p,elevation(s)+s.z]);
         outlinePoints.forEach((p,i)=>i?outline.lineTo(...project(p,p[2])):outline.moveTo(...project(p,p[2])));outline.closePath();
         ctx.strokeStyle='#fff1a1';ctx.lineWidth=3;ctx.stroke(outline);
       }
@@ -341,6 +442,8 @@
     dialog.querySelector('#twinFocus').hidden=!s;
     if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t('photo');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
+    if(item?.id==='eq_office')dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
+    if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
     dialog.querySelector('#twinObjects').value=item?.id || '';
   }
   function fit(){zoom=detail?1.5:1;pan={x:0,y:0};requestDraw();}
