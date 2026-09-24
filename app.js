@@ -16,7 +16,7 @@
   const TOTAL_W_M = (COLS_X - 1) * BAY_SIZE_M; // 100.0m
   const TOTAL_H_M = 70.0; // 70.0m total height including south CNC area
 
-  // Expanded Site Master Plan Bounds (140M x 90M default)
+  // Expanded drawing viewport; these dimensions are not surveyed site boundaries.
   const SITE_EXP_W_M = 140.0;
   const SITE_EXP_H_M = 90.0;
   const SITE_MARGIN_X_M = 20.0; // 20m West & East outdoor space
@@ -3603,7 +3603,7 @@
     console.warn("Could not load custom lib from localStorage:", err);
   }
 
-  let siteViewMode = "expanded"; // 'expanded' (140x90m) | 'indoor' (100x40m) | 'max' (160x100m)
+  let siteViewMode = "expanded"; // expanded site context | indoor floor plan | maximum overview
   let currentFloor = "1F";
   let selectedId = null;
   let selectedItemType = null; // 'equipment' | 'column' | 'wall' | 'aisle' | 'zone' | 'flow' | 'title_block'
@@ -4349,34 +4349,38 @@
         <!-- Site Boundary Property Ground -->
         <rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="#F8FAFC" rx="8"/>
 
-        <!-- Outer Landscape Green Buffer (2.5M) -->
-        <rect x="${siteX + 4}" y="${siteY + 4}" width="${siteW - 8}" height="${siteH - 8}" fill="none" stroke="#86EFAC" stroke-width="16" stroke-opacity="0.35" rx="6"/>
+        <!-- Satellite-reference context: approximate positions, not a survey. -->
+        <rect x="${OFFSET_X - 19 * SCALE}" y="${OFFSET_Y + 2 * SCALE}" width="${10 * SCALE}" height="${16 * SCALE}" fill="#DCF4DF" stroke="#86B98B" stroke-width="1.5" rx="5"/>
+        <text x="${OFFSET_X - 14 * SCALE}" y="${OFFSET_Y + 10 * SCALE}" font-size="10" font-weight="800" fill="#377348" text-anchor="middle">西側花園</text>
+        <rect x="${OFFSET_X - 19 * SCALE}" y="${OFFSET_Y + 24 * SCALE}" width="${10 * SCALE}" height="${23 * SCALE}" fill="#DEE6DF" stroke="#84958A" stroke-width="1.5" rx="3"/>
+        <text x="${OFFSET_X - 14 * SCALE}" y="${OFFSET_Y + 35 * SCALE}" font-size="9" font-weight="700" fill="#52655A" text-anchor="middle" transform="rotate(-90 ${OFFSET_X - 14 * SCALE} ${OFFSET_Y + 35 * SCALE})">衛星參考：西側建物</text>
+        <path d="M ${OFFSET_X - 19 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 10) * SCALE} L ${OFFSET_X - 4 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 10) * SCALE} L ${OFFSET_X - 4 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 18) * SCALE} L ${OFFSET_X - 19 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 18) * SCALE} Z" fill="#E7E2D8" stroke="#A39C8F" stroke-width="1.5"/>
+        <text x="${OFFSET_X - 11.5 * SCALE}" y="${OFFSET_Y + (TOTAL_H_M + 14) * SCALE}" font-size="9" font-weight="700" fill="#6B6256" text-anchor="middle">南側鄰棟示意</text>
 
-        <!-- Property Line (CAD Dash-dot Boundary) -->
-        <rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-dasharray="14,4,3,4" rx="8"/>
-        <text x="${siteX + 20}" y="${siteY + 22}" font-size="11" font-weight="800" fill="#B91C1C">金讚廠區總地籍境界線 · 全區 140.0M × 90.0M (地坪約 12,600 m²)</text>
-        <text x="${siteX + siteW - 20}" y="${siteY + 22}" font-size="10" font-weight="700" fill="#B91C1C" text-anchor="end">建築覆蓋率: 45.2% · 容積率: 86.5%</text>
+        <!-- Schematic extent only: satellite screenshots do not establish cadastral boundaries. -->
+        <rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="none" stroke="#94A3B8" stroke-width="2" stroke-dasharray="8,6" rx="8"/>
+        <text x="${siteX + 20}" y="${siteY + 22}" font-size="11" font-weight="800" fill="#475569">廠區周邊示意 · 非地籍測量圖</text>
 
-        <!-- Perimeter Truck Ring Road Band (8.0M Dual Carriage Way) -->
-        <!-- West Truck Road -->
-        <rect x="${OFFSET_X - 18 * SCALE}" y="${OFFSET_Y - 14 * SCALE}" width="${16 * SCALE}" height="${(TOTAL_H_M + 28) * SCALE}" class="outdoor-road-band" rx="4"/>
-        <line x1="${OFFSET_X - 10 * SCALE}" y1="${OFFSET_Y - 12 * SCALE}" x2="${OFFSET_X - 10 * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 12) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
-        <text x="${OFFSET_X - 10 * SCALE}" y="${OFFSET_Y + 25 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" transform="rotate(-90 ${OFFSET_X - 10 * SCALE} ${OFFSET_Y + 25 * SCALE})">環廠西側重車物流專用道 8.0M (雙向通車)</text>
+        <!-- Six-metre perimeter roads, with the previously confirmed floor plan unchanged. -->
+        <!-- West Road -->
+        <rect x="${OFFSET_X - 8 * SCALE}" y="${OFFSET_Y - 8 * SCALE}" width="${6 * SCALE}" height="${(TOTAL_H_M + 16) * SCALE}" class="outdoor-road-band" rx="4"/>
+        <line x1="${OFFSET_X - 5 * SCALE}" y1="${OFFSET_Y - 8 * SCALE}" x2="${OFFSET_X - 5 * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 8) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
+        <text x="${OFFSET_X - 5 * SCALE}" y="${OFFSET_Y + 25 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" transform="rotate(-90 ${OFFSET_X - 5 * SCALE} ${OFFSET_Y + 25 * SCALE})">環廠西側車道 6.0M</text>
 
-        <!-- North Truck Road -->
-        <rect x="${OFFSET_X - 18 * SCALE}" y="${OFFSET_Y - 16 * SCALE}" width="${(TOTAL_W_M + 34) * SCALE}" height="${14 * SCALE}" class="outdoor-road-band" rx="4"/>
-        <line x1="${OFFSET_X - 12 * SCALE}" y1="${OFFSET_Y - 9 * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 12) * SCALE}" y2="${OFFSET_Y - 9 * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
-        <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y - 9 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠北側貨櫃物流道 8.0M · 保持淨空禁停</text>
+        <!-- North Road -->
+        <rect x="${OFFSET_X - 8 * SCALE}" y="${OFFSET_Y - 8 * SCALE}" width="${(TOTAL_W_M + 16) * SCALE}" height="${6 * SCALE}" class="outdoor-road-band" rx="4"/>
+        <line x1="${OFFSET_X - 8 * SCALE}" y1="${OFFSET_Y - 5 * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 8) * SCALE}" y2="${OFFSET_Y - 5 * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
+        <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y - 5 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠北側車道 6.0M</text>
 
-        <!-- East Truck Road -->
-        <rect x="${OFFSET_X + TOTAL_W_M * SCALE + 2 * SCALE}" y="${OFFSET_Y - 14 * SCALE}" width="${16 * SCALE}" height="${(TOTAL_H_M + 28) * SCALE}" class="outdoor-road-band" rx="4"/>
-        <line x1="${OFFSET_X + TOTAL_W_M * SCALE + 10 * SCALE}" y1="${OFFSET_Y - 12 * SCALE}" x2="${OFFSET_X + TOTAL_W_M * SCALE + 10 * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 12) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
-        <text x="${OFFSET_X + TOTAL_W_M * SCALE + 10 * SCALE}" y="${OFFSET_Y + 25 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" transform="rotate(90 ${OFFSET_X + TOTAL_W_M * SCALE + 10 * SCALE} ${OFFSET_Y + 25 * SCALE})">環廠東側物流車道 8.0M (重車道)</text>
+        <!-- East Road -->
+        <rect x="${OFFSET_X + (TOTAL_W_M + 2) * SCALE}" y="${OFFSET_Y - 8 * SCALE}" width="${6 * SCALE}" height="${(TOTAL_H_M + 16) * SCALE}" class="outdoor-road-band" rx="4"/>
+        <line x1="${OFFSET_X + (TOTAL_W_M + 5) * SCALE}" y1="${OFFSET_Y - 8 * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 5) * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 8) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
+        <text x="${OFFSET_X + (TOTAL_W_M + 5) * SCALE}" y="${OFFSET_Y + 25 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" transform="rotate(90 ${OFFSET_X + (TOTAL_W_M + 5) * SCALE} ${OFFSET_Y + 25 * SCALE})">環廠東側車道 6.0M</text>
 
-        <!-- South Truck Road -->
-        <rect x="${OFFSET_X - 18 * SCALE}" y="${OFFSET_Y + TOTAL_H_M * SCALE + 2 * SCALE}" width="${(TOTAL_W_M + 34) * SCALE}" height="${14 * SCALE}" class="outdoor-road-band" rx="4"/>
-        <line x1="${OFFSET_X - 12 * SCALE}" y1="${OFFSET_Y + TOTAL_H_M * SCALE + 9 * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 12) * SCALE}" y2="${OFFSET_Y + TOTAL_H_M * SCALE + 9 * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
-        <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y + TOTAL_H_M * SCALE + 9 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠南側車道 8.0M · 消防緊急通道</text>
+        <!-- South Road -->
+        <rect x="${OFFSET_X - 8 * SCALE}" y="${OFFSET_Y + (TOTAL_H_M + 2) * SCALE}" width="${(TOTAL_W_M + 16) * SCALE}" height="${6 * SCALE}" class="outdoor-road-band" rx="4"/>
+        <line x1="${OFFSET_X - 8 * SCALE}" y1="${OFFSET_Y + (TOTAL_H_M + 5) * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 8) * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 5) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
+        <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y + (TOTAL_H_M + 5) * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠南側車道 6.0M</text>
 
         <!-- Gate, weighbridge, and parking -->
         <g id="outdoorSiteFacilities">
@@ -5039,7 +5043,7 @@
         <text x="325" y="120" font-size="11" fill="var(--text-main)" font-weight="800">${tb.date || '2026/09/09'}</text>
 
         <text x="15" y="146" font-size="9" fill="var(--text-muted)" font-weight="600">規格 / SPEC</text>
-        <text x="15" y="162" font-size="11" fill="#16A34A" font-weight="800">${tb.spec || '140M×90M · 廠區/車道/設備'}</text>
+        <text x="15" y="162" font-size="11" fill="#16A34A" font-weight="800">${tb.spec || '廠區/6M車道/設備 · 周邊示意'}</text>
         <text x="165" y="146" font-size="9" fill="var(--text-muted)" font-weight="600">比例 / SCALE</text>
         <text x="165" y="162" font-size="11" fill="var(--text-main)" font-weight="800">${tb.scale || '1:150 (Metric)'}</text>
         <text x="325" y="146" font-size="9" fill="var(--text-muted)" font-weight="600">狀態 / STATUS</text>
