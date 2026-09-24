@@ -1801,17 +1801,6 @@ body.theme-cad-dark .outdoor-road-band {
   stroke: #334155;
 }
 
-.outdoor-dock-bay {
-  fill: #FEF3C7;
-  stroke: #D97706;
-  stroke-width: 1.5;
-}
-
-body.theme-cad-dark .outdoor-dock-bay {
-  fill: rgba(217, 119, 6, 0.18);
-  stroke: #F59E0B;
-}
-
 .outdoor-parking-bay {
   fill: #F1F5F9;
   stroke: #94A3B8;

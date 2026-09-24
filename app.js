@@ -4378,24 +4378,9 @@
         <line x1="${OFFSET_X - 12 * SCALE}" y1="${OFFSET_Y + TOTAL_H_M * SCALE + 9 * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 12) * SCALE}" y2="${OFFSET_Y + TOTAL_H_M * SCALE + 9 * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
         <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y + TOTAL_H_M * SCALE + 9 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠南側車道 8.0M · 消防緊急通道</text>
 
-        <!-- 40FT Container Loading Docks along West Wall -->
-        <g id="outdoorLoadingDocks">
+        <!-- Gate, weighbridge, and parking -->
+        <g id="outdoorSiteFacilities">
     `;
-
-    // 4 Container Loading Docks (West Wall, Y = 10m, 20m, 30m, 40m)
-    for (let d = 0; d < 4; d++) {
-      const dy = OFFSET_Y + (8 + d * 10) * SCALE;
-      const dx = OFFSET_X - 14 * SCALE;
-      const dw = 13 * SCALE;
-      const dh = 6.5 * SCALE;
-
-      outHtml += `
-        <rect x="${dx}" y="${dy}" width="${dw}" height="${dh}" class="outdoor-dock-bay" rx="3"/>
-        <line x1="${dx + dw}" y1="${dy}" x2="${dx + dw}" y2="${dy + dh}" stroke="#B45309" stroke-width="4"/>
-        <text x="${dx + dw / 2}" y="${dy + dh / 2 - 4}" font-size="10" font-weight="800" fill="#B45309" text-anchor="middle">40FT 貨櫃泊位 D0${d + 1}</text>
-        <text x="${dx + dw / 2}" y="${dy + dh / 2 + 10}" font-size="8.5" font-family="'JetBrains Mono', monospace" fill="#78350F" text-anchor="middle">12.5M × 3.5M 裝卸月台</text>
-      `;
-    }
 
     // Main Security Gate, Guardhouse & Truck Scale (North-West Entrance)
     const gateX = OFFSET_X - 18 * SCALE;
