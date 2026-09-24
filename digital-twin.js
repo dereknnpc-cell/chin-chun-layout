@@ -98,7 +98,9 @@
       const light=(normal[0]*.25-normal[1]*.35+Math.abs(normal[2])*.65)/len;
       color=shade(color,Math.round(light*32)-8);
     }
-    hits.push({path:polygon(f.points.map(p=>project(p,p[2])),color,f.s===selected?'#fff5ac':'#42574c'),s:f.s});
+    // Segmented walls need seamless joints; their selection outline is drawn once below.
+    const stroke=f.s.type==='wall' ? f.stroke : f.s===selected?'#fff5ac':f.stroke || '#42574c';
+    hits.push({path:polygon(f.points.map(p=>project(p,p[2])),color,stroke),s:f.s});
   }
   function drawModelAnnotations(s) {
     if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,.02)):path.moveTo(...project(p,.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
@@ -112,14 +114,43 @@
     }
   }
   function drawGroundContact(s) {
-    // A thin footprint shadow stays on the floor, independent of the machine's height.
-    const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
-    const contact=s.points.map(p=>[center[0]+(p[0]-center[0])*1.035,center[1]+(p[1]-center[1])*1.035]);
+    // A thin footprint shadow stays on the floor, independent of the object's height.
+    let contact;
+    if(s.type==='wall'){
+      const [a,b,c,d]=s.points,dx=d[0]-a[0],dy=d[1]-a[1],length=Math.hypot(dx,dy)||1;
+      const offset=[dx/length*.12,dy/length*.12];
+      contact=[a.map((v,i)=>v-offset[i]),b.map((v,i)=>v-offset[i]),c.map((v,i)=>v+offset[i]),d.map((v,i)=>v+offset[i])];
+    } else {
+      const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
+      contact=s.points.map(p=>[center[0]+(p[0]-center[0])*1.035,center[1]+(p[1]-center[1])*1.035]);
+    }
     const path=new Path2D();contact.forEach((p,i)=>i?path.lineTo(...project(p,.012)):path.moveTo(...project(p,.012)));path.closePath();
     ctx.fillStyle='#263a35';ctx.globalAlpha=.35;ctx.fill(path);ctx.globalAlpha=1;
   }
+  function wallFaces(s) {
+    const [a,b,c,d]=s.points,length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    const count=Math.max(1,Math.ceil(length/2));
+    const lerp=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
+    const faces=[];
+    for(let k=0;k<count;k++){
+      const start=k/count,end=(k+1)/count;
+      const footprint=[lerp(a,b,start),lerp(a,b,end),lerp(d,c,end),lerp(d,c,start)];
+      const bottom=footprint.map(p=>[...p,0]),top=footprint.map(p=>[...p,s.z]);
+      for(let i=0;i<4;i++){
+        if((i===1 && k<count-1)||(i===3 && k>0))continue;
+        const j=(i+1)%4;
+        if(project(footprint[j],s.z)[0]<project(footprint[i],s.z)[0]){
+          const points=[bottom[i],bottom[j],top[j],top[i]],color=shade(s.color,i%2?-45:-25);
+          faces.push({s,points,color,stroke:color,depth:faceDepth(points)});
+        }
+      }
+      faces.push({s,points:top,color:shade(s.color,25),stroke:shade(s.color,25),depth:faceDepth(top)});
+    }
+    return faces;
+  }
   function objectFaces(s) {
     if(s.model)return s.model.map(f=>({s,points:f.points,color:f.color,model:true,depth:faceDepth(f.points)}));
+    if(s.type==='wall')return wallFaces(s);
     const bottom=s.points.map(p=>[...p,0]),top=s.points.map(p=>[...p,s.z]);
     const faces=[];
     for(let i=0;i<4;i++){const j=(i+1)%4;
@@ -162,7 +193,7 @@
       polygon([end,[end[0]-9*Math.cos(a-.45),end[1]-9*Math.sin(a-.45)],[end[0]-9*Math.cos(a+.45),end[1]-9*Math.sin(a+.45)]],'#f8e7a1','#927d3b');
     });
     const solids=visible.filter(s=>s.type!=='aisle' && s.type!=='zone');
-    solids.filter(s=>s.type==='equipment').forEach(drawGroundContact);
+    solids.filter(s=>s.type==='equipment' || s.type==='wall').forEach(drawGroundContact);
     // Painter order must be per face: a whole long machine can straddle a column.
     solids.flatMap(objectFaces).sort((a,b)=>a.depth-b.depth).forEach(drawFace);
     solids.forEach(s=>{
