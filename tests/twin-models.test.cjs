@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
-const base={id:'eq_eva2_a1_2',code:'A1-2',x:65.07,y:41.47,width:20.23,height:2,rotation:0};
+const base={id:'eq_latex_h1_1',code:'H1-1',x:82.08,y:7.5,width:14.82,height:2,rotation:0};
 test('silver oven is the highest point at the confirmed 2.4 m',()=>{
   const faces=models.build(base);
   const maxZ=list=>Math.max(...list.flatMap(f=>f.points.map(p=>p[2])));
@@ -11,12 +11,12 @@ test('silver oven is the highest point at the confirmed 2.4 m',()=>{
   assert.ok(Math.abs(maxZ(faces.filter(f=>f.color==='#aababc'))-2.4)<1e-9);
   assert.ok(maxZ(faces.filter(f=>f.color!=='#aababc'))<2.4);
 });
-test('only A1-2 gets photo-reference geometry and input is unchanged',()=>{
+test('only H1-1 gets photo-reference geometry and input is unchanged',()=>{
   const input=Object.freeze({...base}),before=JSON.stringify(input);
   const faces=models.build(input);
   assert.ok(faces.length>500);
   assert.equal(JSON.stringify(input),before);
-  assert.equal(models.build({...base,code:'A1-1'}),null);
+  assert.equal(models.build({...base,code:'A1-2'}),null);
   for(const face of faces) {
     assert.ok(face.points.length>=3);
     assert.match(face.color,/^#[0-9a-f]{6}$/i);
@@ -34,7 +34,7 @@ test('rotation follows CAD center without changing height',()=>{
   }));
 });
 test('resize follows planar dimensions, not estimated vertical height',()=>{
-  const a=models.build({...base,x:0,y:0}),b=models.build({...base,x:0,y:0,width:40.46,height:4});
+  const a=models.build({...base,x:0,y:0}),b=models.build({...base,x:0,y:0,width:29.64,height:4});
   a.forEach((f,i)=>f.points.forEach((p,j)=>{
     const q=b[i].points[j];
     assert.ok(Math.abs(q[0]-p[0]*2)<1e-9);

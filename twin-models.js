@@ -1,14 +1,16 @@
 /* Photo-informed display geometry only. Never writes CAD dimensions or cloud data. */
 (() => {
   'use strict';
-  const matches = item => String(item.code || '').trim().toUpperCase() === 'A1-2';
+  const matches = item => String(item.code || '').trim().toUpperCase() === 'H1-1';
   function build(item) {
     if (!matches(item)) return null;
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
     // CAD-left (local x=0) is collection; CAD-right is the two-person feed end.
     const verticalScale = .64;
-    const length = Math.max(.05, Number(item.width) || 20.23), depth = Math.max(.05, Number(item.height) || 2);
+    // H1-1 is 14.82 × 2 m in the validated 2D layout.
+    const referenceLength = 14.82;
+    const length = Math.max(.05, Number(item.width) || referenceLength), depth = Math.max(.05, Number(item.height) || 2);
     const angle = (Number(item.rotation) || 0) * Math.PI / 180, c = Math.cos(angle), s = Math.sin(angle);
     const world = ([x,y,z]) => {
       x = x / 20.23 * length - length / 2; y = y / 2 * depth - depth / 2;
