@@ -21,3 +21,10 @@
 .twin-footer { display:flex; gap:10px; justify-content:space-between; padding:10px 22px; font-size:11px; color:#c7d4bd; border-top:1px solid #78987c44; }
 .twin-dialog [hidden] { display:none!important; }
 @media(max-width:700px) { .twin-dialog { width:100vw; height:100dvh; border-radius:0; max-height:100dvh; } .twin-header { padding:12px; } .twin-header h2 { font-size:15px; } .twin-toolbar { padding:8px; gap:5px; } .twin-footer { padding:8px; font-size:10px; } .twin-info { width:220px; padding:12px; } }
+/* Keep the information card from covering the machine and end labels on phones. */
+@media(max-width:700px) {
+  .twin-stage { display:flex; flex-direction:column; }
+  .twin-stage canvas { flex:1; min-height:100px; height:0; }
+  .twin-info { position:static; flex-shrink:0; width:auto; max-width:none; max-height:150px; overflow:auto; margin:0 8px 8px; }
+  .twin-info h3 { margin-bottom:4px; }
+}

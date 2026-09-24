@@ -6,19 +6,20 @@
   let width = 1, height = 1, baseScale = 1, bounds, labels = true;
   const pointers = new Map();
   let gesture = null;
+  let detail = false;
   const zh = {
     title:'廠房數位孿生', close:'返回平面圖', floor:'樓層', fit:'全覽', rotate:'旋轉視角', labels:'設備標籤',
     select:'選取物件', all:'選擇設備／柱子／牆面', empty:'點選場景中的物件，查看尺寸與位置。', edit:'在平面圖編輯',
     note:'配置同步 · 高度為示意 · 未接入即時機台訊號', help:'拖曳巡覽 · 滾輪／雙指縮放 · Esc 返回',
     equipment:'設備', column:'柱子', wall:'牆面', aisle:'走道', zone:'夾層區域', size:'平面尺寸', position:'座標', rotation:'角度', count:'物件',
-    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層'
+    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', feed:'入料（兩人端）', collect:'收料（一人端）'
   };
   const th = {
     title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'หมุนมุมมอง', labels:'ป้ายอุปกรณ์',
     select:'เลือกวัตถุ', all:'เลือกอุปกรณ์ / เสา / ผนัง', empty:'คลิกวัตถุเพื่อดูขนาดและตำแหน่ง', edit:'แก้ไขในแปลน',
     note:'ใช้ข้อมูลแปลนเดียวกัน · ความสูงสมมติ · ยังไม่มีข้อมูลเครื่องจักรสด', help:'ลากเพื่อเลื่อน · ล้อเมาส์ / สองนิ้วเพื่อซูม · Esc กลับ',
     equipment:'อุปกรณ์', column:'เสา', wall:'ผนัง', aisle:'ทางเดิน', zone:'พื้นที่ชั้นลอย', size:'ขนาดแปลน', position:'พิกัด', rotation:'มุม', count:'วัตถุ',
-    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย'
+    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)'
   };
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
   const n = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
@@ -35,7 +36,7 @@
     if (!data) return;
     dialog.querySelector('#twinFloor').value=floor;
     scene = [];
-    const add = (item,type,points,z,color) => scene.push({item,type,points,z,color});
+    const add = (item,type,points,z,color) => scene.push({item,type,points,z,color,model:type==='equipment'?window.ChinChunModels?.build(item):null});
     if(floor==='2F') (data.mezzanine_2f?.zones || []).forEach(item=>add(item,'zone',rect(item),.04,'#91afac'));
     (floor==='2F' ? data.equipment_2f || [] : data.equipment || []).forEach(item => {
       const category = item.category || '';
@@ -55,6 +56,7 @@
     bounds={x0:Math.min(...(indoor?[0]:[]),...points.map(p=>p[0]))-4,y0:Math.min(...(indoor?[0]:[]),...points.map(p=>p[1]))-4,
       x1:Math.max(...(indoor?[n(data.grid?.factory_width,100)]:[]),...points.map(p=>p[0]))+4,y1:Math.max(...(indoor?[n(data.grid?.factory_depth,40)]:[]),...points.map(p=>p[1]))+4};
     selected=scene.find(s=>s.item.id===selected?.item.id) || null;
+    if(!selected)detail=false;
     const list=dialog.querySelector('#twinObjects');
     list.replaceChildren(new Option(t('all'),''));
     scene.filter(s=>s.type!=='aisle').forEach(s=>list.add(new Option(`${s.item.code || s.item.name || s.item.id}`,s.item.id)));
@@ -66,7 +68,7 @@
     return [(u-v)*.866,(u+v)*.5-z];
   }
   function project(p,z=0) {
-    const v=iso(p[0],p[1],z), center=iso((bounds.x0+bounds.x1)/2,(bounds.y0+bounds.y1)/2);
+    const b=viewBounds(),v=iso(p[0],p[1],z), center=iso((b.x0+b.x1)/2,(b.y0+b.y1)/2,detail?1.3:0);
     return [width/2+pan.x+(v[0]-center[0])*baseScale*zoom,height/2+pan.y+(v[1]-center[1])*baseScale*zoom];
   }
   function shade(color, amount) {
@@ -78,33 +80,61 @@
     ctx.fillStyle=fill;ctx.fill(path);ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke(path); return path;
   }
   function requestDraw() { if(dialog?.open && !frame) frame=requestAnimationFrame(draw); }
+  function viewBounds() {
+    if(!detail || !selected)return bounds;
+    return {x0:Math.min(...selected.points.map(p=>p[0]))-1,y0:Math.min(...selected.points.map(p=>p[1]))-1,
+      x1:Math.max(...selected.points.map(p=>p[0]))+1,y1:Math.max(...selected.points.map(p=>p[1]))+1};
+  }
+  function drawModel(s) {
+    const a=angle*Math.PI/2,c=Math.cos(a),sn=Math.sin(a);
+    const depth=p=>p[0]*(c+sn)+p[1]*(c-sn)+p[2];
+    const faces=s.model.map(f=>({...f,depth:f.points.reduce((sum,p)=>sum+depth(p)/f.points.length,0)})).sort((a,b)=>a.depth-b.depth);
+    faces.forEach(f=>{
+      const [a,b,c]=f.points,u=b.map((v,i)=>v-a[i]),v=c.map((n,i)=>n-a[i]);
+      const normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],len=Math.hypot(...normal)||1;
+      const light=(normal[0]*.25-normal[1]*.35+Math.abs(normal[2])*.65)/len;
+      const color=shade(f.color,Math.round(light*32)-8);
+      hits.push({path:polygon(f.points.map(p=>project(p,p[2])),color,color),s});
+    });
+    if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,.02)):path.moveTo(...project(p,.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
+    if(labels || s===selected){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,2.7);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
+    if(detail){
+      // Labels follow local CAD ends through both equipment and camera rotation.
+      [[0,3,'collect'],[1,2,'feed']].forEach(([i,j,key])=>{
+        const p=project([(s.points[i][0]+s.points[j][0])/2,(s.points[i][1]+s.points[j][1])/2],1.55);
+        ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#18332e';ctx.strokeText(t(key),p[0],p[1]);ctx.fillStyle='#fff5d7';ctx.fillText(t(key),p[0],p[1]);
+      });
+    }
+  }
   function draw() {
     frame=0;if(!dialog?.open || !bounds)return;
     const size=canvas.getBoundingClientRect();width=size.width;height=size.height;
     const dpr=Math.min(devicePixelRatio || 1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
-    const corners=[[bounds.x0,bounds.y0],[bounds.x1,bounds.y0],[bounds.x1,bounds.y1],[bounds.x0,bounds.y1]];
+    const b=viewBounds(),visible=detail&&selected?[selected]:scene;
+    const corners=[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]];
     const raw=corners.map(p=>iso(...p));
     baseScale=Math.min(width/(Math.max(...raw.map(p=>p[0]))-Math.min(...raw.map(p=>p[0]))+12),height/(Math.max(...raw.map(p=>p[1]))-Math.min(...raw.map(p=>p[1]))+14))*.9;
     hits=[];
     polygon(corners.map(p=>project(p,-1.4)),'#344938');
     polygon(corners.map(p=>project(p)),'#829477');
-    const x0=Math.ceil(bounds.x0/5)*5,y0=Math.ceil(bounds.y0/5)*5;
+    const x0=Math.ceil(b.x0/5)*5,y0=Math.ceil(b.y0/5)*5;
     // Alternating stone tiles create the JRPG diorama ground without changing CAD dimensions.
-    for(let x=x0;x<bounds.x1-5;x+=5)for(let y=y0;y<bounds.y1-5;y+=5){
+    for(let x=x0;x<b.x1-5;x+=5)for(let y=y0;y<b.y1-5;y+=5){
       polygon([[x,y],[x+5,y],[x+5,y+5],[x,y+5]].map(p=>project(p)),(Math.round(x/5+y/5)%2)?'#bdc6ac':'#c8ceb6','#a6b499');
     }
-    scene.filter(s=>s.type==='aisle' || s.type==='zone').forEach(s=>{const path=polygon(s.points.map(p=>project(p,.03)),s.color,'#e5dca2');hits.push({path,s});});
-    (data.flows || []).filter(f=>(f.floor || '1F')===floor).forEach(f=>{
+    visible.filter(s=>s.type==='aisle' || s.type==='zone').forEach(s=>{const path=polygon(s.points.map(p=>project(p,.03)),s.color,'#e5dca2');hits.push({path,s});});
+    (detail?[]:data.flows || []).filter(f=>(f.floor || '1F')===floor).forEach(f=>{
       if(!Array.isArray(f.points) || f.points.length<2)return;
       ctx.beginPath();f.points.forEach((p,i)=>{const v=project([n(p.x),n(p.y)],.08);i?ctx.lineTo(...v):ctx.moveTo(...v);});
       ctx.strokeStyle='#f8e7a1';ctx.lineWidth=3;ctx.setLineDash([7,5]);ctx.stroke();ctx.setLineDash([]);
       const end=project([n(f.points.at(-1).x),n(f.points.at(-1).y)],.08),prev=project([n(f.points.at(-2).x),n(f.points.at(-2).y)],.08),a=Math.atan2(end[1]-prev[1],end[0]-prev[0]);
       polygon([end,[end[0]-9*Math.cos(a-.45),end[1]-9*Math.sin(a-.45)],[end[0]-9*Math.cos(a+.45),end[1]-9*Math.sin(a+.45)]],'#f8e7a1','#927d3b');
     });
-    const ordered=scene.filter(s=>s.type!=='aisle' && s.type!=='zone').slice().sort((a,b)=>{
+    const ordered=visible.filter(s=>s.type!=='aisle' && s.type!=='zone').slice().sort((a,b)=>{
       const depth=s=>Math.max(...s.points.map(p=>iso(...p)[1]));return depth(a)-depth(b);
     });
     ordered.forEach(s=>{
+      if(s.model){drawModel(s);return;}
       const bottom=s.points.map(p=>project(p)),top=s.points.map(p=>project(p,s.z));
       const faces=[];
       for(let i=0;i<4;i++){const j=(i+1)%4;
@@ -129,26 +159,31 @@
     dialog.querySelector('#twinName').textContent=item ? (item.code || item.name || item.id) : t('select');
     dialog.querySelector('#twinDetails').textContent=item ? `${t(s.type)} · ${item.name || item.id}\n${t('position')}: ${n(item.x ?? item.x1).toFixed(2)}, ${n(item.y ?? item.y1).toFixed(2)} m\n${t('size')}: ${s.type==='wall'?Math.hypot(n(item.x2)-n(item.x1),n(item.y2)-n(item.y1)).toFixed(2)+' × '+n(item.thickness,.2).toFixed(2):n(item.width).toFixed(2)+' × '+n(item.height).toFixed(2)} m\n${t('rotation')}: ${n(item.rotation).toFixed(0)}°` : t('empty');
     dialog.querySelector('#twinEdit').hidden=!s;
+    dialog.querySelector('#twinFocus').hidden=!s;
+    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t('photo');
     dialog.querySelector('#twinObjects').value=item?.id || '';
   }
-  function fit(){zoom=1;pan={x:0,y:0};requestDraw();}
+  function fit(){zoom=detail?1.5:1;pan={x:0,y:0};requestDraw();}
   function zoomAt(factor,x=width/2,y=height/2){const next=Math.max(.4,Math.min(8,zoom*factor)),ratio=next/zoom;pan={x:x-width/2-(x-width/2-pan.x)*ratio,y:y-height/2-(y-height/2-pan.y)*ratio};zoom=next;requestDraw();}
   function mount() {
     if(dialog)return;
     dialog=document.createElement('dialog');dialog.className='twin-dialog';dialog.setAttribute('aria-labelledby','twinHeading');
     dialog.innerHTML=`<div class="twin-shell"><header class="twin-header"><div><div class="twin-eyebrow">CHIN CHUN · WORLD VIEW</div><h2 id="twinHeading"><span data-twin-text="title"></span> / 2.5D</h2></div><button id="twinClose" data-twin-text="close"></button></header><nav class="twin-toolbar"><label><span data-twin-text="floor"></span><select id="twinFloor"><option value="1F" data-twin-text="floor1"></option><option value="2F" data-twin-text="floor2"></option></select></label><button id="twinFit" data-twin-text="fit"></button><button id="twinRotate" data-twin-text="rotate"></button><button id="twinMinus" aria-label="Zoom out">−</button><button id="twinPlus" aria-label="Zoom in">＋</button><label><input id="twinLabels" type="checkbox" checked><span data-twin-text="labels"></span></label><label><span data-twin-text="select"></span><select id="twinObjects" style="max-width:220px"></select></label></nav><div class="twin-stage"><canvas aria-label="Isometric factory layout"></canvas><div class="twin-plaque">FACTORY ATLAS<br>配置世界 / ISOMETRIC DIORAMA</div><aside class="twin-info"><h3 id="twinName"></h3><p id="twinDetails"></p><button id="twinEdit" data-twin-text="edit" hidden></button></aside></div><footer class="twin-footer"><span id="twinCount"></span><span data-twin-text="help"></span></footer><div class="twin-footer" data-twin-text="note"></div></div>`;
     document.body.append(dialog);canvas=dialog.querySelector('canvas');ctx=canvas.getContext('2d');
+    const focus=document.createElement('button');focus.id='twinFocus';focus.dataset.twinText='focus';focus.hidden=true;
+    dialog.querySelector('.twin-toolbar').append(focus);
+    focus.onclick=()=>{if(selected){detail=true;fit();}};
     // Keep CAD delete/rotate/undo shortcuts from changing the model behind the modal.
     dialog.addEventListener('keydown',e=>e.stopPropagation());
     dialog.addEventListener('keyup',e=>e.stopPropagation());
     dialog.querySelector('#twinClose').onclick=()=>dialog.close();
     dialog.querySelector('#twinFloor').onchange=e=>{floor=e.target.value;selected=null;rebuild();fit();};
-    dialog.querySelector('#twinFit').onclick=fit;
+    dialog.querySelector('#twinFit').onclick=()=>{detail=false;fit();};
     dialog.querySelector('#twinRotate').onclick=()=>{angle=(angle+1)%4;fit();};
     dialog.querySelector('#twinPlus').onclick=()=>zoomAt(1.25);
     dialog.querySelector('#twinMinus').onclick=()=>zoomAt(.8);
     dialog.querySelector('#twinLabels').onchange=e=>{labels=e.target.checked;requestDraw();};
-    dialog.querySelector('#twinObjects').onchange=e=>{selected=scene.find(s=>s.item.id===e.target.value)||null;updateInfo();requestDraw();};
+    dialog.querySelector('#twinObjects').onchange=e=>{selected=scene.find(s=>s.item.id===e.target.value)||null;if(!selected)detail=false;updateInfo();if(detail)fit();else requestDraw();};
     dialog.querySelector('#twinEdit').onclick=()=>{if(selected){const id=selected.item.id;dialog.close();bridge?.edit(id,floor);}};
     canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.001),e.clientX-r.left,e.clientY-r.top);},{passive:false});
     canvas.onpointerdown=e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});gesture={x:e.clientX,y:e.clientY,moved:false};};
@@ -159,7 +194,7 @@
       else {pan.x+=e.clientX-old.x;pan.y+=e.clientY-old.y;if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>4)gesture.moved=true;requestDraw();}
     };
     canvas.onpointerup=e=>{
-      if(gesture && !gesture.moved){const r=canvas.getBoundingClientRect();ctx.save();ctx.setTransform(1,0,0,1,0,0);selected=[...hits].reverse().find(h=>ctx.isPointInPath(h.path,e.clientX-r.left,e.clientY-r.top))?.s || null;ctx.restore();updateInfo();requestDraw();}
+      if(gesture && !gesture.moved){const r=canvas.getBoundingClientRect();ctx.save();ctx.setTransform(1,0,0,1,0,0);selected=[...hits].reverse().find(h=>ctx.isPointInPath(h.path,e.clientX-r.left,e.clientY-r.top))?.s || (detail?selected:null);ctx.restore();updateInfo();requestDraw();}
       pointers.delete(e.pointerId);if(pointers.size===0)gesture=null;
     };
     canvas.onpointercancel=e=>{pointers.delete(e.pointerId);gesture=null;};
@@ -167,7 +202,7 @@
     new ResizeObserver(requestDraw).observe(canvas);
   }
   window.ChinChunTwin={
-    connect(api){bridge=api;document.getElementById('openDigitalTwin')?.addEventListener('click',()=>{mount();localize();dialog.showModal();rebuild();fit();});},
+    connect(api){bridge=api;document.getElementById('openDigitalTwin')?.addEventListener('click',()=>{mount();localize();detail=false;dialog.showModal();rebuild();fit();});},
     update(layout,activeFloor){data=layout;if(!dialog?.open){floor=activeFloor==='2F'?'2F':'1F';return;}rebuild();}
   };
 })();

@@ -6,6 +6,7 @@ const staticFiles = [
   "index.html",
   "app.js",
   "digital-twin.js",
+  "twin-models.js",
   "digital-twin.css",
   "style.css",
   "manifest.json",
