@@ -14,20 +14,26 @@
     select:'選取物件', all:'選擇設備／柱子／牆面', empty:'點選場景中的物件，查看尺寸與位置。', edit:'在平面圖編輯',
     note:'配置同步 · 廠內外高差約 1.5 m；台階與月台細節為照片示意 · 未接入即時機台訊號', help:'拖曳巡覽 · 滾輪縮放 · ⌘＋橫滾旋轉、縱滾傾斜（Shift＋縱滾旋轉） · Esc 返回',
     equipment:'設備', column:'柱子', wall:'牆面', aisle:'走道', zone:'夾層區域', size:'平面尺寸', position:'座標', rotation:'角度', count:'物件',
-    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'南側入口台階為照片示意；實際階高待量測。', dockSite:'西側上貨月台與旁側斜坡依照片示意；廠內高於外側約 1.5 m。'
+    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
   };
   const th = {
     title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'หมุนมุมมอง', labels:'ป้ายอุปกรณ์',
     select:'เลือกวัตถุ', all:'เลือกอุปกรณ์ / เสา / ผนัง', empty:'คลิกวัตถุเพื่อดูขนาดและตำแหน่ง', edit:'แก้ไขในแปลน',
     note:'ใช้ข้อมูลแปลนเดียวกัน · พื้นโรงงานสูงกว่าภายนอกประมาณ 1.5 ม.; ขั้นบันไดและท่าโหลดอ้างอิงภาพ · ยังไม่มีข้อมูลเครื่องจักรสด', help:'ลากเพื่อเลื่อน · ล้อเมาส์ซูม · ⌘ + เลื่อนแนวนอนหมุน แนวตั้งปรับมุมก้ม · Esc กลับ',
     equipment:'อุปกรณ์', column:'เสา', wall:'ผนัง', aisle:'ทางเดิน', zone:'พื้นที่ชั้นลอย', size:'ขนาดแปลน', position:'พิกัด', rotation:'มุม', count:'วัตถุ',
-    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นบันไดทางเข้าด้านใต้เป็นภาพจำลองจากรูปถ่าย; ต้องวัดความสูงจริง', dockSite:'ท่าโหลดฝั่งตะวันตกและทางลาดข้างเคียงจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
+    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นทางเข้าสำนักงานยึดตำแหน่ง DOOR-1800; ความสูงเป็นภาพจำลองจากรูปถ่าย ต้องวัดจริง', dockSite:'ท่าโหลดฝั่งตะวันตกจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
   };
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
   const n = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
   const isRamp = item => /^RAMP(?:-|$)/i.test(String(item?.code || ''));
+  // The reference photo marks the office entrance at the south wall between X6 and X7.
+  const isOfficeEntry = item => /^DOOR-1800$/i.test(String(item?.code || '')) && n(item.x)+n(item.width)/2>=20 && n(item.x)+n(item.width)/2<=35 && n(item.y)+n(item.height)/2>=37 && n(item.y)+n(item.height)/2<=42;
   const inFactory = p => p[0]>=0 && p[0]<=n(data?.grid?.factory_width,100) && p[1]>=0 && p[1]<=n(data?.grid?.factory_depth,40);
-  const elevation = s => floor==='1F' && !isRamp(s.item) && inFactory(s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0])) ? factoryRise : 0;
+  const elevation = s => {
+    if(floor!=='1F' || isRamp(s.item))return 0;
+    const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
+    return (inFactory(center) || isOfficeEntry(s.item) && center[0]>=0 && center[0]<=n(data?.grid?.factory_width,100) && center[1]>=-.5 && center[1]<=n(data?.grid?.factory_depth,40)+.5) ? factoryRise : 0;
+  };
   function localize() {
     dialog.querySelectorAll('[data-twin-text]').forEach(el => { el.textContent = t(el.dataset.twinText); });
   }
@@ -45,7 +51,7 @@
     if(floor==='2F') (data.mezzanine_2f?.zones || []).forEach(item=>add(item,'zone',rect(item),.04,'#91afac'));
     (floor==='2F' ? data.equipment_2f || [] : data.equipment || []).forEach(item => {
       const category = item.category || '';
-      const z = isRamp(item) ? factoryRise : item.id==='eq_office' ? 2.8 : category==='Door' ? (/ROLL/i.test(item.code || '') ? 2.7 : 2.1) : category==='Window' ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
+      const z = isRamp(item) ? factoryRise : category==='Door' ? (/ROLL/i.test(item.code || '') ? 2.7 : 2.1) : category==='Window' ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
       const points=rect(item);
       if(floor==='1F' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1){
         const center=points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
@@ -60,13 +66,25 @@
       const a=dy/len*n(item.thickness,.2)/2,b=-dx/len*n(item.thickness,.2)/2;
       let segments=[[0,1]];
       // A loading shutter must be an opening in the west wall, not painted over a solid wall.
+      const cuts=[];
       if(floor==='1F' && Math.abs(n(item.x1))<.35 && Math.abs(n(item.x2))<.35){
         const shutters=(data.equipment || []).filter(q=>q.category==='Door' && /ROLL/i.test(q.code || '') && Math.abs(n(q.x))<1);
-        const cuts=shutters.flatMap(q=>{
+        cuts.push(...shutters.flatMap(q=>{
           const ys=rect(q).map(p=>p[1]),lo=Math.min(...ys),hi=Math.max(...ys);
-          return [[(lo-n(item.y1))/dy,(hi-n(item.y1))/dy],[(lo-3-n(item.y1))/dy,(lo-.5-n(item.y1))/dy]];
-        }).filter(([lo,hi])=>hi>0 && lo<1).sort((l,r)=>l[0]-r[0]);
-        for(const [lo,hi] of cuts)segments=segments.flatMap(([a,b])=>{
+          return [[(lo-n(item.y1))/dy,(hi-n(item.y1))/dy]];
+        }));
+      }
+      if(floor==='1F' && Math.abs(dy)<.01){
+        (data.equipment || []).filter(isOfficeEntry).forEach(q=>{
+          const door=rect(q),xs=door.map(p=>p[0]),ys=door.map(p=>p[1]);
+          if(Math.abs((Math.min(...ys)+Math.max(...ys))/2-n(item.y1))<.4)
+            cuts.push([(Math.min(...xs)-n(item.x1))/dx,(Math.max(...xs)-n(item.x1))/dx]);
+        });
+      }
+      for(const cut of cuts){
+        const lo=Math.min(...cut),hi=Math.max(...cut);
+        if(hi<=0 || lo>=1)continue;
+        segments=segments.flatMap(([a,b])=>{
           const start=Math.max(a,lo),end=Math.min(b,hi);
           return end<=start?[[a,b]]:[...(a<start?[[a,start]]:[]),...(end<b?[[end,b]]:[])];
         });
@@ -110,8 +128,11 @@
   function viewBounds() {
     if(!detail || !selected)return bounds;
     const xs=selected.points.map(p=>p[0]),ys=selected.points.map(p=>p[1]);
-    if(selected.item.id==='eq_office')ys.push(n(selected.item.y)+n(selected.item.height)+2.6);
-    if(selected.item.category==='Door' && /ROLL/i.test(selected.item.code || '') && Math.abs(n(selected.item.x))<1){xs.push(-5);ys.push(Math.min(...ys)-3);}
+    if(isOfficeEntry(selected.item)){
+      const entry=officeEntrance(selected);
+      for(const p of [entry.edge(-entry.half,2.6),entry.edge(entry.half,2.6)]){xs.push(p[0]);ys.push(p[1]);}
+    }
+    if(selected.item.category==='Door' && /ROLL/i.test(selected.item.code || '') && Math.abs(n(selected.item.x))<1){xs.push(-2);ys.push(Math.min(...ys)-.5);}
     return {x0:Math.min(...xs)-1,y0:Math.min(...ys)-1,x1:Math.max(...xs)+1,y1:Math.max(...ys)+1};
   }
   function viewDepth(p) {
@@ -282,27 +303,30 @@
     faces.push({s,points,color:shade(color,18),depth:faceDepth(points)});
     return faces;
   }
+  function officeEntrance(s) {
+    const xs=s.points.map(p=>p[0]),ys=s.points.map(p=>p[1]);
+    const horizontal=Math.max(...xs)-Math.min(...xs)>=Math.max(...ys)-Math.min(...ys);
+    const midX=(Math.min(...xs)+Math.max(...xs))/2,midY=(Math.min(...ys)+Math.max(...ys))/2;
+    const outward=horizontal?[0,midY>=n(data?.grid?.factory_depth,40)/2?1:-1]:[midX>=n(data?.grid?.factory_width,100)/2?1:-1,0];
+    const tangent=horizontal?[1,0]:[0,1];
+    const front=horizontal?[midX,outward[1]>0?Math.max(...ys):Math.min(...ys)]:[outward[0]>0?Math.max(...xs):Math.min(...xs),midY];
+    const half=Math.max(1.4,(horizontal?Math.max(...xs)-Math.min(...xs):Math.max(...ys)-Math.min(...ys))/2+.45);
+    return {half,outward,edge:(along,offset)=>[front[0]+tangent[0]*along+outward[0]*offset,front[1]+tangent[1]*along+outward[1]*offset]};
+  }
   function siteFaces() {
     if(floor!=='1F')return [];
     const faces=[];
-    const office=scene.find(s=>s.item.id==='eq_office');
+    const office=scene.find(s=>isOfficeEntry(s.item));
     if(office && (!detail || selected===office)){
-      const item=office.item,front=n(item.y)+n(item.height),mid=n(item.x)+n(item.width)/2;
-      const left=mid-1.6,right=mid+1.6,steps=6,depth=.42;
+      const entry=officeEntrance(office),steps=6,depth=.42;
       for(let k=0;k<steps;k++){
-        const near=front+k*depth,far=near+depth;
-        faces.push(...blockFaces(office,[[left,near],[right,near],[right,far],[left,far]],0,factoryRise*(steps-k)/steps,'#aeb8af'));
+        const near=k*depth,far=near+depth;
+        faces.push(...blockFaces(office,[entry.edge(-entry.half,near),entry.edge(entry.half,near),entry.edge(entry.half,far),entry.edge(-entry.half,far)],0,factoryRise*(steps-k)/steps,'#aeb8af'));
       }
     }
     const shutter=scene.find(s=>s.item.category==='Door' && /ROLL/i.test(s.item.code || '') && Math.abs(n(s.item.x))<1);
     if(shutter && (!detail || selected===shutter)){
       const ys=shutter.points.map(p=>p[1]),lo=Math.min(...ys),hi=Math.max(...ys);
-      const rampLow=lo-3,rampHigh=lo-.5;
-      const nearbyRamp=scene.some(s=>isRamp(s.item) && Math.abs(s.points.reduce((sum,p)=>sum+p[0]/4,0)+2.5)<3 && Math.abs(s.points.reduce((sum,p)=>sum+p[1]/4,0)-(rampLow+rampHigh)/2)<3);
-      if(!nearbyRamp){
-        const ramp={...shutter,points:[[-5,rampLow],[0,rampLow],[0,rampHigh],[-5,rampHigh]],z:factoryRise,color:'#D97706'};
-        faces.push(...rampFaces(ramp).map(f=>({...f,s:shutter})));
-      }
       const landing=[[-2,lo-.45],[.05,lo-.45],[.05,hi+.45],[-2,hi+.45]];
       faces.push(...blockFaces(shutter,landing,0,factoryRise,'#a6a79c'));
       const line=[[-2,lo-.36,factoryRise+.025],[-1.86,lo-.36,factoryRise+.025],[-1.86,hi+.36,factoryRise+.025],[-2,hi+.36,factoryRise+.025]];
@@ -312,15 +336,15 @@
   }
   function drawOfficeFacade() {
     if(floor!=='1F')return;
-    const office=scene.find(s=>s.item.id==='eq_office');
+    const office=scene.find(s=>isOfficeEntry(s.item));
     if(!office || (detail && selected!==office))return;
-    const item=office.item,front=n(item.y)+n(item.height),mid=n(item.x)+n(item.width)/2,centerY=n(item.y)+n(item.height)/2;
-    if(viewDepth([mid,front,0])<=viewDepth([mid,centerY,0]))return;
-    const z=factoryRise,glass=[[mid-1.25,front+.05,z+.12],[mid+1.25,front+.05,z+.12],[mid+1.25,front+.05,z+2.45],[mid-1.25,front+.05,z+2.45]];
+    const entry=officeEntrance(office),z=elevation(office),out=entry.edge(0,.08),inside=entry.edge(0,-1);
+    if(viewDepth([...out,0])<=viewDepth([...inside,0]))return;
+    const glass=[entry.edge(-.9,.05),entry.edge(.9,.05),entry.edge(.9,.05),entry.edge(-.9,.05)].map((p,i)=>[...p,i<2?z+.12:z+2.45]);
     hits.push({path:polygon(glass.map(p=>project(p,p[2])),'#6d9ba4','#e9eee4'),s:office});
-    const mullion=[[mid-.035,front+.06,z+.12],[mid+.035,front+.06,z+.12],[mid+.035,front+.06,z+2.45],[mid-.035,front+.06,z+2.45]];
+    const mullion=[entry.edge(-.035,.06),entry.edge(.035,.06),entry.edge(.035,.06),entry.edge(-.035,.06)].map((p,i)=>[...p,i<2?z+.12:z+2.45]);
     polygon(mullion.map(p=>project(p,p[2])),'#e3e8dc','#e3e8dc');
-    const canopy=[[mid-2.3,front-.05,z+2.67],[mid+2.3,front-.05,z+2.67],[mid+2.3,front+.72,z+2.67],[mid-2.3,front+.72,z+2.67]];
+    const canopy=[entry.edge(-2.2,-.05),entry.edge(2.2,-.05),entry.edge(2.2,.72),entry.edge(-2.2,.72)].map(p=>[...p,z+2.67]);
     polygon(canopy.map(p=>project(p,p[2])),'#cfd7cf','#edf1e7');
   }
   function objectFaces(s) {
@@ -442,7 +466,7 @@
     dialog.querySelector('#twinFocus').hidden=!s;
     if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t('photo');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
-    if(item?.id==='eq_office')dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
+    if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
     dialog.querySelector('#twinObjects').value=item?.id || '';
   }
