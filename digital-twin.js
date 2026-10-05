@@ -10,6 +10,7 @@
   let gesture = null;
   let detail = false;
   const zh = {
+    f1Photo:'F1-1：大黑色捲料端在平面圖右端，最高約 2.8 m（已確認）。橘紅護欄、上層走台、直梯與下層滾輪依六張照片建模；其餘尺寸為照片估算。',
     title:'廠房數位孿生', close:'返回平面圖', floor:'樓層', fit:'全覽', rotate:'旋轉視角', labels:'設備標籤',
     select:'選取物件', all:'選擇設備／柱子／牆面', empty:'點選場景中的物件，查看尺寸與位置。', edit:'在平面圖編輯',
     note:'配置同步 · 廠內外高差約 1.5 m；台階與月台細節為照片示意 · 未接入即時機台訊號', help:'拖曳巡覽 · 滾輪縮放 · ⌘＋橫滾旋轉、縱滾傾斜（Shift＋縱滾旋轉） · Esc 返回',
@@ -17,6 +18,7 @@
     updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', a1Photo:'A1-1 依新照片重畫：右端綠色輸送帶入料，經加工滾輪與靠右的大輪，帶材斜向左端取料滾輪。方向已確認；部件尺寸與高度仍是照片估算。', a1Entrance:'入料（綠色輸送帶）', a1Collection:'取料（銀色滾輪）', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
   };
   const th = {
+    f1Photo:'F1-1: ม้วนวัสดุสีดำขนาดใหญ่อยู่ปลายขวาของแปลน สูงสุดประมาณ 2.8 ม. (ยืนยันแล้ว) ราวสีส้ม ทางเดินด้านบน บันไดแนวตั้ง และลูกกลิ้งจำลองจากภาพ 6 ภาพ ขนาดส่วนอื่นประมาณจากภาพ',
     title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'หมุนมุมมอง', labels:'ป้ายอุปกรณ์',
     select:'เลือกวัตถุ', all:'เลือกอุปกรณ์ / เสา / ผนัง', empty:'คลิกวัตถุเพื่อดูขนาดและตำแหน่ง', edit:'แก้ไขในแปลน',
     note:'ใช้ข้อมูลแปลนเดียวกัน · พื้นโรงงานสูงกว่าภายนอกประมาณ 1.5 ม.; ขั้นบันไดและท่าโหลดอ้างอิงภาพ · ยังไม่มีข้อมูลเครื่องจักรสด', help:'ลากเพื่อเลื่อน · ล้อเมาส์ซูม · ⌘ + เลื่อนแนวนอนหมุน แนวตั้งปรับมุมก้ม · Esc กลับ',
@@ -534,7 +536,7 @@
     dialog.querySelector('#twinDetails').textContent=item ? `${t(s.type)} · ${item.name || item.id}\n${t('position')}: ${n(item.x ?? item.x1).toFixed(2)}, ${n(item.y ?? item.y1).toFixed(2)} m\n${t('size')}: ${s.type==='wall'?Math.hypot(n(item.x2)-n(item.x1),n(item.y2)-n(item.y1)).toFixed(2)+' × '+n(item.thickness,.2).toFixed(2):n(item.width).toFixed(2)+' × '+n(item.height).toFixed(2)} m\n${t('rotation')}: ${n(item.rotation).toFixed(0)}°` : t('empty');
     dialog.querySelector('#twinEdit').hidden=!s;
     dialog.querySelector('#twinFocus').hidden=!s;
-    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t(String(item.code || '').toUpperCase()==='A1-1'?'a1Photo':'photo');
+    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'A1-1':'a1Photo','F1-1':'f1Photo'})[String(item.code || '').toUpperCase()] || 'photo');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');

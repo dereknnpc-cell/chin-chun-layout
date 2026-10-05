@@ -3,6 +3,24 @@ const assert=require('node:assert/strict');
 global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
+test('F1-1 respects the confirmed 2.8 m height and keeps its coil inside the right end',()=>{
+  const item=Object.freeze({code:'F1-1',x:0,y:0,width:15,height:3.8,rotation:0});
+  const faces=models.build(item),points=faces.flatMap(f=>f.points);
+  assert.ok(models.matches(item));
+  assert.ok(points.every(p=>p.every(Number.isFinite)));
+  assert.ok(points.every(([x,y,z])=>x>=0 && x<=15 && y>=0 && y<=3.8 && z>=0 && z<=2.8));
+  assert.ok(Math.abs(Math.max(...points.map(p=>p[2]))-2.8)<.01);
+  assert.equal(Math.min(...points.map(p=>p[2])),0);
+  const coil=faces.filter(f=>f.color==='#272a31').flatMap(f=>f.points);
+  assert.ok(coil.length>0 && coil.every(p=>p[0]>11));
+  const turned=models.build({...item,rotation:90});
+  faces.forEach((f,i)=>f.points.forEach((p,j)=>{
+    const q=turned[i].points[j];
+    assert.ok(Math.abs(q[0]-(7.5-(p[1]-1.9)))<1e-9);
+    assert.ok(Math.abs(q[1]-(1.9+(p[0]-7.5)))<1e-9);
+    assert.equal(q[2],p[2]);
+  }));
+});
 const base={id:'eq_latex_h1_1',code:'H1-1',x:82.08,y:7.5,width:14.82,height:2,rotation:0};
 test('silver oven is the highest point at the confirmed 2.4 m',()=>{
   const faces=models.build(base);
