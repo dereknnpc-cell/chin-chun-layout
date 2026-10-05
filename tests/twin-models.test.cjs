@@ -3,6 +3,24 @@ const assert=require('node:assert/strict');
 global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
+test('G2-2 stays grounded in its CAD footprint and rotates without changing height',()=>{
+  const item=Object.freeze({code:'G2-2',x:0,y:0,width:4,height:2.4});
+  const original=models.build(item),turned=models.build({...item,rotation:90}),resized=models.build({...item,width:8,height:4.8});
+  assert.ok(models.matches(item));
+  const points=original.flatMap(f=>f.points);
+  assert.ok(points.every(p=>p.every(Number.isFinite)));
+  assert.ok(points.every(([x,y,z])=>x>=0 && x<=4 && y>=0 && y<=2.4 && z>=0 && z<=2.3));
+  assert.equal(Math.min(...points.map(p=>p[2])),0);
+  assert.ok(Math.max(...points.map(p=>p[2]))>2.29);
+  original.forEach((face,i)=>face.points.forEach((p,j)=>{
+    const q=turned[i].points[j],r=resized[i].points[j];
+    assert.ok(Math.abs(q[0]-(2-(p[1]-1.2)))<1e-9);
+    assert.ok(Math.abs(q[1]-(1.2+(p[0]-2)))<1e-9);
+    assert.equal(q[2],p[2]);
+    assert.ok(Math.abs(r[0]-2*p[0])<1e-9 && Math.abs(r[1]-2*p[1])<1e-9);
+    assert.equal(r[2],p[2]);
+  }));
+});
 test('F1-1 respects the confirmed 2.8 m height and excludes foam consumables',()=>{
   const item=Object.freeze({code:'F1-1',x:0,y:0,width:15,height:3.8,rotation:0});
   const faces=models.build(item),points=faces.flatMap(f=>f.points);

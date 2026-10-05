@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const modelCode = item => String(item.code || '').trim().toUpperCase();
-  const matches = item => ['H1-1', 'A1-1', 'F1-1'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -302,11 +302,95 @@
     }
     return faces;
   }
+  function buildG2(item) {
+    // Five reference photographs; CAD footprint is retained. Vertical dimensions
+    // and orientation are provisional, not surveyed. No stock rolls or web material.
+    const faces=[],cream='#ddd6bd',steel='#b9c5c7',green='#477d5d',orange='#c96532',dark='#354044';
+    const w=Math.max(.05,Number(item.width)||4),d=Math.max(.05,Number(item.height)||2.4);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{const u=x/4*w-w/2,v=y/2.4*d-d/2;return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];};
+    const face=(points,color)=>faces.push({points:points.map(world),color});
+    function box(x,y,z,w,d,h,color=cream){
+      const p=[[x,y,z],[x+w,y,z],[x+w,y+d,z],[x,y+d,z],[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color=steel,n=12){
+      const v=b.map((x,i)=>x-a[i]),len=Math.hypot(...v),u=v.map(x=>x/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);const el=Math.hypot(...e);e=e.map(x=>x/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((x,j)=>x+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color));
+    }
+    // Transverse machine axes run across local y; process path along local x.
+    const roll=(x,z,r,col=steel)=>tube([x,.39,z],[x,1.99,z],r,col,24);
+    for(const y of [.10,2.04]){
+      box(.12,y,0,3.74,.23,.10);
+      box(.15,y,.10,.68,.23,.64);
+      // Sloping tall cheeks beside knife station, not a solid cross-machine wall.
+      const profile=[[1.23,.10],[2.98,.10],[2.98,1.26],[2.20,1.34],[1.23,.80]];
+      face(profile.map(([x,z])=>[x,y,z]),cream);
+      face(profile.map(([x,z])=>[x,y+.23,z]).reverse(),cream);
+      profile.forEach(([x,z],i)=>{const [xx,zz]=profile[(i+1)%profile.length];face([[x,y,z],[xx,y,zz],[xx,y+.23,zz],[x,y+.23,z]],cream);});
+    }
+    box(.22,.34,.17,1.04,1.69,.08,orange);
+    box(1.33,.34,.18,.07,1.69,.49,orange);
+    // Empty winding axle, bearings and green end brackets.
+    for(const x of [.42,3.58]){
+      tube([x,.13,.79],[x,2.26,.79],.037,steel,20);
+      for(const y of [.25,2.09]){
+        tube([x,y-.055,.79],[x,y+.055,.79],.075,dark,16);
+        box(x-.065,y-.035,.57,.13,.07,.16,green);
+      }
+    }
+    for(const y of [.26,2.07]){
+      tube([2.95,y,.31],[3.58,y,.74],.045,cream,8);
+      tube([2.93,y,.14],[3.57,y,.38],.035,cream,8);
+      tube([3.57,y,.38],[3.58,y,.79],.035,cream,8);
+    }
+    // Open bed of independent rollers: do not fill with foam or paper sheets.
+    for(const [x,z,r,col] of [[.88,.65,.052,green],[1.13,.75,.055,green],[1.46,.84,.052,'#947f62'],[1.71,.91,.055,green],[1.98,1.01,.052,steel],[2.22,1.06,.056,green],[2.57,1.01,.12,steel]])roll(x,z,r,col);
+    box(2.43,.37,1.25,.095,1.64,.065,orange);
+    tube([2.44,.35,1.36],[2.44,2.03,1.36],.029,steel,16);
+    for(let i=0;i<14;i++){
+      const y=.44+i*.112;
+      box(2.40,y,1.27,.19,.064,.12,'#88969a');
+      tube([2.48,y+.03,1.22],[2.48,y+.04,1.22],.058,steel,12);
+      // Individual arched pneumatic lines, not an invented upper conveyor.
+      let prev=[2.38,y+.03,1.40];
+      for(let k=1;k<=8;k++){
+        const t=k/8,p=[2.38+.29*t,y+.03,1.40+.24*Math.sin(Math.PI*t)];
+        tube(prev,p,.009,'#3297b9',6);prev=p;
+      }
+    }
+    // Side drive/control cabinet and small raised operator console.
+    box(1.59,2.08,.10,1.41,.25,1.18);
+    box(2.19,2.337,.71,.67,.016,.39,orange);
+    for(const x of [2.58,2.77]){
+      tube([x,2.356,.97],[x,2.365,.97],.066,dark,16);
+      tube([x,2.366,.97],[x,2.370,.97],.051,'#e0e1cf',16);
+    }
+    for(const x of [2.29,2.45,2.63,2.79])tube([x,2.36,.81],[x,2.38,.81],.021,dark,10);
+    box(2.30,2.16,1.28,.055,.07,.23);
+    box(2.07,2.10,1.49,.67,.21,.24);
+    box(2.11,2.317,1.53,.57,.017,.14,dark);
+    for(const x of [2.16,2.28,2.40,2.52,2.64])tube([x,2.34,1.56],[x,2.35,1.56],.013,steel,8);
+    // Thin overhead lighting frame. Its estimated 2.3 m height is NOT F1's 2.8 m.
+    for(const x of [.22,2.92])for(const y of [.12,2.10])box(x,y,.10,.045,.045,2.15);
+    for(const y of [.12,2.10])box(.22,y,2.25,2.745,.045,.045);
+    for(const x of [.22,2.92]){
+      box(x,.12,2.25,.045,2.025,.045);
+      box(x,.36,2.19,.07,1.58,.055,steel);
+      box(x+.015,.38,2.177,.04,1.54,.012,'#f1f2df');
+    }
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'H1-1': return buildH1(item);
       case 'A1-1': return buildA1(item);
       case 'F1-1': return buildF1(item);
+      case 'G2-2': return buildG2(item);
       default: return null;
     }
   }
