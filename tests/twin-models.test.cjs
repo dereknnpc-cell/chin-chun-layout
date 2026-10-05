@@ -54,6 +54,15 @@ test('A1-1 rotates and resizes with its CAD footprint without changing estimated
     assert.equal(r[2],p[2]);
   }));
 });
+test('A1-1 entrance conveyor is right of the large wheel',()=>{
+  const faces=models.build(eva);
+  const centerX=color=>{
+    const xs=faces.filter(f=>f.color===color).flatMap(f=>f.points.map(p=>p[0]));
+    return xs.reduce((sum,x)=>sum+x,0)/xs.length;
+  };
+  assert.ok(centerX('#244944')>centerX('#5b6060'));
+  assert.ok(centerX('#bc3326')<centerX('#244944'));
+});
 test('rotation follows CAD center without changing height',()=>{
   const a=models.build(base),b=models.build({...base,rotation:90});
   const cx=base.x+base.width/2,cy=base.y+base.height/2;

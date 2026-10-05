@@ -145,59 +145,81 @@
       ra.forEach((p,i)=>{const j=(i+1)%segments;face([p,ra[j],rb[j],rb[i]],color);});
     }
     const roller=(x,z,r,color=chrome)=>tube([x,.28,z],[x,3.42,z],r,color,20);
-    // Floor-contacting frame and open, overhead longitudinal rails.
+    // Photo 1 shows the entire side elevation: collection rolls at local left,
+    // a long open transfer span, the large drum near the right, and the entry
+    // conveyor still farther right. No people, surrounding columns, or carts.
     for(const y of [.12,3.46]) {
       box(.2,y,.02,13.15,.12,.13,cream);
       box(.3,y,2.08,12.85,.09,.1,cream);
-      for(const x of [.35,2.85,5.55,8.1,10.65,13.05]) {
+      for(const x of [.35,2.85,5.55,8.05,10.65,13.05]) {
         box(x,y,.04,.13,.13,2.13,cream);
         box(x-.04,y-.035,0,.21,.20,.06,green);
       }
     }
-    for(const x of [.35,5.55,8.1,10.65,13.05])box(x,.12,2.1,.11,3.46,.09,cream);
-    // The front of the photo shows two bright steel rolls followed by brown guide rolls.
-    for(const [x,z,r,color] of [[.75,.52,.22,chrome],[1.17,.62,.25,steel],[1.65,.68,.17,'#876c4e'],[2.15,.82,.11,'#987c59'],[2.65,.95,.1,'#ad8b61'],[3.25,1.01,.09,chrome]])roller(x,z,r,color);
-    for(const x of [.68,1.35,2.7]) {
+    for(const x of [.35,5.55,8.05,10.65,13.05])box(x,.12,2.1,.11,3.46,.09,cream);
+    // Collection bank: broad polished rolls at the left and smaller brown guides
+    // above the open frame (photos 1 and the earlier front/overhead series).
+    for(const [x,z,r,color] of [[.55,.49,.22,chrome],[1.04,.56,.24,steel],[1.52,.7,.14,'#876c4e'],[2.08,.86,.10,'#987c59'],[2.7,.98,.09,'#ad8b61']])roller(x,z,r,color);
+    for(const x of [.35,1.35,2.7]) {
       for(const y of [.15,3.39])box(x,y,.12,.14,.15,.85,cream);
       box(x,.15,.95,.1,3.25,.09,cream);
     }
-    // Dark green processing conveyor, exposed around the front and back cylinders.
-    box(3.55,.3,.47,4.28,3.1,.23,dark);
-    face([[3.58,.31,.79],[7.75,.31,.79],[7.75,3.39,.79],[3.58,3.39,.79]],belt);
-    roller(3.65,.72,.16,dark);roller(7.72,.72,.16,steel);
-    for(const y of [.27,3.35])box(3.5,y,.25,4.35,.1,.72,cream);
-    // Large rear drum and the cream sheet wrapping its visible upper arc.
-    const drumX=9.26,drumZ=1.37,drumR=.77;
+    // The sheet visibly spans diagonally from the high drum toward the left
+    // collection bank. These connected panels are material, not a solid block.
+    const web='#e4dec9',webY0=.44,webY1=3.26;
+    function sheet(path,color=web) {
+      for(let i=1;i<path.length;i++) {
+        const [x,z]=path[i-1],[nx,nz]=path[i];
+        face([[x,webY0,z],[nx,webY0,nz],[nx,webY1,nz],[x,webY1,z]],color);
+      }
+    }
+    sheet([[1.06,.83],[2.1,.92],[4.1,1.02],[6.7,1.22],[7.62,1.47],[8.2,1.99]]);
+    // The large exposed wheel is toward the right end of the long machine.
+    const drumX=8.75,drumZ=1.35,drumR=.78;
     tube([drumX,.34,drumZ],[drumX,3.36,drumZ],drumR,'#5b6060',32);
     for(let i=0;i<20;i++) {
-      const a=(-55+i*190/20)*Math.PI/180,b=(-55+(i+1)*190/20)*Math.PI/180;
-      face([[drumX+Math.cos(a)*(.79),.38,drumZ+Math.sin(a)*(.79)],
-        [drumX+Math.cos(b)*(.79),.38,drumZ+Math.sin(b)*(.79)],
-        [drumX+Math.cos(b)*(.79),3.32,drumZ+Math.sin(b)*(.79)],
-        [drumX+Math.cos(a)*(.79),3.32,drumZ+Math.sin(a)*(.79)]],'#e6dcc0');
+      const a=(-205+i*230/20)*Math.PI/180,b=(-205+(i+1)*230/20)*Math.PI/180;
+      face([[drumX+Math.cos(a)*(.79),webY0,drumZ+Math.sin(a)*(.79)],
+        [drumX+Math.cos(b)*(.79),webY0,drumZ+Math.sin(b)*(.79)],
+        [drumX+Math.cos(b)*(.79),webY1,drumZ+Math.sin(b)*(.79)],
+        [drumX+Math.cos(a)*(.79),webY1,drumZ+Math.sin(a)*(.79)]],web);
     }
     for(const y of [.25,3.36]) {
       tube([drumX,y-.08,drumZ],[drumX,y+.08,drumZ],.17,steel,16);
-      box(8.37,y,.18,1.8,.12,.16,cream);
+      box(7.84,y,.18,1.82,.12,.16,cream);
+      tube([8.06,y,.18],[8.55,y,1.54],.055,cream,6);
+      tube([9.44,y,.2],[8.96,y,1.55],.055,cream,6);
     }
-    roller(10.22,.63,.17,'#8b725a');roller(10.65,1.15,.1,chrome);
-    // Red side-mounted control cabinet, dials, push-buttons and green drive guard.
-    box(7.2,3.25,.16,1.28,.31,1.65,red);
-    box(7.26,3.57,.31,1.16,.025,1.43,'#ce402d');
-    for(const x of [7.48,7.82,8.16])for(const z of [.58,.88,1.18,1.5])
+    // Process nip/coating station sits between wheel and green entrance table
+    // (photos 3–4). The entrance belt is genuinely to the wheel's right.
+    for(const [x,z,r,color] of [[9.66,.77,.15,'#8b725a'],[9.93,.92,.12,chrome],[10.26,.85,.14,steel],[10.48,1.0,.09,chrome]])roller(x,z,r,color);
+    box(9.74,.27,.2,.58,3.15,.14,dark);
+    for(const y of [.26,3.28])box(9.73,y,.2,.73,.12,.72,cream);
+    sheet([[9.43,1.6],[9.68,1.02],[10.1,.94],[10.48,.93],[10.8,.88]]);
+    box(10.62,.3,.45,2.7,3.1,.17,green);
+    face([[10.68,.32,.67],[13.24,.32,.67],[13.24,3.38,.67],[10.68,3.38,.67]],belt);
+    roller(10.73,.67,.13,dark);roller(13.16,.67,.13,steel);
+    for(const y of [.27,3.35])box(10.6,y,.17,2.75,.1,.59,cream);
+    for(const x of [11.0,12.25,13.08])for(const y of [.31,3.26])box(x,y,.03,.08,.09,.5,green);
+    sheet([[10.8,.88],[11.6,.69],[13.12,.69]]);
+    // Two separate red electrical cabinets are visible in the side photos:
+    // one at collection and another beside the drum.
+    box(.36,3.24,.16,1.04,.28,1.34,red);
+    box(7.15,3.23,.16,1.15,.31,1.65,red);
+    box(7.21,3.55,.31,1.03,.025,1.43,'#ce402d');
+    for(const x of [7.38,7.68,7.98])for(const z of [.58,.88,1.18,1.5])
       tube([x,3.59,z],[x,3.60,z],.047,z===.58?green:z===.88?dark:steel,10);
-    box(8.48,3.31,.32,.83,.18,.54,green);
-    // Rear open gantry, overhead fan housing and silver exhaust/guide pipes.
-    for(const y of [.14,3.43])for(const x of [11.15,13.1])box(x,y,.03,.13,.14,2.14,cream);
-    for(const x of [11.2,12.3,13.05])roller(x,1.47,.08,steel);
-    box(10.65,.95,1.69,.62,1.8,.52,'#697273');
-    tube([10.60,1.85,1.96],[10.62,1.85,1.96],.36,dark,24);
+    box(7.64,3.30,.32,.56,.18,.54,green);
+    // Open transfer-span rails and suspended fan, without a closed box body.
+    for(const x of [3.3,5.75,7.15])roller(x,1.52,.045,steel);
+    box(5.55,1.15,1.83,.18,1.35,.18,'#697273');
+    tube([5.59,1.85,1.93],[5.61,1.85,1.93],.32,dark,24);
     for(let i=0;i<6;i++) {
       const a=i*Math.PI/3;
-      tube([10.62,1.85,1.96],[10.62,1.85+Math.cos(a)*.3,1.96+Math.sin(a)*.3],.018,steel,6);
+      tube([5.61,1.85,1.93],[5.61,1.85+Math.cos(a)*.26,1.93+Math.sin(a)*.26],.018,steel,6);
     }
-    tube([10.95,.2,2.24],[13.0,.2,2.24],.06,chrome);
-    tube([10.95,3.5,2.24],[13.0,3.5,2.24],.06,chrome);
+    tube([5.8,.2,2.24],[8.0,.2,2.24],.06,chrome);
+    tube([5.8,3.5,2.24],[8.0,3.5,2.24],.06,chrome);
     return faces;
   }
   function build(item) {
