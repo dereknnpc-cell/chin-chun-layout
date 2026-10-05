@@ -9,6 +9,14 @@ control cabinet extending to its left. A second cabinet is beside the drum.
 The 2.5D model depicts this sequence, the support frame, guide rollers, and
 overhead fan. Original photos and people are not embedded in the application.
 
+The yellow-marked review further corrects the collection control to a small
+raised panel on a post. The entrance has a low conveyor frame, not the previous
+full-height enclosing gantry. Unsupported longitudinal silver pipes and floating
+cross rollers have been removed. Frame members use thinner photo-based sections.
+The 2.5D solids now use a WebGL depth buffer for per-pixel occlusion; long beams
+and sheets no longer rely on a single face-center painter order against columns.
+Canvas painter rendering remains a fallback when WebGL is unavailable.
+
 The model uses the existing A1-1 CAD footprint (initially 13.6 × 3.7 m), x/y,
 rotation, and resized planar dimensions. It does not change the 2D drawing,
 cloud records, or machine data. Vertical dimensions and component proportions

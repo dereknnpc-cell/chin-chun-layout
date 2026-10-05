@@ -150,19 +150,18 @@
     // conveyor still farther right. No people, surrounding columns, or carts.
     for(const y of [.12,3.46]) {
       box(.2,y,.02,13.15,.12,.13,cream);
-      box(.3,y,2.08,12.85,.09,.1,cream);
-      for(const x of [.35,2.85,5.55,8.05,10.65,13.05]) {
-        box(x,y,.04,.13,.13,2.13,cream);
+      box(.3,y,2.08,7.45,.065,.075,cream);
+      for(const x of [.35,3.45,7.65]) {
+        box(x,y,.04,.075,.075,2.08,cream);
         box(x-.04,y-.035,0,.21,.20,.06,green);
       }
     }
-    for(const x of [.35,5.55,8.05,10.65,13.05])box(x,.12,2.1,.11,3.46,.09,cream);
+    for(const x of [.35,7.65])box(x,.12,2.08,.075,3.40,.075,cream);
     // Collection bank: broad polished rolls at the left and smaller brown guides
     // above the open frame (photos 1 and the earlier front/overhead series).
     for(const [x,z,r,color] of [[.55,.49,.22,chrome],[1.04,.56,.24,steel],[1.52,.7,.14,'#876c4e'],[2.08,.86,.10,'#987c59'],[2.7,.98,.09,'#ad8b61']])roller(x,z,r,color);
     for(const x of [.35,1.35,2.7]) {
       for(const y of [.15,3.39])box(x,y,.12,.14,.15,.85,cream);
-      box(x,.15,.95,.1,3.25,.09,cream);
     }
     // The sheet visibly spans diagonally from the high drum toward the left
     // collection bank. These connected panels are material, not a solid block.
@@ -204,22 +203,22 @@
     sheet([[10.8,.88],[11.6,.69],[13.12,.69]]);
     // Two separate red electrical cabinets are visible in the side photos:
     // one at collection and another beside the drum.
-    box(.36,3.24,.16,1.04,.28,1.34,red);
+    box(.65,3.28,.08,.075,.075,1.22,cream);
+    box(.40,3.23,.94,.65,.16,.70,red);
+    for(const x of [.52,.72,.92])for(const z of [1.08,1.27,1.45])
+      tube([x,3.39,z],[x,3.41,z],.025,z===1.08?green:dark,8);
     box(7.15,3.23,.16,1.15,.31,1.65,red);
     box(7.21,3.55,.31,1.03,.025,1.43,'#ce402d');
     for(const x of [7.38,7.68,7.98])for(const z of [.58,.88,1.18,1.5])
       tube([x,3.59,z],[x,3.60,z],.047,z===.58?green:z===.88?dark:steel,10);
     box(7.64,3.30,.32,.56,.18,.54,green);
     // Open transfer-span rails and suspended fan, without a closed box body.
-    for(const x of [3.3,5.75,7.15])roller(x,1.52,.045,steel);
-    box(5.55,1.15,1.83,.18,1.35,.18,'#697273');
-    tube([5.59,1.85,1.93],[5.61,1.85,1.93],.32,dark,24);
+    box(7.28,1.51,1.80,.09,.68,.66,'#697273');
+    tube([7.26,1.85,2.12],[7.28,1.85,2.12],.29,dark,24);
     for(let i=0;i<6;i++) {
       const a=i*Math.PI/3;
-      tube([5.61,1.85,1.93],[5.61,1.85+Math.cos(a)*.26,1.93+Math.sin(a)*.26],.018,steel,6);
+      tube([7.25,1.85,2.12],[7.25,1.85+Math.cos(a)*.26,2.12+Math.sin(a)*.26],.012,steel,6);
     }
-    tube([5.8,.2,2.24],[8.0,.2,2.24],.06,chrome);
-    tube([5.8,3.5,2.24],[8.0,3.5,2.24],.06,chrome);
     return faces;
   }
   function build(item) {

@@ -141,7 +141,7 @@
     return (u+v)*Math.cos(pitch)/Math.SQRT2+p[2]*Math.sin(pitch);
   }
   function faceDepth(points) { return points.reduce((sum,p)=>sum+viewDepth(p),0)/points.length; }
-  function drawFace(f) {
+  function faceColor(f) {
     let color=f.color;
     if(f.model){
       const [a,b,c]=f.points,u=b.map((v,i)=>v-a[i]),v=c.map((n,i)=>n-a[i]);
@@ -149,9 +149,56 @@
       const light=(normal[0]*.25-normal[1]*.35+Math.abs(normal[2])*.65)/len;
       color=shade(color,Math.round(light*32)-8);
     }
-    // Segmented walls need seamless joints; their selection outline is drawn once below.
-    const stroke=f.stroke || (f.s===selected?'#fff5ac':'#42574c');
+    return color;
+  }
+  function drawFace(f) {
+    const color=faceColor(f);
+    const stroke=f.model?color:f.stroke || (f.s===selected?'#fff5ac':'#42574c');
     hits.push({path:polygon(f.points.map(p=>project(p,p[2])),color,stroke),s:f.s});
+  }
+  let solidRenderer;
+  function renderSolids(faces,dpr) {
+    // Actual per-pixel depth handles a long rail crossing in front of and behind
+    // columns. Sorting face centers cannot represent those relationships.
+    if(solidRenderer===undefined){
+      try {
+        const surface=document.createElement('canvas');
+        const gl=surface.getContext('webgl',{alpha:true,antialias:true,premultipliedAlpha:true});
+        if(!gl)throw new Error('WebGL unavailable');
+        const shader=(kind,source)=>{const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;};
+        const program=gl.createProgram();
+        gl.attachShader(program,shader(gl.VERTEX_SHADER,'attribute vec3 position; attribute vec3 color; varying vec3 tint; void main(){gl_Position=vec4(position,1.0);tint=color;}'));
+        gl.attachShader(program,shader(gl.FRAGMENT_SHADER,'precision mediump float; varying vec3 tint; void main(){gl_FragColor=vec4(tint,1.0);}'));
+        gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program));
+        solidRenderer={surface,gl,program,buffer:gl.createBuffer(),position:gl.getAttribLocation(program,'position'),color:gl.getAttribLocation(program,'color')};
+        surface.addEventListener('webglcontextlost',e=>{e.preventDefault();solidRenderer=undefined;requestDraw();});
+      }catch(error){console.warn('Depth renderer unavailable; using canvas fallback.',error);solidRenderer=null;}
+    }
+    if(!solidRenderer){faces.sort((a,b)=>a.depth-b.depth).forEach(drawFace);return;}
+    const {surface,gl,program,buffer,position,color}=solidRenderer;
+    surface.width=Math.round(width*dpr);surface.height=Math.round(height*dpr);
+    gl.viewport(0,0,surface.width,surface.height);gl.clearColor(0,0,0,0);gl.clearDepth(1);
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+    const depths=faces.flatMap(f=>f.points.map(viewDepth));
+    let low=Infinity,high=-Infinity;for(const d of depths){low=Math.min(low,d);high=Math.max(high,d);}
+    const span=Math.max(1,high-low),triangles=[],edges=[];
+    const rgb=hex=>{const h=hex.replace('#','');return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);};
+    const vertex=(p,tint)=>{const q=project(p,p[2]);return[q[0]/width*2-1,1-q[1]/height*2,.9-1.8*(viewDepth(p)-low)/span,...tint];};
+    for(const f of faces){
+      const tint=rgb(faceColor(f)),vertices=f.points.map(p=>vertex(p,tint));
+      for(let i=1;i<vertices.length-1;i++)triangles.push(...vertices[0],...vertices[i],...vertices[i+1]);
+      if(!f.model){const edgeTint=rgb(f.stroke || (f.s===selected?'#fff5ac':'#42574c'));for(let i=0;i<f.points.length;i++)edges.push(...vertex(f.points[i],edgeTint),...vertex(f.points[(i+1)%f.points.length],edgeTint));}
+    }
+    gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+    gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,3,gl.FLOAT,false,24,0);
+    gl.enableVertexAttribArray(color);gl.vertexAttribPointer(color,3,gl.FLOAT,false,24,12);
+    gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(triangles),gl.STREAM_DRAW);gl.drawArrays(gl.TRIANGLES,0,triangles.length/6);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(edges),gl.STREAM_DRAW);gl.drawArrays(gl.LINES,0,edges.length/6);
+    ctx.drawImage(surface,0,0,width,height);
+    // Preserve canvas hit targets independently of the depth-buffered image.
+    faces.sort((a,b)=>a.depth-b.depth).forEach(f=>{const path=new Path2D();f.points.forEach((p,i)=>{const q=project(p,p[2]);i?path.lineTo(...q):path.moveTo(...q);});path.closePath();hits.push({path,s:f.s});});
   }
   function drawModelAnnotations(s) {
     const z=elevation(s);
@@ -457,7 +504,7 @@
     const solids=visible.filter(s=>s.type!=='aisle' && s.type!=='zone');
     solids.filter(s=>s.type==='equipment' || s.type==='wall').forEach(drawGroundContact);
     // Painter order must be per face: a whole long machine can straddle a column.
-    [...solids.flatMap(objectFaces),...siteFaces()].sort((a,b)=>a.depth-b.depth).forEach(drawFace);
+    renderSolids([...solids.flatMap(objectFaces),...siteFaces()],dpr);
     drawOfficeFacade();
     solids.forEach(s=>{
       if(s.model){drawModelAnnotations(s);return;}
