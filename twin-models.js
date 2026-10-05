@@ -223,8 +223,9 @@
   }
   function buildF1(item) {
     // Six owner-supplied photos: overhead catwalk, orange rails and ladder,
-    // looped foam web, cream enclosure, process rolls and end-mounted foam coil.
-    // Owner confirmed coil end = CAD-right and maximum height approximately 2.8 m.
+    // cream enclosure, process rolls and empty right-end winding shaft.
+    // Foam is consumable material and deliberately excluded from machine geometry.
+    // Owner confirmed winding end = CAD-right and maximum height approximately 2.8 m.
     const faces=[],cream='#dcd6bb',steel='#bac4c2',dark='#303339',orange='#d9542c',green='#4e8263';
     const length=Math.max(.05,Number(item.width)||15),depth=Math.max(.05,Number(item.height)||3.8);
     const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
@@ -243,7 +244,6 @@
       ra.forEach((p,i)=>{const j=(i+1)%segments;face([p,ra[j],rb[j],rb[i]],color);});
     }
     const roll=(x,z,r,color=steel)=>tube([x,.66,z],[x,3.08,z],r,color,28);
-    function web(path,color=dark){for(let i=1;i<path.length;i++){const [x,z]=path[i-1],[nx,nz]=path[i];face([[x,.74,z],[nx,.74,nz],[nx,3,z],[x,3,z]],color);}}
     // Raised maintenance walkways sit on open cream supports, leaving the
     // process strip visible between them. Rails do not enclose the lower coil.
     for(const y of [.18,3.15]){
@@ -256,17 +256,15 @@
       for(const z of [2.59,3.02])tube([.4,y+.20,z],[14.25,y+.20,z],.029,orange,10);
     }
     for(const x of [.4,6.2,9.5,14.15])box(x,.26,2.00,.10,3.19,.10);
-    // Access ladder on the aisle side, beside the looped-belt end.
+    // Access ladder on the aisle side, beside the vertical roller frame.
     for(const x of [.43,1.0])tube([x,3.69,.03],[x,3.69,3.02],.026,orange,10);
     for(let z=.23;z<2.96;z+=.28)tube([.43,3.69,z],[1,3.69,z],.022,orange,10);
-    // Left end: visibly vertical foam web folded over upper/lower rolls.
+    // Left end: exposed upper/lower rolls, without foam threaded through them.
     for(const x of [.85,2.2])for(const y of [.55,3.10])box(x,y,.07,.10,.12,1.97);
     roll(1.02,1.91,.14);roll(1.02,.47,.14);roll(2.05,.77,.19,dark);
-    web([[2.25,2.06],[1.03,2.06],[.88,1.91],[.88,.48],[1.03,.33],[2.05,.58],[2.5,.81]]);
     box(.83,.57,2.16,.075,2.59,.58);
-    // Upper material path: sagging black sheet with exposed guides.
+    // Exposed upper guide rollers.
     for(const x of [2.5,4.8,7.2,9.35])roll(x,2.24,.085);
-    web([[1.04,2.06],[2.5,2.34],[3.25,2.20],[4.02,2.16],[4.8,2.34],[6,2.17],[7.2,2.34],[9.35,2.34]]);
     // Cream electrical/process enclosure below the maintenance deck.
     box(3.50,2.31,.08,3.05,1.05,1.86);
     for(const x of [3.55,5.06]){
@@ -274,10 +272,9 @@
       box(x+1.18,3.398,.90,.035,.04,.23,'#737c75');
     }
     box(4.15,3.4,1.15,.26,.018,.26,'#c1a744');
-    // Process section: stacked rollers and sloping foam material.
+    // Process section: stacked machine rollers.
     for(const y of [.58,3.10])for(const x of [8.3,10.55])box(x,y,.04,.11,.12,1.98);
     for(const [x,z,r,col] of [[8.45,1.77,.13,steel],[8.6,1.36,.18,'#8b7557'],[8.7,.94,.14,steel],[10.05,.92,.20,steel],[10.3,.64,.15,'#705a46']])roll(x,z,r,col);
-    web([[9.35,2.34],[8.48,1.90],[8.60,1.55],[8.80,1.03],[10.05,1.14],[11.4,.67]]);
     box(9.78,.57,.97,.24,2.6,.16,'#ded8c6');
     // Tall red control cabinet beside the process, not a factory column.
     box(7.0,3.13,.04,.85,.48,1.87,'#bd3929');
@@ -286,13 +283,9 @@
       for(const z of [.55,.76,.97,1.18,1.38])tube([x+.07,3.63,z],[x+.07,3.65,z],.024,z===.97?green:dark,10);
     }
     box(1.9,3.20,.85,.43,.27,.58,'#c5472b');
-    // Large end coil with horizontal axle and visible concentric foam layers.
-    const cx=13.30,cz=.93,cr=.78;
-    roll(cx,cz,cr,'#272a31');
+    // Empty winding hardware: axle, chucks and support uprights only.
+    const cx=13.30,cz=.93;
     for(const y of [.64,3.10]){
-      for(let r=.24;r<cr;r+=.10){
-        for(let i=0;i<48;i++){const a=i*Math.PI/24,b=(i+1)*Math.PI/24;tube([cx+r*Math.cos(a),y,cz+r*Math.sin(a)],[cx+r*Math.cos(b),y,cz+r*Math.sin(b)],.008,'#53565b',5);}
-      }
       tube([cx,y-.04,cz],[cx,y+.04,cz],.16,green,20);
       box(12.72,y,.02,.12,.13,1.84);
       tube([12.78,y,1.0],[12.78,y,1.77],.043,steel);
@@ -300,7 +293,6 @@
     tube([cx,.47,cz],[cx,3.30,cz],.042,steel);
     box(10.60,.62,.20,2.95,2.53,.10,green);
     for(const x of [11.1,11.6,12.15])roll(x,.48,.07);
-    web([[10.05,1.14],[11.25,.67],[12.35,1.22],[12.74,1.46]]);
     // Two upper cooling fans seen along the maintenance platform.
     for(const x of [2.10,6.45]){
       box(x,.73,2.20,.09,.81,.72,'#646c6b');

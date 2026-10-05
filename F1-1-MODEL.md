@@ -2,9 +2,11 @@
 
 Six owner-supplied photos establish the cream support structure and enclosure,
 orange upper guardrails and vertical ladder, narrow metal maintenance walkways,
-upper cooling fans, looped dark foam sheet, stacked processing rolls, red control
-cabinet and large black end coil. People, factory columns, loose drums, carts and
-surrounding stored rolls are not equipment geometry.
+upper cooling fans, stacked processing rolls, red control cabinet and empty
+right-end winding shaft. The owner clarified that the black sheets and large
+black coil are foam material: all threaded foam and wound foam are excluded.
+Machine rollers, chucks and shafts remain. People, factory columns, loose drums,
+carts and surrounding stored rolls are not equipment geometry.
 
 The owner confirmed that the large coil is at the CAD-right end and that the
 highest point is approximately 2.8 m above the equipment floor. Other component

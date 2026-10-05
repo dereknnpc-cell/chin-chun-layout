@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
-test('F1-1 respects the confirmed 2.8 m height and keeps its coil inside the right end',()=>{
+test('F1-1 respects the confirmed 2.8 m height and excludes foam consumables',()=>{
   const item=Object.freeze({code:'F1-1',x:0,y:0,width:15,height:3.8,rotation:0});
   const faces=models.build(item),points=faces.flatMap(f=>f.points);
   assert.ok(models.matches(item));
@@ -11,8 +11,7 @@ test('F1-1 respects the confirmed 2.8 m height and keeps its coil inside the rig
   assert.ok(points.every(([x,y,z])=>x>=0 && x<=15 && y>=0 && y<=3.8 && z>=0 && z<=2.8));
   assert.ok(Math.abs(Math.max(...points.map(p=>p[2]))-2.8)<.01);
   assert.equal(Math.min(...points.map(p=>p[2])),0);
-  const coil=faces.filter(f=>f.color==='#272a31').flatMap(f=>f.points);
-  assert.ok(coil.length>0 && coil.every(p=>p[0]>11));
+  assert.ok(!faces.some(f=>f.color==='#272a31' || f.color==='#53565b'));
   const turned=models.build({...item,rotation:90});
   faces.forEach((f,i)=>f.points.forEach((p,j)=>{
     const q=turned[i].points[j];
