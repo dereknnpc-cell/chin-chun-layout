@@ -1,9 +1,9 @@
 /* Photo-informed display geometry only. Never writes CAD dimensions or cloud data. */
 (() => {
   'use strict';
-  const matches = item => String(item.code || '').trim().toUpperCase() === 'H1-1';
-  function build(item) {
-    if (!matches(item)) return null;
+  const modelCode = item => String(item.code || '').trim().toUpperCase();
+  const matches = item => ['H1-1', 'A1-1'].includes(modelCode(item));
+  function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
     // CAD-left (local x=0) is collection; CAD-right is the two-person feed end.
@@ -112,6 +112,100 @@
       for(let i=1;i<path.length;i++)tube(path[i-1],path[i],.016,red,6);
     }
     return faces;
+  }
+  function buildA1(item) {
+    // A1-1 is an open EVA processing line. All vertical dimensions are photo estimates.
+    // Coordinates are local to the existing 13.6 × 3.7 m CAD footprint.
+    const faces = [];
+    const cream = '#d9d2b8', steel = '#a8b6b7', chrome = '#c9d2d0';
+    const dark = '#303a3c', belt = '#244944', red = '#bc3326', green = '#668744';
+    const length = Math.max(.05, Number(item.width) || 13.6);
+    const depth = Math.max(.05, Number(item.height) || 3.7);
+    const angle = (Number(item.rotation) || 0) * Math.PI / 180;
+    const c = Math.cos(angle), s = Math.sin(angle);
+    const centerX = (Number(item.x) || 0) + length / 2;
+    const centerY = (Number(item.y) || 0) + depth / 2;
+    const world = ([x,y,z]) => {
+      const lx = x / 13.6 * length - length / 2;
+      const ly = y / 3.7 * depth - depth / 2;
+      return [centerX + lx*c - ly*s, centerY + lx*s + ly*c, z];
+    };
+    const face = (points,color) => faces.push({points:points.map(world),color});
+    function box(x,y,z,w,d,h,color) {
+      const p=[[x,y,z],[x+w,y,z],[x+w,y+d,z],[x,y+d,z],[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color,segments=12) {
+      const v=b.map((n,i)=>n-a[i]),len=Math.hypot(...v),u=v.map(n=>n/len);
+      const ref=Math.abs(u[2])<.9?[0,0,1]:[0,1,0];
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,ref);const el=Math.hypot(...e);e=e.map(n=>n/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:segments},(_,i)=>p.map((n,j)=>n+r*(e[j]*Math.cos(i*2*Math.PI/segments)+f[j]*Math.sin(i*2*Math.PI/segments))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>{const j=(i+1)%segments;face([p,ra[j],rb[j],rb[i]],color);});
+    }
+    const roller=(x,z,r,color=chrome)=>tube([x,.28,z],[x,3.42,z],r,color,20);
+    // Floor-contacting frame and open, overhead longitudinal rails.
+    for(const y of [.12,3.46]) {
+      box(.2,y,.02,13.15,.12,.13,cream);
+      box(.3,y,2.08,12.85,.09,.1,cream);
+      for(const x of [.35,2.85,5.55,8.1,10.65,13.05]) {
+        box(x,y,.04,.13,.13,2.13,cream);
+        box(x-.04,y-.035,0,.21,.20,.06,green);
+      }
+    }
+    for(const x of [.35,5.55,8.1,10.65,13.05])box(x,.12,2.1,.11,3.46,.09,cream);
+    // The front of the photo shows two bright steel rolls followed by brown guide rolls.
+    for(const [x,z,r,color] of [[.75,.52,.22,chrome],[1.17,.62,.25,steel],[1.65,.68,.17,'#876c4e'],[2.15,.82,.11,'#987c59'],[2.65,.95,.1,'#ad8b61'],[3.25,1.01,.09,chrome]])roller(x,z,r,color);
+    for(const x of [.68,1.35,2.7]) {
+      for(const y of [.15,3.39])box(x,y,.12,.14,.15,.85,cream);
+      box(x,.15,.95,.1,3.25,.09,cream);
+    }
+    // Dark green processing conveyor, exposed around the front and back cylinders.
+    box(3.55,.3,.47,4.28,3.1,.23,dark);
+    face([[3.58,.31,.79],[7.75,.31,.79],[7.75,3.39,.79],[3.58,3.39,.79]],belt);
+    roller(3.65,.72,.16,dark);roller(7.72,.72,.16,steel);
+    for(const y of [.27,3.35])box(3.5,y,.25,4.35,.1,.72,cream);
+    // Large rear drum and the cream sheet wrapping its visible upper arc.
+    const drumX=9.26,drumZ=1.37,drumR=.77;
+    tube([drumX,.34,drumZ],[drumX,3.36,drumZ],drumR,'#5b6060',32);
+    for(let i=0;i<20;i++) {
+      const a=(-55+i*190/20)*Math.PI/180,b=(-55+(i+1)*190/20)*Math.PI/180;
+      face([[drumX+Math.cos(a)*(.79),.38,drumZ+Math.sin(a)*(.79)],
+        [drumX+Math.cos(b)*(.79),.38,drumZ+Math.sin(b)*(.79)],
+        [drumX+Math.cos(b)*(.79),3.32,drumZ+Math.sin(b)*(.79)],
+        [drumX+Math.cos(a)*(.79),3.32,drumZ+Math.sin(a)*(.79)]],'#e6dcc0');
+    }
+    for(const y of [.25,3.36]) {
+      tube([drumX,y-.08,drumZ],[drumX,y+.08,drumZ],.17,steel,16);
+      box(8.37,y,.18,1.8,.12,.16,cream);
+    }
+    roller(10.22,.63,.17,'#8b725a');roller(10.65,1.15,.1,chrome);
+    // Red side-mounted control cabinet, dials, push-buttons and green drive guard.
+    box(7.2,3.25,.16,1.28,.31,1.65,red);
+    box(7.26,3.57,.31,1.16,.025,1.43,'#ce402d');
+    for(const x of [7.48,7.82,8.16])for(const z of [.58,.88,1.18,1.5])
+      tube([x,3.59,z],[x,3.60,z],.047,z===.58?green:z===.88?dark:steel,10);
+    box(8.48,3.31,.32,.83,.18,.54,green);
+    // Rear open gantry, overhead fan housing and silver exhaust/guide pipes.
+    for(const y of [.14,3.43])for(const x of [11.15,13.1])box(x,y,.03,.13,.14,2.14,cream);
+    for(const x of [11.2,12.3,13.05])roller(x,1.47,.08,steel);
+    box(10.65,.95,1.69,.62,1.8,.52,'#697273');
+    tube([10.60,1.85,1.96],[10.62,1.85,1.96],.36,dark,24);
+    for(let i=0;i<6;i++) {
+      const a=i*Math.PI/3;
+      tube([10.62,1.85,1.96],[10.62,1.85+Math.cos(a)*.3,1.96+Math.sin(a)*.3],.018,steel,6);
+    }
+    tube([10.95,.2,2.24],[13.0,.2,2.24],.06,chrome);
+    tube([10.95,3.5,2.24],[13.0,3.5,2.24],.06,chrome);
+    return faces;
+  }
+  function build(item) {
+    switch(modelCode(item)) {
+      case 'H1-1': return buildH1(item);
+      case 'A1-1': return buildA1(item);
+      default: return null;
+    }
   }
   window.ChinChunModels = {matches,build};
 })();

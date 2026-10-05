@@ -14,14 +14,14 @@
     select:'選取物件', all:'選擇設備／柱子／牆面', empty:'點選場景中的物件，查看尺寸與位置。', edit:'在平面圖編輯',
     note:'配置同步 · 廠內外高差約 1.5 m；台階與月台細節為照片示意 · 未接入即時機台訊號', help:'拖曳巡覽 · 滾輪縮放 · ⌘＋橫滾旋轉、縱滾傾斜（Shift＋縱滾旋轉） · Esc 返回',
     equipment:'設備', column:'柱子', wall:'牆面', aisle:'走道', zone:'夾層區域', size:'平面尺寸', position:'座標', rotation:'角度', count:'物件',
-    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
+    updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', a1Photo:'A1-1 外形參考照片重建；機架、滾輪、輸送帶、滾筒、控制箱與風扇為視覺示意。高度與入料／收料方向尚未實測確認。', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
   };
   const th = {
     title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'หมุนมุมมอง', labels:'ป้ายอุปกรณ์',
     select:'เลือกวัตถุ', all:'เลือกอุปกรณ์ / เสา / ผนัง', empty:'คลิกวัตถุเพื่อดูขนาดและตำแหน่ง', edit:'แก้ไขในแปลน',
     note:'ใช้ข้อมูลแปลนเดียวกัน · พื้นโรงงานสูงกว่าภายนอกประมาณ 1.5 ม.; ขั้นบันไดและท่าโหลดอ้างอิงภาพ · ยังไม่มีข้อมูลเครื่องจักรสด', help:'ลากเพื่อเลื่อน · ล้อเมาส์ซูม · ⌘ + เลื่อนแนวนอนหมุน แนวตั้งปรับมุมก้ม · Esc กลับ',
     equipment:'อุปกรณ์', column:'เสา', wall:'ผนัง', aisle:'ทางเดิน', zone:'พื้นที่ชั้นลอย', size:'ขนาดแปลน', position:'พิกัด', rotation:'มุม', count:'วัตถุ',
-    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นทางเข้าสำนักงานยึดตำแหน่ง DOOR-1800; ความสูงเป็นภาพจำลองจากรูปถ่าย ต้องวัดจริง', dockSite:'ท่าโหลดฝั่งตะวันตกจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
+    updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', a1Photo:'รูปทรง A1-1 จำลองจากภาพถ่าย: โครงเครื่อง ลูกกลิ้ง สายพาน ดรัม ตู้ควบคุม และพัดลม ความสูงและทิศทางป้อน/รับงานยังไม่ได้วัดยืนยัน', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นทางเข้าสำนักงานยึดตำแหน่ง DOOR-1800; ความสูงเป็นภาพจำลองจากรูปถ่าย ต้องวัดจริง', dockSite:'ท่าโหลดฝั่งตะวันตกจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
   };
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
   const n = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
@@ -157,7 +157,7 @@
     const z=elevation(s);
     if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,z+.02)):path.moveTo(...project(p,z+.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
     if(labels || s===selected){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,z+2.7);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
-    if(detail){
+    if(detail && String(s.item.code || '').toUpperCase()==='H1-1'){
       // Labels follow local CAD ends through both equipment and camera rotation.
       [[0,3,'collect'],[1,2,'feed']].forEach(([i,j,key])=>{
         const p=project([(s.points[i][0]+s.points[j][0])/2,(s.points[i][1]+s.points[j][1])/2],z+1.55);
@@ -481,7 +481,7 @@
     dialog.querySelector('#twinDetails').textContent=item ? `${t(s.type)} · ${item.name || item.id}\n${t('position')}: ${n(item.x ?? item.x1).toFixed(2)}, ${n(item.y ?? item.y1).toFixed(2)} m\n${t('size')}: ${s.type==='wall'?Math.hypot(n(item.x2)-n(item.x1),n(item.y2)-n(item.y1)).toFixed(2)+' × '+n(item.thickness,.2).toFixed(2):n(item.width).toFixed(2)+' × '+n(item.height).toFixed(2)} m\n${t('rotation')}: ${n(item.rotation).toFixed(0)}°` : t('empty');
     dialog.querySelector('#twinEdit').hidden=!s;
     dialog.querySelector('#twinFocus').hidden=!s;
-    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t('photo');
+    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t(String(item.code || '').toUpperCase()==='A1-1'?'a1Photo':'photo');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');

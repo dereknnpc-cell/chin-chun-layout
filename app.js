@@ -5812,7 +5812,7 @@
         { code: "M2-1", name: "ADH 2 (貼合機主機 M2-1)", w: 25.0, h: 4.3, cat: "ADH", col: "#2B6CB0" },
         { code: "N1-1", name: "DC (集塵設備/DC)", w: 1.35, h: 3.74, cat: "ADH", col: "#4A90E2" },
         { code: "F1-1", name: "Foam (發泡原料存放區)", w: 15.0, h: 3.8, cat: "Material", col: "#319795" },
-        { code: "A1-1", name: "EVA 1 (EVA 原料暫存 1)", w: 13.6, h: 3.7, cat: "Material", col: "#319795" }
+        { code: "A1-1", name: "EVA 1 (EVA 生產線 A1-1)", w: 13.6, h: 3.7, cat: "EVA", col: "#2C7A7B" }
       ],
       "✂️ 裁切與成型精加工 (Cutting)": [
         { code: "T Cut 1", name: "T Cut 1 (裁切機 1)", w: 4.5, h: 2.7, cat: "Cutting", col: "#F5A623" },

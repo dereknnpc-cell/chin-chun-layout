@@ -11,7 +11,7 @@ test('silver oven is the highest point at the confirmed 2.4 m',()=>{
   assert.ok(Math.abs(maxZ(faces.filter(f=>f.color==='#aababc'))-2.4)<1e-9);
   assert.ok(maxZ(faces.filter(f=>f.color!=='#aababc'))<2.4);
 });
-test('only H1-1 gets photo-reference geometry and input is unchanged',()=>{
+test('H1-1 gets photo-reference geometry and input is unchanged',()=>{
   const input=Object.freeze({...base}),before=JSON.stringify(input);
   const faces=models.build(input);
   assert.ok(faces.length>500);
@@ -22,6 +22,37 @@ test('only H1-1 gets photo-reference geometry and input is unchanged',()=>{
     assert.match(face.color,/^#[0-9a-f]{6}$/i);
     for(const p of face.points)assert.ok(p.every(Number.isFinite));
   }
+});
+const eva={id:'eq_eva1_a1_1',code:'A1-1',x:65,y:.95,width:13.6,height:3.7,rotation:0};
+test('A1-1 has its own grounded photo-reference geometry inside the CAD footprint',()=>{
+  const input=Object.freeze({...eva}),before=JSON.stringify(input),faces=models.build(input);
+  assert.ok(models.matches(input));
+  assert.ok(faces.length>300);
+  assert.equal(JSON.stringify(input),before);
+  assert.equal(models.build({...input,code:'A1-2'}),null);
+  const points=faces.flatMap(f=>f.points);
+  assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+  assert.ok(points.every(p=>p[0]>=eva.x-1e-9 && p[0]<=eva.x+eva.width+1e-9));
+  assert.ok(points.every(p=>p[1]>=eva.y-1e-9 && p[1]<=eva.y+eva.height+1e-9));
+  assert.ok(Math.abs(Math.min(...points.map(p=>p[2])))<1e-9);
+  assert.ok(Math.max(...points.map(p=>p[2]))<3);
+  for(const color of ['#d9d2b8','#c9d2d0','#244944','#bc3326','#697273'])
+    assert.ok(faces.some(f=>f.color===color),`missing photo feature ${color}`);
+});
+test('A1-1 rotates and resizes with its CAD footprint without changing estimated height',()=>{
+  const original=models.build({...eva,x:0,y:0});
+  const rotated=models.build({...eva,x:0,y:0,rotation:90});
+  const resized=models.build({...eva,x:0,y:0,width:27.2,height:7.4});
+  const cx=eva.width/2,cy=eva.height/2;
+  original.forEach((face,i)=>face.points.forEach((p,j)=>{
+    const q=rotated[i].points[j],r=resized[i].points[j];
+    assert.ok(Math.abs(q[0]-(cx-(p[1]-cy)))<1e-9);
+    assert.ok(Math.abs(q[1]-(cy+(p[0]-cx)))<1e-9);
+    assert.equal(q[2],p[2]);
+    assert.ok(Math.abs(r[0]-p[0]*2)<1e-9);
+    assert.ok(Math.abs(r[1]-p[1]*2)<1e-9);
+    assert.equal(r[2],p[2]);
+  }));
 });
 test('rotation follows CAD center without changing height',()=>{
   const a=models.build(base),b=models.build({...base,rotation:90});
