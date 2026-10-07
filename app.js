@@ -4986,8 +4986,8 @@
           <text x="12" y="22" font-size="15" font-weight="800" fill="#FFFFFF" data-fit-width="436">${tb.company || '金讚科技 · 廠房平面配置工程圖'}</text>
           <path d="M0 32H460 M0 62H460 M0 99H460 M0 136H460 M150 62V136 M310 62V175" fill="none" stroke="var(--border-cad)" stroke-width="1.2"/>
 
-          <text x="12" y="44" font-size="8" fill="var(--text-muted)" font-weight="600">圖名 / TITLE</text>
-          <text x="12" y="57" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="436">${tb.title || '1F生產動線、建築元件與全廠區配置'}</text>
+          <text x="12" y="41" font-size="8" fill="var(--text-muted)" font-weight="600">圖名 / TITLE</text>
+          <text x="12" y="59" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="436">${tb.title || '1F生產動線、建築元件與全廠區配置'}</text>
           <text x="12" y="75" font-size="8" fill="var(--text-muted)" font-weight="600">圖號 / DWG NO.</text>
           <text x="12" y="91" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="126">${tb.dwg_no || 'CC-ENG-2026-004'}</text>
           <text x="162" y="75" font-size="8" fill="var(--text-muted)" font-weight="600">版次 / REV</text>
