@@ -5061,13 +5061,21 @@
       if (!labels.length) continue;
       const selected = group.classList.contains('selected');
       const footprint = (group.querySelector('.main-box') || group.querySelector('rect'))?.getBoundingClientRect();
-      const enoughRoom = footprint && footprint.width >= 30 && footprint.height >= 12;
-      if (selected || enoughRoom || scale >= .95 && footprint?.width >= 20) place(labels[0],group,selected);
-      else labels[0].style.visibility = 'hidden';
+      // Equipment identifiers are essential drawing information, not optional
+      // detail. Fit them to their own footprint rather than dropping small ones.
+      const item = findItemRecord(group.dataset.id)?.item;
+      if (item && !['Door', 'Window', 'Stairs', 'Elevator', 'Furniture', 'Sanitary'].includes(item.category)) {
+        const primary = labels[0];
+        const baseSize = Number(primary.dataset.cadFontSize) || 11;
+        const size = Math.min(Math.max(baseSize, 10 / Math.max(scale, .01)), item.height * SCALE * .72);
+        const center = metersToSvg(item.x + item.width / 2, item.y + item.height / 2);
+        applyDrawingTextScale(primary, size, center.x, scale < .95 ? center.y : Number(primary.dataset.cadY));
+      }
+      place(labels[0],group,true);
       for (const label of labels.slice(1)) {
         label.style.visibility = '';
         const rect = label.getBoundingClientRect();
-        if (selected || scale >= .95 && footprint && rect.width <= footprint.width * 1.05 && !overlaps(rect,group)) place(label,group,selected);
+        if (scale >= .95 && footprint && rect.width <= footprint.width * 1.05 && !overlaps(rect,group)) place(label,group,selected);
         else label.style.visibility = 'hidden';
       }
     }
@@ -5090,25 +5098,44 @@
   }
 
   function scaleDrawingText() {
+    svgEl.querySelectorAll('.svg-equipment-group:not(.svg-column-group)').forEach(group => {
+      const record = findItemRecord(group.dataset.id);
+      if (!record?.item?.width) return;
+      Array.from(group.children).filter(child => child.tagName.toLowerCase() === 'text').forEach(label => {
+        label.dataset.fitWidth = Math.max(8, record.item.width * SCALE - 8);
+      });
+    });
     // Render large glyphs and scale them in SVG coordinates. Browser minimum-font
     // preferences otherwise enlarge small CAD labels independently of the drawing.
     svgEl.querySelectorAll('text').forEach(label => {
-      const size = parseFloat(getComputedStyle(label).fontSize) || 10;
+      // Safari reports a minimum-font-adjusted computed size. Preserve the CAD
+      // size declared by the drawing instead of baking that adjustment back in.
+      const size = parseFloat(label.getAttribute('font-size')) || parseFloat(getComputedStyle(label).fontSize) || 10;
       const x = Number(label.getAttribute('x')) || 0;
       const y = Number(label.getAttribute('y')) || 0;
       const transform = label.getAttribute('transform') || '';
+      label.dataset.cadFontSize = size;
+      label.dataset.cadX = x;
+      label.dataset.cadY = y;
+      label.dataset.cadTransform = transform;
       label.setAttribute('x', '0');
       label.setAttribute('y', '0');
       label.style.fontSize = '100px';
+      label.style.textRendering = 'geometricPrecision';
+      label.style.webkitTextSizeAdjust = 'none';
       label.setAttribute('font-size', '100');
-      let ratio = size / 100;
-      const fitWidth = Number(label.dataset.fitWidth);
-      if (fitWidth > 0) {
-        const textWidth = label.getComputedTextLength() * ratio;
-        if (textWidth > fitWidth) ratio *= fitWidth / textWidth;
-      }
-      label.setAttribute('transform', `${transform} translate(${x} ${y}) scale(${ratio})`);
+      applyDrawingTextScale(label, size, x, y);
     });
+  }
+
+  function applyDrawingTextScale(label, size, x, y) {
+    let ratio = size / 100;
+    const fitWidth = Number(label.dataset.fitWidth);
+    if (fitWidth > 0) {
+      const textWidth = label.getComputedTextLength() * ratio;
+      if (textWidth > fitWidth) ratio *= fitWidth / textWidth;
+    }
+    label.setAttribute('transform', `${label.dataset.cadTransform || ''} translate(${x} ${y}) scale(${ratio})`);
   }
 
   // --- Specialized Architectural Component SVG Renderer ---
@@ -5303,7 +5330,7 @@
           <text x="${centerX}" y="${centerY + 6}" font-size="8" font-weight="600" fill="var(--text-muted)" text-anchor="middle" dominant-baseline="central">${eq.name}</text>
         `;
       } else {
-        itemHtml += `<text x="${centerX}" y="${centerY}" font-size="9" font-weight="800" fill="var(--text-main)" text-anchor="middle" dominant-baseline="central">${eq.code} · ${eq.name}</text>`;
+        itemHtml += `<text x="${centerX}" y="${centerY}" font-size="9" font-weight="800" fill="var(--text-main)" text-anchor="middle" dominant-baseline="central">${eq.code}</text>`;
       }
     }
 
