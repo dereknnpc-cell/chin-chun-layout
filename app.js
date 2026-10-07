@@ -4349,11 +4349,7 @@
         <!-- Site Boundary Property Ground -->
         <rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="#F8FAFC" rx="8"/>
 
-        <!-- Satellite-reference context: approximate positions, not a survey. -->
-        <rect x="${OFFSET_X - 19 * SCALE}" y="${OFFSET_Y + 2 * SCALE}" width="${10 * SCALE}" height="${16 * SCALE}" fill="#DCF4DF" stroke="#86B98B" stroke-width="1.5" rx="5"/>
-        <text x="${OFFSET_X - 14 * SCALE}" y="${OFFSET_Y + 10 * SCALE}" font-size="10" font-weight="800" fill="#377348" text-anchor="middle">西側花園</text>
-        <rect x="${OFFSET_X - 19 * SCALE}" y="${OFFSET_Y + 24 * SCALE}" width="${10 * SCALE}" height="${23 * SCALE}" fill="#DEE6DF" stroke="#84958A" stroke-width="1.5" rx="3"/>
-        <text x="${OFFSET_X - 14 * SCALE}" y="${OFFSET_Y + 35 * SCALE}" font-size="9" font-weight="700" fill="#52655A" text-anchor="middle" transform="rotate(-90 ${OFFSET_X - 14 * SCALE} ${OFFSET_Y + 35 * SCALE})">衛星參考：西側建物</text>
+        <!-- Remaining satellite-reference context, outside the factory. -->
         <path d="M ${OFFSET_X - 19 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 10) * SCALE} L ${OFFSET_X - 4 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 10) * SCALE} L ${OFFSET_X - 4 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 18) * SCALE} L ${OFFSET_X - 19 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 18) * SCALE} Z" fill="#E7E2D8" stroke="#A39C8F" stroke-width="1.5"/>
         <text x="${OFFSET_X - 11.5 * SCALE}" y="${OFFSET_Y + (TOTAL_H_M + 14) * SCALE}" font-size="9" font-weight="700" fill="#6B6256" text-anchor="middle">南側鄰棟示意</text>
 
@@ -4382,40 +4378,6 @@
         <line x1="${OFFSET_X - 8 * SCALE}" y1="${OFFSET_Y + (TOTAL_H_M + 5) * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 8) * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 5) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
         <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y + (TOTAL_H_M + 5) * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠南側車道 6.0M</text>
 
-        <!-- Gate, weighbridge, and parking -->
-        <g id="outdoorSiteFacilities">
-    `;
-
-    // Main Security Gate, Guardhouse & Truck Scale (North-West Entrance)
-    const gateX = OFFSET_X - 18 * SCALE;
-    const gateY = OFFSET_Y - 18 * SCALE;
-    outHtml += `
-      <!-- Main Entrance Gate & Guardhouse -->
-      <rect x="${gateX + 2 * SCALE}" y="${gateY + 2 * SCALE}" width="${5 * SCALE}" height="${4 * SCALE}" fill="#1E293B" stroke="#0F172A" stroke-width="2" rx="3"/>
-      <text x="${gateX + 4.5 * SCALE}" y="${gateY + 4.5 * SCALE}" font-size="9" font-weight="800" fill="#FFFFFF" text-anchor="middle">警衛崗亭</text>
-
-      <!-- Truck Weighbridge (地磅站 18M x 3.5M) -->
-      <rect x="${gateX + 8 * SCALE}" y="${gateY + 2 * SCALE}" width="${18 * SCALE}" height="${3.5 * SCALE}" fill="#334155" stroke="#E2E8F0" stroke-width="1.5" stroke-dasharray="4,2" rx="2"/>
-      <text x="${gateX + 17 * SCALE}" y="${gateY + 4 * SCALE}" font-size="9.5" font-weight="800" fill="#F8FAFC" text-anchor="middle" dominant-baseline="central">進出廠重車地磅站 (100T / 18.0M)</text>
-
-      <!-- Main Sliding Gate -->
-      <line x1="${gateX}" y1="${gateY + 7 * SCALE}" x2="${gateX + 16 * SCALE}" y2="${gateY + 7 * SCALE}" stroke="#2563EB" stroke-width="4"/>
-      <text x="${gateX + 8 * SCALE}" y="${gateY + 9 * SCALE}" font-size="10" font-weight="800" fill="#1D4ED8" text-anchor="middle">廠區正門出入口 (16M 主大門)</text>
-    `;
-
-    // Parking Bays along North Road
-    const parkX = OFFSET_X + 15 * SCALE;
-    const parkY = OFFSET_Y - 14 * SCALE;
-    for (let p = 0; p < 8; p++) {
-      const px = parkX + p * 3.0 * SCALE;
-      outHtml += `
-        <rect x="${px}" y="${parkY}" width="${2.8 * SCALE}" height="${5.5 * SCALE}" class="outdoor-parking-bay" rx="2"/>
-        <text x="${px + 1.4 * SCALE}" y="${parkY + 2.8 * SCALE}" font-size="8" font-weight="700" fill="#64748B" text-anchor="middle">P${p + 1}</text>
-      `;
-    }
-
-    outHtml += `
-        </g>
       </g>
     `;
     return outHtml;
@@ -5019,35 +4981,32 @@
       <g id="layerTitleBlock" class="svg-interactive-item svg-title-block-group ${isTbSelected ? 'selected' : ''}"
          data-id="title_block" transform="translate(${curTbX}, ${curTbY})">
         <rect width="${tbW}" height="${tbH}" fill="var(--bg-panel)" stroke="${isTbSelected ? 'var(--cad-selection)' : 'var(--cad-wall)'}" stroke-width="${isTbSelected ? '3' : '2'}" rx="4"/>
-        <rect width="${tbW}" height="45" fill="#1E3A8A" rx="4"/>
-        <rect y="40" width="${tbW}" height="5" fill="#1E3A8A"/>
-        <text x="20" y="28" font-size="15" font-weight="800" fill="#FFFFFF">${tb.company || '金讚科技 · 廠房平面配置工程圖'}</text>
-        <line x1="0" y1="45" x2="${tbW}" y2="45" stroke="var(--border-cad)" stroke-width="1.2"/>
-        <line x1="0" y1="88" x2="${tbW}" y2="88" stroke="var(--border-cad)" stroke-width="1.2"/>
-        <line x1="0" y1="130" x2="${tbW}" y2="130" stroke="var(--border-cad)" stroke-width="1.2"/>
-        <line x1="150" y1="45" x2="150" y2="${tbH}" stroke="var(--border-cad)" stroke-width="1.2"/>
-        <line x1="310" y1="45" x2="310" y2="${tbH}" stroke="var(--border-cad)" stroke-width="1.2"/>
+        <g transform="scale(${tbW / 460}, ${tbH / 175})">
+          <rect width="460" height="32" fill="#1E3A8A" rx="4"/>
+          <text x="12" y="22" font-size="15" font-weight="800" fill="#FFFFFF" data-fit-width="436">${tb.company || '金讚科技 · 廠房平面配置工程圖'}</text>
+          <path d="M0 32H460 M0 62H460 M0 99H460 M0 136H460 M150 62V136 M310 62V175" fill="none" stroke="var(--border-cad)" stroke-width="1.2"/>
 
-        <text x="15" y="62" font-size="9" fill="var(--text-muted)" font-weight="600">圖名 / TITLE</text>
-        <text x="15" y="78" font-size="11" fill="var(--text-main)" font-weight="800">${tb.title || '1F生產動線、建築元件與全廠區配置'}</text>
-        <text x="165" y="62" font-size="9" fill="var(--text-muted)" font-weight="600">圖號 / DWG NO.</text>
-        <text x="165" y="78" font-size="11" fill="var(--text-main)" font-weight="800">${tb.dwg_no || 'CC-ENG-2026-004'}</text>
-        <text x="325" y="62" font-size="9" fill="var(--text-muted)" font-weight="600">版次 / REV</text>
-        <text x="325" y="78" font-size="11" fill="var(--text-main)" font-weight="800">${tb.rev || 'REV V2.2'}</text>
+          <text x="12" y="44" font-size="8" fill="var(--text-muted)" font-weight="600">圖名 / TITLE</text>
+          <text x="12" y="57" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="436">${tb.title || '1F生產動線、建築元件與全廠區配置'}</text>
+          <text x="12" y="75" font-size="8" fill="var(--text-muted)" font-weight="600">圖號 / DWG NO.</text>
+          <text x="12" y="91" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="126">${tb.dwg_no || 'CC-ENG-2026-004'}</text>
+          <text x="162" y="75" font-size="8" fill="var(--text-muted)" font-weight="600">版次 / REV</text>
+          <text x="162" y="91" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="136">${tb.rev || 'REV V2.2'}</text>
+          <text x="322" y="75" font-size="8" fill="var(--text-muted)" font-weight="600">日期 / DATE</text>
+          <text x="322" y="91" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="126">${tb.date || '2026/09/09'}</text>
 
-        <text x="15" y="104" font-size="9" fill="var(--text-muted)" font-weight="600">繪製 / DESIGNER</text>
-        <text x="15" y="120" font-size="11" fill="var(--text-main)" font-weight="800">${tb.designer || 'Derek Yeh'}</text>
-        <text x="165" y="104" font-size="9" fill="var(--text-muted)" font-weight="600">標高 / ELEVATION</text>
-        <text x="165" y="120" font-size="11" fill="#DC2626" font-weight="800">${tb.elevation || '1F +0.6M / 2F +4.4M'}</text>
-        <text x="325" y="104" font-size="9" fill="var(--text-muted)" font-weight="600">日期 / DATE</text>
-        <text x="325" y="120" font-size="11" fill="var(--text-main)" font-weight="800">${tb.date || '2026/09/09'}</text>
+          <text x="12" y="112" font-size="8" fill="var(--text-muted)" font-weight="600">繪製 / DESIGNER</text>
+          <text x="12" y="128" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="126">${tb.designer || 'Derek Yeh'}</text>
+          <text x="162" y="112" font-size="8" fill="var(--text-muted)" font-weight="600">標高 / ELEVATION</text>
+          <text x="162" y="128" font-size="11" fill="#DC2626" font-weight="800" data-fit-width="136">${tb.elevation || '1F +0.6M / 2F +4.4M'}</text>
+          <text x="322" y="112" font-size="8" fill="var(--text-muted)" font-weight="600">比例 / SCALE</text>
+          <text x="322" y="128" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="126">${tb.scale || '1:150 (Metric)'}</text>
 
-        <text x="15" y="146" font-size="9" fill="var(--text-muted)" font-weight="600">規格 / SPEC</text>
-        <text x="15" y="162" font-size="11" fill="#16A34A" font-weight="800">${tb.spec || '廠區/6M車道/設備 · 周邊示意'}</text>
-        <text x="165" y="146" font-size="9" fill="var(--text-muted)" font-weight="600">比例 / SCALE</text>
-        <text x="165" y="162" font-size="11" fill="var(--text-main)" font-weight="800">${tb.scale || '1:150 (Metric)'}</text>
-        <text x="325" y="146" font-size="9" fill="var(--text-muted)" font-weight="600">狀態 / STATUS</text>
-        <text x="325" y="162" font-size="11" fill="#16A34A" font-weight="800">${tb.status || 'APPROVED 正式版'}</text>
+          <text x="12" y="150" font-size="8" fill="var(--text-muted)" font-weight="600">規格 / SPEC</text>
+          <text x="12" y="166" font-size="11" fill="#16A34A" font-weight="800" data-fit-width="286">${tb.spec || '廠區/6M車道/設備 · 周邊示意'}</text>
+          <text x="322" y="150" font-size="8" fill="var(--text-muted)" font-weight="600">狀態 / STATUS</text>
+          <text x="322" y="166" font-size="11" fill="#16A34A" font-weight="800" data-fit-width="126">${tb.status || 'APPROVED 正式版'}</text>
+        </g>
       </g>
     `;
 
@@ -5072,6 +5031,7 @@
     }
 
     svgEl.innerHTML = html;
+    scaleDrawingText();
     attachSvgClickListeners();
     refreshAnnotationVisibility();
   }
@@ -5125,9 +5085,29 @@
       if (selected || scale >= 1.2) place(label,group,selected);
       else label.style.visibility = 'hidden';
     }
-    const titleSelected = svgEl.querySelector('#layerTitleBlock')?.classList.contains('selected');
-    svgEl.querySelectorAll('#layerTitleBlock text').forEach((label,index) => {
-      label.style.visibility = titleSelected || index === 0 || scale >= .65 ? '' : 'hidden';
+    // Engineering metadata remains present even in a zoomed-out drawing.
+    svgEl.querySelectorAll('#layerTitleBlock text').forEach(label => label.style.visibility = '');
+  }
+
+  function scaleDrawingText() {
+    // Render large glyphs and scale them in SVG coordinates. Browser minimum-font
+    // preferences otherwise enlarge small CAD labels independently of the drawing.
+    svgEl.querySelectorAll('text').forEach(label => {
+      const size = parseFloat(getComputedStyle(label).fontSize) || 10;
+      const x = Number(label.getAttribute('x')) || 0;
+      const y = Number(label.getAttribute('y')) || 0;
+      const transform = label.getAttribute('transform') || '';
+      label.setAttribute('x', '0');
+      label.setAttribute('y', '0');
+      label.style.fontSize = '100px';
+      label.setAttribute('font-size', '100');
+      let ratio = size / 100;
+      const fitWidth = Number(label.dataset.fitWidth);
+      if (fitWidth > 0) {
+        const textWidth = label.getComputedTextLength() * ratio;
+        if (textWidth > fitWidth) ratio *= fitWidth / textWidth;
+      }
+      label.setAttribute('transform', `${transform} translate(${x} ${y}) scale(${ratio})`);
     });
   }
 
