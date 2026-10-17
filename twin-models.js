@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const modelCode = item => String(item.code || '').trim().toUpperCase();
-  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -576,6 +576,113 @@
     tube([.33,3.39,1.915],[1.87,3.39,1.915],.018,light,12);
     return faces;
   }
+  function buildE1(item) {
+    // Photo-informed Auto Cut pair. Long local x follows the existing 5.03 m
+    // CAD footprint, not a photo's screen direction. Individual photo/code
+    // correspondence and flow direction remain unconfirmed. No foam or dies.
+    const faces=[],cream='#dcd5b9',steel='#b9c3c3',dark='#323b3e';
+    const blue='#328eaa',deepBlue='#285e88',orange='#c56b32',belt='#d8d5c8';
+    const w=Math.max(.05,Number(item.width)||5.03),d=Math.max(.05,Number(item.height)||2);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{
+      const u=x/5.03*w-w/2,v=y/2*d-d/2;
+      return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
+    };
+    const face=(points,color)=>faces.push({points:points.map(world),color});
+    function box(x,y,z,bw,bd,bh,color=cream) {
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color=steel,n=16) {
+      const v=b.map((value,i)=>value-a[i]),len=Math.hypot(...v),u=v.map(value=>value/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);
+      const el=Math.hypot(...e);e=e.map(value=>value/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((value,j)=>value+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color));
+    }
+    const hose=points=>points.slice(1).forEach((p,i)=>tube(points[i],p,.026,dark,8));
+    // Central pedestal and four exposed chrome guide columns.
+    box(1.91,.20,.07,1.22,1.60,.18);
+    box(2.03,.31,.25,.98,1.38,.44);
+    box(1.98,.21,.69,1.08,1.58,.20);
+    for(const x of [1.99,2.97])for(const y of [.27,1.73]) {
+      box(x-.10,y-.10,0,.20,.20,.07,dark);
+      tube([x,y,.26],[x,y,2.17],.052,steel,20);
+      for(const z of [.76,1.27,1.82])tube([x,y,z],[x,y,z+.15],.083,cream,20);
+    }
+    // Two pale endless conveyor belts. They are permanent machine parts,
+    // not white foam sheets. No material web is laid across the press.
+    for(const [start,end] of [[.13,1.94],[3.06,4.90]]) {
+      for(const y of [.20,1.70])box(start,y,.64,end-start,.10,.29);
+      box(start,.31,.90,end-start,1.38,.027,belt);
+      box(start,.31,.67,end-start,1.38,.018,belt);
+      for(const x of [start+.115,end-.115]) {
+        tube([x,.29,.797],[x,1.71,.797],.115,belt,24);
+        for(const y of [.24,1.74])tube([x,y,.797],[x,y+.025,.797],.048,steel,12);
+      }
+      const legX=start<1?start+.17:end-.27;
+      for(const y of [.23,1.68]) {
+        box(legX,y,.06,.11,.11,.59);
+        box(legX-.06,y-.05,0,.23,.21,.06,dark);
+      }
+      box(legX,.23,.13,.10,1.56,.10);
+    }
+    // Small drive beneath the conveyor, not a stock roll under the machine.
+    tube([4.39,.87,.35],[4.74,.87,.35],.13,dark,20);
+    box(4.39,.74,.19,.32,.26,.07,dark);
+    // Cutting bed and raised platen leave the working throat visibly open.
+    box(1.96,.25,.91,1.10,1.50,.085,steel);
+    box(2.07,.35,1.19,.88,1.30,.12);
+    for(const y of [.22,1.66])box(1.92,y,1.30,1.20,.12,.16);
+    tube([2.52,1,1.43],[2.52,1,1.84],.18,dark,24);
+    // Crown with sloped shoulders, extruded across the press depth.
+    const outline=[[1.91,1.82],[3.12,1.82],[3.12,2.02],[2.88,2.02],[2.72,2.16],[2.31,2.16],[2.15,2.02],[1.91,2.02]];
+    const near=outline.map(([x,z])=>[x,.22,z]),far=outline.map(([x,z])=>[x,1.78,z]);
+    face([...near].reverse(),cream);face(far,cream);
+    near.forEach((p,i)=>face([p,near[(i+1)%near.length],far[(i+1)%far.length],far[i]],cream));
+    // Hydraulic deck, turquoise reservoir, motor and blue upright accumulator.
+    box(1.91,.19,2.18,1.21,1.62,.075);
+    box(2.14,.31,2.255,.70,.80,.34,blue);
+    box(2.13,1.22,2.255,.66,.49,.47,deepBlue);
+    for(let i=0;i<7;i++)box(2.19+i*.072,1.713,2.35,.030,.006,.27,dark);
+    tube([2.30,.50,2.70],[2.70,.50,2.70],.105,dark,20);
+    for(const x of [2.34,2.41,2.48,2.55,2.62])tube([x,.50,2.70],[x+.012,.50,2.70],.115,dark,16);
+    // Rounded end profile rather than a square-ended tank. Maximum 3.0 m
+    // is a photo estimate only, independent of F1-1's confirmed 2.8 m.
+    const tankX=2.98,tankY=1.28,levels=[[2.34,0],[2.37,.065],[2.43,.105],[2.86,.105],[2.93,.085],[2.97,.045],[2.98,0]];
+    const rings=levels.map(([z,r])=>Array.from({length:20},(_,i)=>[tankX+r*Math.cos(i*Math.PI/10),tankY+r*Math.sin(i*Math.PI/10),z]));
+    rings.slice(1).forEach((ring,k)=>ring.forEach((p,i)=>{
+      const next=(i+1)%20;
+      if(k===0)face([rings[k][i],ring[next],p],deepBlue);
+      else if(k===rings.length-2)face([rings[k][i],rings[k][next],p],deepBlue);
+      else face([rings[k][i],rings[k][next],ring[next],p],deepBlue);
+    }));
+    tube([tankX,tankY,2.98],[tankX,tankY,3.00],.018,steel,12);
+    hose([[2.91,1.25,2.40],[2.85,1.24,2.83],[2.68,1.18,2.96],[2.46,1.08,2.93],[2.30,.86,2.69]]);
+    hose([[2.72,.83,2.59],[2.88,.72,2.61],[3.03,.64,2.47],[3.04,.55,1.94],[2.82,.48,1.65]]);
+    hose([[2.35,.76,2.59],[2.20,.68,2.77],[2.05,.62,2.73],[1.98,.54,2.32],[2.03,.48,1.96]]);
+    // Orange side cabinet and small operator screen mounted to the press.
+    box(1.96,.055,.23,1.11,.12,1.91,orange);
+    box(2.19,.025,.94,.43,.045,.79);
+    box(2.23,.018,1.43,.35,.007,.22,dark);
+    box(2.25,.010,1.45,.31,.007,.18,'#547d8d');
+    for(const [x,col] of [[2.27,dark],[2.40,'#447b59'],[2.53,'#aa4030']])tube([x,.017,1.34],[x,.006,1.34],.023,col,12);
+    // Task lights on both press faces; no room-spanning lighting frame.
+    for(const x of [1.82,3.16]) {
+      box(x,.24,2.12,.045,1.52,.05,steel);
+      tube([x-.006,.29,2.115],[x-.006,1.71,2.115],.017,'#f2f0d8',12);
+    }
+    // Adjustable silver hold-down roll at one conveyor end, with two screws.
+    for(const y of [.20,1.80]) {
+      box(4.65,y-.055,.84,.10,.11,.45);
+      tube([4.70,y,1.04],[4.70,y,1.43],.018,steel,12);
+      tube([4.70,y,1.43],[4.70,y,1.445],.075,dark,16);
+    }
+    tube([4.70,.28,1.12],[4.70,1.72,1.12],.105,steel,32);
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'H1-1': return buildH1(item);
@@ -586,6 +693,8 @@
       case 'B1-2': return buildB12(item);
       case 'B1-3':
       case 'B1-4': return buildB13(item);
+      case 'E1-1':
+      case 'E1-2': return buildE1(item);
       default: return null;
     }
   }

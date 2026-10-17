@@ -4,6 +4,54 @@ global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
 const qc3={id:'eq_qc3_b1_3',code:'B1-3',x:60.53,y:15.18,width:2.2,height:5,rotation:0};
+test('E1-1 and E1-2 retain independent CAD footprints and use photo-based press geometry',()=>{
+  for(const [code,y,depth] of [['E1-1',36.28,1.99],['E1-2',30.77,2]]) {
+    const item=Object.freeze({code,x:81.19,y,width:5.03,height:depth,rotation:0});
+    const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
+    assert.ok(models.matches(item));
+    assert.ok(models.matches({code:` ${code.toLowerCase()} `}));
+    assert.equal(JSON.stringify(item),before);
+    assert.ok(faces.length>1000);
+    assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+    assert.ok(points.every(([x,py,z])=>x>=item.x-1e-9 && x<=item.x+item.width+1e-9 && py>=y-1e-9 && py<=y+depth+1e-9 && z>=0 && z<=3));
+    assert.equal(Math.min(...points.map(p=>p[2])),0);
+    assert.equal(Math.max(...points.map(p=>p[2])),3);
+    for(const color of ['#328eaa','#285e88','#c56b32','#d8d5c8','#b9c3c3'])
+      assert.ok(faces.some(f=>f.color===color),`missing ${code} photo feature ${color}`);
+    assert.deepEqual(faces,models.build({...item,code:code==='E1-1'?'E1-2':'E1-1'}));
+    assert.ok(!faces.some(f=>['#272a31','#53565b','#a07549'].includes(f.color)),'no foam or surrounding wooden tables');
+  }
+});
+test('E1 pair has two separate conveyor belts, an open press throat and central-only hydraulic assembly',()=>{
+  const faces=models.build({code:'E1-1',x:0,y:0,width:5.03,height:2});
+  const belt=faces.filter(f=>f.color==='#d8d5c8');
+  assert.ok(belt.length>0);
+  assert.ok(belt.every(f=>f.points.every(p=>p[0]<=1.94+1e-9) || f.points.every(p=>p[0]>=3.06-1e-9)),'no belt or material web across press throat');
+  const upper=faces.filter(f=>f.color==='#328eaa' || f.color==='#285e88');
+  assert.ok(upper.every(f=>f.points.every(([x,,z])=>x>=1.9 && x<=3.13 && z>=2.255 && z<=3)));
+  // Exposed guide shafts at all four corners, not a solid box hiding the throat.
+  for(const x of [1.99,2.97])for(const y of [.27,1.73]) {
+    const shaft=faces.filter(f=>f.color==='#b9c3c3' && f.points.every(p=>Math.abs(p[0]-x)<=.052+1e-9 && Math.abs(p[1]-y)<=.052+1e-9));
+    const points=shaft.flatMap(f=>f.points);
+    assert.ok(points.some(p=>Math.abs(p[2]-.26)<1e-9));
+    assert.ok(points.some(p=>Math.abs(p[2]-2.17)<1e-9));
+  }
+});
+test('E1 pair scales in plan and rotates around the CAD center without changing height',()=>{
+  const item={code:'E1-2',x:0,y:0,width:5.03,height:2};
+  const original=models.build(item),resized=models.build({...item,width:10.06,height:3});
+  for(const rotation of [90,-90,180]) {
+    const turned=models.build({...item,rotation}),a=rotation*Math.PI/180;
+    original.forEach((face,i)=>face.points.forEach((p,j)=>{
+      const q=turned[i].points[j],r=resized[i].points[j];
+      assert.ok(Math.abs(q[0]-(2.515+(p[0]-2.515)*Math.cos(a)-(p[1]-1)*Math.sin(a)))<1e-9);
+      assert.ok(Math.abs(q[1]-(1+(p[0]-2.515)*Math.sin(a)+(p[1]-1)*Math.cos(a)))<1e-9);
+      assert.equal(q[2],p[2]);
+      assert.ok(Math.abs(r[0]-2*p[0])<1e-9 && Math.abs(r[1]-1.5*p[1])<1e-9);
+      assert.equal(r[2],p[2]);
+    }));
+  }
+});
 test('B1-1 and B1-2 use the new shared photo structure, retaining independent CAD records',()=>{
   for(const [code,x,y] of [['B1-1',70.59,15.13],['B1-2',66.63,15.10]]) {
     const item=Object.freeze({code,x,y,width:2.85,height:5,rotation:0});
