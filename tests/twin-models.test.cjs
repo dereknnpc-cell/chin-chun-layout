@@ -4,6 +4,53 @@ global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
 const qc3={id:'eq_qc3_b1_3',code:'B1-3',x:60.53,y:15.18,width:2.2,height:5,rotation:0};
+test('B1-1 and B1-2 use the new shared photo structure, retaining independent CAD records',()=>{
+  for(const [code,x,y] of [['B1-1',70.59,15.13],['B1-2',66.63,15.10]]) {
+    const item=Object.freeze({code,x,y,width:2.85,height:5,rotation:0});
+    const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
+    assert.ok(models.matches(item));
+    assert.ok(models.matches({code:` ${code.toLowerCase()} `}));
+    assert.equal(JSON.stringify(item),before);
+    assert.ok(faces.length>700);
+    assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+    assert.ok(points.every(p=>p[0]>=x-1e-9 && p[0]<=x+2.85+1e-9 && p[1]>=y-1e-9 && p[1]<=y+5+1e-9 && p[2]>=0 && p[2]<=2.3));
+    assert.equal(Math.min(...points.map(p=>p[2])),0);
+    assert.equal(Math.max(...points.map(p=>p[2])),2.3);
+    for(const color of ['#62696b','#c8d2d3','#bb632f','#a07549','#454d56','#f2f0d8'])
+      assert.ok(faces.some(f=>f.color===color),`missing ${code} feature ${color}`);
+    assert.notDeepEqual(faces,models.build({...item,code:'B1-3'}));
+    assert.deepEqual(faces,models.build({...item,code:code==='B1-1'?'B1-2':'B1-1'}));
+    assert.ok(!faces.some(f=>['#272a31','#53565b'].includes(f.color)),'no foam material palette');
+  }
+});
+test('B1-1/2 have two fixed grey rolls plus a polished roll, with an open guide bed',()=>{
+  const faces=models.build({code:'B1-1',x:0,y:0,width:2.85,height:5});
+  for(const [y,z,r,color] of [[.60,.94,.22,'#62696b'],[1.16,.99,.21,'#62696b'],[1.70,1.02,.20,'#c8d2d3']]) {
+    const parts=faces.filter(f=>f.color===color && Math.abs(f.points.reduce((sum,p)=>sum+p[1],0)/f.points.length-y)<=r+1e-9);
+    assert.equal(parts.length,34);
+    const points=parts.flatMap(f=>f.points);
+    assert.ok(Math.abs(Math.min(...points.map(p=>p[0]))-.31)<1e-9);
+    assert.ok(Math.abs(Math.max(...points.map(p=>p[0]))-2.47)<1e-9);
+    assert.ok(points.every(p=>Math.abs(p[1]-y)<=r+1e-9 && Math.abs(p[2]-z)<=r+1e-9));
+  }
+  // No continuous foam web or invented table covering the guide-roll region.
+  assert.ok(!faces.some(f=>Math.min(...f.points.map(p=>p[0]))<.5 && Math.max(...f.points.map(p=>p[0]))>2.3 && Math.min(...f.points.map(p=>p[1]))<2.4 && Math.max(...f.points.map(p=>p[1]))>3.4));
+});
+test('B1-1/2 rotate around their own centers and scale only in plan',()=>{
+  const item={code:'B1-2',x:0,y:0,width:2.85,height:5};
+  const original=models.build(item),resized=models.build({...item,width:5.7,height:7.5});
+  for(const rotation of [90,-90,180]) {
+    const turned=models.build({...item,rotation}),a=rotation*Math.PI/180;
+    original.forEach((face,i)=>face.points.forEach((p,j)=>{
+      const q=turned[i].points[j],r=resized[i].points[j];
+      assert.ok(Math.abs(q[0]-(1.425+(p[0]-1.425)*Math.cos(a)-(p[1]-2.5)*Math.sin(a)))<1e-9);
+      assert.ok(Math.abs(q[1]-(2.5+(p[0]-1.425)*Math.sin(a)+(p[1]-2.5)*Math.cos(a)))<1e-9);
+      assert.equal(q[2],p[2]);
+      assert.ok(Math.abs(r[0]-2*p[0])<1e-9 && Math.abs(r[1]-1.5*p[1])<1e-9);
+      assert.equal(r[2],p[2]);
+    }));
+  }
+});
 test('B1-4 shares the B1-3 machine without changing its own CAD dimensions or rotation',()=>{
   const item=Object.freeze({id:'eq_qc4_b1_4',code:'B1-4',x:56.97,y:15.22,width:2.35,height:5,rotation:90});
   const before=JSON.stringify(item),faces=models.build(item);
@@ -30,7 +77,7 @@ test('B1-3 uses its own photo model without changing CAD or adding adjacent equi
   assert.ok(models.matches({code:' b1-3 '}));
   assert.ok(faces.length>500);
   assert.equal(JSON.stringify(item),before);
-  assert.equal(models.build({...item,code:'B1-2'}),null);
+  assert.equal(models.build({...item,code:'B1-5'}),null);
   assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
   assert.ok(points.every(([x,y,z])=>x>=qc3.x-1e-9 && x<=qc3.x+qc3.width+1e-9 && y>=qc3.y-1e-9 && y<=qc3.y+qc3.height+1e-9 && z>=0 && z<=2.3));
   assert.equal(Math.min(...points.map(p=>p[2])),0);

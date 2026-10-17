@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const modelCode = item => String(item.code || '').trim().toUpperCase();
-  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-3', 'B1-4'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -385,6 +385,100 @@
     }
     return faces;
   }
+  function buildB12(item) {
+    // The new photo set covers B1-1 and B1-2, but does not identify which
+    // individual view belongs to which code. Use their shared visible structure,
+    // not the B1-3 model or neighbouring machines. No foam webs or stock rolls.
+    // Reference plan is 2.85 x 5 m; vertical dimensions remain photo estimates.
+    const faces=[],cream='#dcd5b9',steel='#b9c3c3',grey='#62696b';
+    const chrome='#c8d2d3',orange='#bb632f',wood='#a07549',dark='#323b3e';
+    const w=Math.max(.05,Number(item.width)||2.85),d=Math.max(.05,Number(item.height)||5);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{
+      const u=x/2.85*w-w/2,v=y/5*d-d/2;
+      return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
+    };
+    const face=(points,color)=>faces.push({points:points.map(world),color});
+    function box(x,y,z,bw,bd,bh,color=cream) {
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color=steel,n=16) {
+      const v=b.map((value,i)=>value-a[i]),len=Math.hypot(...v),u=v.map(value=>value/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);
+      const el=Math.hypot(...e);e=e.map(value=>value/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((value,j)=>value+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color));
+    }
+    const roll=(y,z,r,color=steel)=>{
+      tube([.18,y,z],[2.60,y,z],.028,steel,16);
+      tube([.31,y,z],[2.47,y,z],r,color,32);
+      for(const x of [.16,2.51])box(x,y-.065,z-.075,.11,.13,.15,dark);
+    };
+    // Open cream chassis, with no solid floor or invented process chamber.
+    for(const x of [.10,2.54]) {
+      box(x,.13,.10,.15,4.72,.15);
+      for(const y of [.13,1.92,3.56,4.70]) {
+        box(x,y,0,.15,.15,.12);
+        box(x,y,.25,.10,.10,.62);
+      }
+      box(x,1.93,.71,.10,1.73,.09);
+    }
+    for(const y of [.13,1.92,3.56,4.70])box(.10,y,.22,2.59,.12,.12);
+    // Three permanently mounted large rolls: grey, grey, polished metal.
+    // Their axle/bearing connections distinguish them from removable foam.
+    for(const [y,z,r,col] of [[.60,.94,.22,grey],[1.16,.99,.21,grey],[1.70,1.02,.20,chrome]]) {
+      roll(y,z,r,col);
+      for(const x of [.28,2.44])tube([x,y,z],[x+.06,y,z],r+.004,steel,32);
+      for(const x of [.10,2.54])box(x,y-.12,.30,.15,.24,.76);
+    }
+    // Low orange side covers flank only the roll bank, not the open guide bed.
+    for(const x of [.095,2.65]) {
+      box(x,.30,.30,.045,1.64,.82);
+      box(x-.004,.37,.36,.053,1.49,.69,orange);
+    }
+    // Low vertical drive motor visible through the open side frame.
+    box(2.21,2.10,.26,.29,.30,.07,dark);
+    tube([2.36,2.25,.33],[2.36,2.25,.66],.12,dark,20);
+    for(const z of [.37,.43,.49,.55,.61])tube([2.36,2.25,z],[2.36,2.25,z+.014],.132,dark,20);
+    // Slender guide rolls and lower empty winding shaft. No material sheet.
+    for(const [y,z,r,col] of [[2.15,1.10,.055,'#927755'],[2.59,1.08,.065,'#d0cbb7'],[3.04,1.14,.051,'#927755'],[3.52,1.10,.047,steel]]) {
+      roll(y,z,r,col);
+      for(const x of [.16,2.51])box(x,y-.06,.77,.11,.12,z-.77);
+    }
+    roll(2.66,.59,.066,chrome);
+    tube([.18,3.22,1.22],[2.60,3.22,1.22],.022,steel,16);
+    for(const x of [.62,2.07]) {
+      box(x,3.01,1.16,.12,.10,.095,dark);
+      box(x+.015,3.015,1.255,.09,.07,.008,'#80a4ac');
+    }
+    // Photo-visible operator table at the far end; free-standing steel carts,
+    // loose cores and neighbouring work benches are deliberately omitted.
+    for(const x of [.22,2.45])for(const y of [3.76,4.70])box(x,y,.16,.07,.07,.78);
+    box(.20,3.69,.91,2.34,1.15,.065,wood);
+    box(.20,4.76,.95,2.34,.045,.075,wood);
+    box(.24,4.74,.38,2.26,.035,.51,'#88633f');
+    // Single wide header and task light, not a platform or upper conveyor.
+    for(const x of [.19,2.53]) {
+      box(x,3.56,.10,.075,.09,1.98);
+      box(x-.02,3.52,.79,.115,.16,.25);
+    }
+    box(.15,3.53,2.00,2.49,.115,.30,'#454d56');
+    box(.42,3.47,1.92,1.95,.12,.045,steel);
+    tube([.46,3.44,1.925],[2.33,3.44,1.925],.018,'#f2f0d8',12);
+    // Orange electrical enclosure on the roll-bank outboard post, kept inside
+    // this machine's CAD bounds. No duplicate cabinets from adjacent units.
+    box(2.72,.73,.12,.07,.09,1.17);
+    box(2.64,.52,1.28,.19,.50,.63,orange);
+    for(const y of [.62,.79,.93]) {
+      tube([2.832,y,1.72],[2.843,y,1.72],.019,dark,10);
+      tube([2.832,y,1.58],[2.843,y,1.58],.019,'#447b59',10);
+      tube([2.832,y,1.44],[2.843,y,1.44],.019,'#aa4030',10);
+    }
+    return faces;
+  }
   function buildB13(item) {
     // B1-4 is the same machine type, confirmed by the owner. Each instance
     // retains its own CAD footprint, location and rotation.
@@ -488,6 +582,8 @@
       case 'A1-1': return buildA1(item);
       case 'F1-1': return buildF1(item);
       case 'G2-2': return buildG2(item);
+      case 'B1-1':
+      case 'B1-2': return buildB12(item);
       case 'B1-3':
       case 'B1-4': return buildB13(item);
       default: return null;
