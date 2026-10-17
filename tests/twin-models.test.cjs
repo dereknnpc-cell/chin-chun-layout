@@ -4,6 +4,57 @@ global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
 const qc3={id:'eq_qc3_b1_3',code:'B1-3',x:60.53,y:15.18,width:2.2,height:5,rotation:0};
+test('Q2-1/2 preserve their CAD records and have distinct photo structures',()=>{
+  for(const [code,x,y] of [['Q2-1',23.95,22.94],['Q2-2',23.91,19.89]]) {
+    const item=Object.freeze({code,x,y,width:4,height:2.65,rotation:0});
+    const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
+    assert.ok(models.matches(item));
+    assert.ok(models.matches({code:` ${code.toLowerCase()} `}));
+    assert.equal(JSON.stringify(item),before);
+    assert.ok(faces.length>700);
+    assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+    assert.ok(points.every(([px,py,z])=>px>=x-1e-9 && px<=x+4+1e-9 && py>=y-1e-9 && py<=y+2.65+1e-9 && z>=0 && z<=2.35+1e-9));
+    assert.equal(Math.min(...points.map(p=>p[2])),0);
+    assert.ok(Math.abs(Math.max(...points.map(p=>p[2]))-2.35)<1e-9);
+    assert.notDeepEqual(faces,models.build({...item,code:code==='Q2-1'?'Q2-2':'Q2-1'}));
+    for(const color of ['#dcd5b9','#927755','#c56b32','#329cba','#f2f0d8'])assert.ok(faces.some(f=>f.color===color));
+    assert.ok(!faces.some(f=>['#272a31','#53565b','#62696b'].includes(f.color)),'no foam sheet or stock rolls');
+  }
+  assert.equal(models.build({code:'Q2-3'}),null,'unphotographed third machine is unchanged');
+});
+test('Q2-2 has two blue driven rolls and an open bed, unlike closed-base Q2-1',()=>{
+  const item={x:0,y:0,width:4,height:2.65};
+  const open=models.build({...item,code:'Q2-2'}),closed=models.build({...item,code:'Q2-1'});
+  const drums=open.filter(f=>f.color==='#2d527e');
+  assert.equal(drums.length,68);
+  assert.ok(!closed.some(f=>f.color==='#2d527e'));
+  for(const x of [.43,.88]) {
+    const parts=drums.filter(f=>f.points.every(p=>Math.abs(p[0]-x)<=.17+1e-9));
+    assert.equal(parts.length,34);
+    assert.ok(parts.every(f=>f.points.every(p=>p[1]>=.32-1e-9 && p[1]<=2.16+1e-9 && Math.abs(p[2]-.99)<=.17+1e-9)));
+  }
+  const cabinet=faces=>faces.some(f=>f.points.some(p=>Math.abs(p[2]-.23)<1e-9) && f.points.some(p=>Math.abs(p[2]-.74)<1e-9) && f.points.every(p=>p[0]>=.13-1e-9 && p[0]<=2.66+1e-9));
+  assert.equal(cabinet(open),false);
+  assert.equal(cabinet(closed),true);
+  // No broad foam face bridging guide rolls or hanging from the front drums.
+  for(const faces of [open,closed])assert.ok(!faces.some(f=>Math.min(...f.points.map(p=>p[0]))<1.4 && Math.max(...f.points.map(p=>p[0]))>2.4 && Math.min(...f.points.map(p=>p[1]))<.5 && Math.max(...f.points.map(p=>p[1]))>2 && f.points.every(p=>p[2]>.9)));
+});
+test('both Q2 variants rotate about their CAD center and scale only in plan',()=>{
+  for(const code of ['Q2-1','Q2-2']) {
+    const item={code,x:0,y:0,width:4,height:2.65},original=models.build(item),resized=models.build({...item,width:6,height:5.3});
+    for(const rotation of [90,-90,180]) {
+      const turned=models.build({...item,rotation}),a=rotation*Math.PI/180;
+      original.forEach((face,i)=>face.points.forEach((p,j)=>{
+        const q=turned[i].points[j],r=resized[i].points[j];
+        assert.ok(Math.abs(q[0]-(2+(p[0]-2)*Math.cos(a)-(p[1]-1.325)*Math.sin(a)))<1e-9);
+        assert.ok(Math.abs(q[1]-(1.325+(p[0]-2)*Math.sin(a)+(p[1]-1.325)*Math.cos(a)))<1e-9);
+        assert.equal(q[2],p[2]);
+        assert.ok(Math.abs(r[0]-1.5*p[0])<1e-9 && Math.abs(r[1]-2*p[1])<1e-9);
+        assert.equal(r[2],p[2]);
+      }));
+    }
+  }
+});
 test('E1-1 and E1-2 retain independent CAD footprints and use photo-based press geometry',()=>{
   for(const [code,y,depth] of [['E1-1',36.28,1.99],['E1-2',30.77,2]]) {
     const item=Object.freeze({code,x:81.19,y,width:5.03,height:depth,rotation:0});

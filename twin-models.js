@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const modelCode = item => String(item.code || '').trim().toUpperCase();
-  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -683,6 +683,122 @@
     tube([4.70,.28,1.12],[4.70,1.72,1.12],.105,steel,32);
     return faces;
   }
+  function buildQ2(item) {
+    // QA 002 is visible on the open-frame machine's sign. Assign the other,
+    // closed-base photo provisionally to Q2-1. Keep their structures distinct.
+    // Local x follows the 4 m CAD length; y spans the roll axes. No foam web,
+    // stock coils, cardboard sleeves, loose cores, bins or warehouse structure.
+    const open=modelCode(item)==='Q2-2';
+    const faces=[],cream='#dcd5b9',steel='#b9c3c3',dark='#323b3e';
+    const blue='#2d527e',floorBlue='#329cba',orange='#c56b32',brown='#927755';
+    const w=Math.max(.05,Number(item.width)||4),d=Math.max(.05,Number(item.height)||2.65);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{
+      const u=x/4*w-w/2,v=y/2.65*d-d/2;
+      return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
+    };
+    const face=(points,color)=>faces.push({points:points.map(world),color});
+    function box(x,y,z,bw,bd,bh,color=cream) {
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color=steel,n=16) {
+      const v=b.map((value,i)=>value-a[i]),len=Math.hypot(...v),u=v.map(value=>value/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);
+      const el=Math.hypot(...e);e=e.map(value=>value/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((value,j)=>value+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color));
+    }
+    const roll=(x,z,r,col=steel)=>{
+      tube([x,.18,z],[x,2.30,z],.025,steel,16);
+      tube([x,.32,z],[x,2.16,z],r,col,32);
+      for(const y of [.18,2.20])box(x-.07,y,z-.065,.14,.10,.13,cream);
+    };
+    // Cream base and bearing pedestals. Q2-2 remains visibly open underneath.
+    for(const y of [.12,2.23]) {
+      box(.12,y,.08,3.55,.13,.14);
+      for(const x of [.12,1.18,2.55,3.52]) {
+        box(x,y,0,.15,.13,.10);
+        box(x,y,.22,.12,.13,.64);
+      }
+      box(.12,y,.77,2.55,.11,.10);
+    }
+    for(const x of [.12,1.22,2.58,3.52])box(x,.12,.16,.13,2.24,.13);
+    for(const y of [.12,2.23])box(.13,y,.44,.96,.13,.55);
+    if(open)box(.18,.26,.225,2.45,1.96,.025,floorBlue);
+    else {
+      box(.13,.15,.23,2.53,2.18,.51);
+      box(.21,.139,.29,1.10,.011,.39,'#ccc7b4');
+      box(1.35,.139,.29,1.10,.011,.39,'#ccc7b4');
+      for(const x of [1.13,1.50])box(x,.118,.48,.13,.02,.025,steel);
+    }
+    // Permanent driven rollers are blue on QA 002. Pale stock covering the
+    // other machine is omitted; only its metal axes/drums remain.
+    for(const x of [.43,.88]) {
+      roll(x,.99,.17,open?blue:steel);
+      for(const y of [.30,2.12])tube([x,y,.99],[x,y+.06,.99],.176,cream,32);
+    }
+    for(const [x,z,r] of [[1.35,1.07,.050],[1.71,1.03,.055],[2.10,1.09,.057],[2.55,1.15,.060]])roll(x,z,r,brown);
+    tube([1.46,.18,1.19],[1.46,2.30,1.19],.019,steel,16);
+    // Two mechanical length counters and one handwheel on the measuring bar.
+    for(const y of [.81,1.13]) {
+      box(1.39,y,1.17,.14,.12,.11,dark);
+      box(1.405,y+.015,1.28,.10,.08,.008,'#d2b34e');
+    }
+    tube([1.47,2.31,1.13],[1.47,2.40,1.13],.022,dark,12);
+    for(let i=0;i<12;i++) {
+      const a=i*Math.PI/6,b=(i+1)*Math.PI/6;
+      tube([1.47+.072*Math.cos(a),2.40,1.13+.072*Math.sin(a)],[1.47+.072*Math.cos(b),2.40,1.13+.072*Math.sin(b)],.008,dark,6);
+      if(i%3===0)tube([1.47,2.40,1.13],[1.47+.07*Math.cos(a),2.40,1.13+.07*Math.sin(a)],.006,dark,6);
+    }
+    // Empty roll mounting at the far end. Cardboard sleeves and the black
+    // wound material seen in photos are removable consumables, not machinery.
+    if(open) {
+      for(const y of [.20,2.24]) {
+        box(2.55,y-.055,.23,.12,.11,1.25);
+        box(2.60,y-.055,1.20,1.17,.11,.12);
+        tube([2.63,y,.19],[3.17,y,.63],.045,steel,12);
+        tube([3.17,y,.63],[3.67,y,1.24],.018,steel,12);
+        box(3.68,y-.06,1.18,.15,.12,.18);
+      }
+      tube([3.76,.16,1.31],[3.76,2.39,1.31],.032,steel,20);
+    } else {
+      for(const y of [.20,2.24])box(3.35,y,.21,.12,.12,1.20);
+      tube([3.41,.18,1.34],[3.41,2.38,1.34],.032,steel,20);
+      for(const y of [.25,2.19])box(3.31,y,1.24,.20,.10,.15);
+    }
+    // Thin, machine-mounted lighting gantry, not the factory mezzanine above.
+    // Maximum 2.35 m is estimated from these photos, not a field measurement.
+    for(const y of [.12,2.26]) {
+      box(2.60,y,.12,.055,.055,2.18);
+      box(2.57,y-.015,.87,.12,.09,.32);
+    }
+    box(2.60,.12,2.30,.055,2.195,.05);
+    box(2.53,.32,2.24,.13,1.80,.045,steel);
+    tube([2.51,.36,2.235],[2.51,2.08,2.235],.019,'#f2f0d8',12);
+    if(open) {
+      // Separate orange control enclosure and small screen, both supported.
+      box(.60,2.45,.10,.07,.08,1.22);
+      box(.39,2.39,1.30,.55,.19,.62,orange);
+      for(const x of [.48,.65,.82])for(const [z,col] of [[1.72,dark],[1.57,'#447b59'],[1.42,'#aa4030']])tube([x,2.582,z],[x,2.595,z],.020,col,10);
+      box(.51,2.43,.99,.055,.06,.30);
+      box(.40,2.42,1.09,.40,.05,.24,steel);
+      box(.425,2.473,1.115,.35,.006,.19,dark);
+    } else {
+      // Closed QA 1 has a low side console with an orange fascia, not QA 2's
+      // tall free-standing box. Keep the photo-visible blue lower cabinet.
+      box(.15,2.36,.09,1.05,.24,.89,floorBlue);
+      box(.15,2.36,.98,1.05,.24,.20);
+      box(.19,2.603,.99,.97,.015,.15,orange);
+      for(const x of [.28,.43,.60,.78,1.03])tube([x,2.62,1.06],[x,2.63,1.06],.018,dark,10);
+      box(.78,2.41,1.18,.055,.06,.21);
+      box(.64,2.40,1.37,.39,.055,.23,steel);
+      box(.66,2.458,1.39,.35,.006,.19,dark);
+    }
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'H1-1': return buildH1(item);
@@ -695,6 +811,8 @@
       case 'B1-4': return buildB13(item);
       case 'E1-1':
       case 'E1-2': return buildE1(item);
+      case 'Q2-1':
+      case 'Q2-2': return buildQ2(item);
       default: return null;
     }
   }
