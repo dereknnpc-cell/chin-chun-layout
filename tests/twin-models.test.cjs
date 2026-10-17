@@ -4,6 +4,25 @@ global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
 const qc3={id:'eq_qc3_b1_3',code:'B1-3',x:60.53,y:15.18,width:2.2,height:5,rotation:0};
+test('B1-4 shares the B1-3 machine without changing its own CAD dimensions or rotation',()=>{
+  const item=Object.freeze({id:'eq_qc4_b1_4',code:'B1-4',x:56.97,y:15.22,width:2.35,height:5,rotation:90});
+  const before=JSON.stringify(item),faces=models.build(item);
+  assert.ok(models.matches(item));
+  assert.ok(models.matches({code:' b1-4 '}));
+  assert.deepEqual(faces,models.build({...item,code:'B1-3'}));
+  assert.equal(JSON.stringify(item),before);
+  const unrotated=models.build({...item,rotation:0});
+  const cx=item.x+item.width/2,cy=item.y+item.height/2;
+  unrotated.forEach((face,i)=>face.points.forEach((p,j)=>{
+    const q=faces[i].points[j];
+    assert.ok(p[0]>=item.x-1e-9 && p[0]<=item.x+item.width+1e-9);
+    assert.ok(p[1]>=item.y-1e-9 && p[1]<=item.y+item.height+1e-9);
+    assert.ok(Math.abs(q[0]-(cx-(p[1]-cy)))<1e-9);
+    assert.ok(Math.abs(q[1]-(cy+(p[0]-cx)))<1e-9);
+    assert.equal(q[2],p[2]);
+  }));
+  assert.equal(Math.max(...faces.flatMap(f=>f.points.map(p=>p[2]))),2.3);
+});
 test('B1-3 uses its own photo model without changing CAD or adding adjacent equipment',()=>{
   const item=Object.freeze({...qc3}),before=JSON.stringify(item);
   const faces=models.build(item),points=faces.flatMap(f=>f.points);

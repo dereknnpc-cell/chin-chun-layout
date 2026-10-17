@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const modelCode = item => String(item.code || '').trim().toUpperCase();
-  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-3'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-3', 'B1-4'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -386,6 +386,8 @@
     return faces;
   }
   function buildB13(item) {
+    // B1-4 is the same machine type, confirmed by the owner. Each instance
+    // retains its own CAD footprint, location and rotation.
     // Three owner-supplied photos of QC 3. Only this machine is modeled:
     // attached grey rolls stay; loose foam, paper cores, carts and adjacent
     // orange control cabinets do not. Height and orientation are provisional.
@@ -486,7 +488,8 @@
       case 'A1-1': return buildA1(item);
       case 'F1-1': return buildF1(item);
       case 'G2-2': return buildG2(item);
-      case 'B1-3': return buildB13(item);
+      case 'B1-3':
+      case 'B1-4': return buildB13(item);
       default: return null;
     }
   }
