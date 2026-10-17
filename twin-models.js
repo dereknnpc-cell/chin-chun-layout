@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const modelCode = item => String(item.code || '').trim().toUpperCase();
-  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-3'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -385,12 +385,108 @@
     }
     return faces;
   }
+  function buildB13(item) {
+    // Three owner-supplied photos of QC 3. Only this machine is modeled:
+    // attached grey rolls stay; loose foam, paper cores, carts and adjacent
+    // orange control cabinets do not. Height and orientation are provisional.
+    // Local x runs across the rollers; local y follows the existing 5 m bed.
+    const faces=[],cream='#dcd5b9',steel='#b9c3c3',grey='#62696b';
+    const dark='#323b3e',brown='#927755',header='#454d56',light='#f2f0d8';
+    const w=Math.max(.05,Number(item.width)||2.2),d=Math.max(.05,Number(item.height)||5);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{
+      const u=x/2.2*w-w/2,v=y/5*d-d/2;
+      return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
+    };
+    const face=(points,color)=>faces.push({points:points.map(world),color});
+    function box(x,y,z,bw,bd,bh,color=cream) {
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color=steel,n=16) {
+      const v=b.map((value,i)=>value-a[i]),len=Math.hypot(...v),u=v.map(value=>value/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);
+      const el=Math.hypot(...e);e=e.map(value=>value/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((value,j)=>value+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color));
+    }
+    const roll=(y,z,r,color=steel)=>{
+      tube([.13,y,z],[2.07,y,z],.026,steel,16);
+      tube([.24,y,z],[1.96,y,z],r,color,32);
+      for(const x of [.10,1.99])box(x,y-.065,z-.075,.11,.13,.15,dark);
+    };
+    // Low, open rectangular chassis. Gaps under the front crossmember are
+    // structural fork/foot recesses, not an invented continuous cabinet.
+    for(const x of [.04,2.00]) {
+      box(x,.12,.08,.16,4.72,.15);
+      box(x,.16,.38,.10,4.64,.10);
+      for(const y of [.12,1.48,3.23,4.70]) {
+        box(x,y,0,.16,.14,.12);
+        box(x,y,.18,.12,.12,.68);
+      }
+    }
+    for(const y of [.12,1.50,3.23,4.72])box(.04,y,.18,2.12,.12,.12);
+    for(const x of [.04,.86,1.75])box(x,.12,0,.41,.16,.12);
+    box(.04,.12,.12,2.12,.16,.14);
+    // Twin permanent grey machine rolls, with exposed shafts and silver collars.
+    for(const [y,z,r] of [[.59,.88,.19],[1.12,.89,.18]]) {
+      roll(y,z,r,grey);
+      for(const x of [.22,1.93])tube([x,y,z],[x+.05,y,z],r+.006,steel,32);
+      for(const x of [.04,2.00])box(x,y-.14,.30,.16,.28,.56);
+    }
+    // Compact motor sits low within the right chassis, not on a free-standing
+    // cabinet. The attached rollers must not be mistaken for foam stock.
+    tube([1.69,.72,.49],[2.05,.72,.49],.115,dark,20);
+    box(1.71,.63,.30,.29,.20,.10,dark);
+    for(const x of [1.73,1.79,1.85,1.91])box(x,.61,.44,.014,.22,.10,'#4c5658');
+    // Slim brown guides and their bearing supports between the main roll bank
+    // and the two silver inspection surfaces visible in the overhead photo.
+    for(const [y,z,r] of [[1.64,1.05,.064],[2.00,1.13,.057],[2.37,1.03,.048],[3.53,1.04,.046],[4.69,1.06,.054]]) {
+      roll(y,z,r,brown);
+      for(const x of [.10,1.99])box(x,y-.065,.73,.11,.13,z-.73);
+    }
+    for(const [y,length,z] of [[2.40,.96,.93],[3.70,.92,.94]]) {
+      box(.22,y,z-.10,1.76,length,.08);
+      box(.24,y,z-.02,1.72,length,.025,steel);
+      for(const x of [.24,1.94])box(x,y,z+.005,.024,length,.025,'#d0d5ce');
+      for(const yy of [y+.08,y+length-.12])box(.27,yy,.78,1.66,.045,.06);
+    }
+    // Empty rear mounting rail. No suspended sheet or material web is added.
+    tube([.12,4.82,1.10],[2.08,4.82,1.10],.023,steel,16);
+    for(const x of [.10,1.99])box(x,4.72,.83,.11,.14,.25);
+    // Mechanical counter and one adjustment handwheel fixed to the right guide.
+    box(2.03,1.91,1.10,.13,.18,.13,dark);
+    box(2.045,1.93,1.23,.10,.10,.008,'#d2b34e');
+    tube([2.07,2.34,1.03],[2.16,2.34,1.03],.025,dark,12);
+    const wheelX=2.16,wheelY=2.34,wheelZ=1.03;
+    for(let i=0;i<12;i++) {
+      const a=i*Math.PI/6,b=(i+1)*Math.PI/6;
+      tube([wheelX,wheelY+.09*Math.cos(a),wheelZ+.09*Math.sin(a)],
+        [wheelX,wheelY+.09*Math.cos(b),wheelZ+.09*Math.sin(b)],.009,dark,6);
+      if(i%3===0)tube([wheelX,wheelY,wheelZ],
+        [wheelX,wheelY+.087*Math.cos(a),wheelZ+.087*Math.sin(a)],.007,dark,6);
+    }
+    // Single high transverse gantry, wide dark header board and task light.
+    // 2.3 m maximum is a photo estimate, not a surveyed measurement.
+    for(const x of [.11,2.01]) {
+      box(x,3.52,.10,.075,.09,1.98);
+      box(x-.02,3.48,.80,.115,.16,.25);
+    }
+    box(.11,3.52,1.99,1.975,.09,.075);
+    box(.08,3.49,2.00,2.04,.115,.30,header);
+    box(.29,3.42,1.91,1.62,.13,.045,steel);
+    tube([.33,3.39,1.915],[1.87,3.39,1.915],.018,light,12);
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'H1-1': return buildH1(item);
       case 'A1-1': return buildA1(item);
       case 'F1-1': return buildF1(item);
       case 'G2-2': return buildG2(item);
+      case 'B1-3': return buildB13(item);
       default: return null;
     }
   }

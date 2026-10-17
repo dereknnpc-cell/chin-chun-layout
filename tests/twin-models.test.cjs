@@ -3,6 +3,50 @@ const assert=require('node:assert/strict');
 global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
+const qc3={id:'eq_qc3_b1_3',code:'B1-3',x:60.53,y:15.18,width:2.2,height:5,rotation:0};
+test('B1-3 uses its own photo model without changing CAD or adding adjacent equipment',()=>{
+  const item=Object.freeze({...qc3}),before=JSON.stringify(item);
+  const faces=models.build(item),points=faces.flatMap(f=>f.points);
+  assert.ok(models.matches(item));
+  assert.ok(models.matches({code:' b1-3 '}));
+  assert.ok(faces.length>500);
+  assert.equal(JSON.stringify(item),before);
+  assert.equal(models.build({...item,code:'B1-2'}),null);
+  assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+  assert.ok(points.every(([x,y,z])=>x>=qc3.x-1e-9 && x<=qc3.x+qc3.width+1e-9 && y>=qc3.y-1e-9 && y<=qc3.y+qc3.height+1e-9 && z>=0 && z<=2.3));
+  assert.equal(Math.min(...points.map(p=>p[2])),0);
+  assert.equal(Math.max(...points.map(p=>p[2])),2.3);
+  for(const color of ['#dcd5b9','#62696b','#927755','#b9c3c3','#454d56','#f2f0d8'])
+    assert.ok(faces.some(f=>f.color===color),`missing QC photo feature ${color}`);
+  assert.ok(!faces.some(f=>['#bc3326','#c96532','#272a31','#53565b'].includes(f.color)), 'no neighbouring orange control box or foam material');
+});
+test('B1-3 has two attached full-width grey machine rollers, not a material roll',()=>{
+  const faces=models.build({...qc3,x:0,y:0});
+  const rolls=faces.filter(f=>f.color==='#62696b');
+  const front=rolls.filter(f=>f.points.reduce((sum,p)=>sum+p[1],0)/f.points.length<.85);
+  const back=rolls.filter(f=>!front.includes(f));
+  for(const [parts,y,z,r] of [[front,.59,.88,.19],[back,1.12,.89,.18]]) {
+    const points=parts.flatMap(f=>f.points);
+    assert.equal(parts.length,34);
+    assert.ok(Math.abs(Math.min(...points.map(p=>p[0]))-.24)<1e-9);
+    assert.ok(Math.abs(Math.max(...points.map(p=>p[0]))-1.96)<1e-9);
+    assert.ok(points.every(p=>Math.abs(p[1]-y)<=r+1e-9 && Math.abs(p[2]-z)<=r+1e-9));
+  }
+});
+test('B1-3 rotates about the CAD center and scales only in plan',()=>{
+  const item={...qc3,x:0,y:0};
+  const original=models.build(item),turned=models.build({...item,rotation:90});
+  const resized=models.build({...item,width:4.4,height:7.5});
+  original.forEach((face,i)=>face.points.forEach((p,j)=>{
+    const q=turned[i].points[j],r=resized[i].points[j];
+    assert.ok(Math.abs(q[0]-(1.1-(p[1]-2.5)))<1e-9);
+    assert.ok(Math.abs(q[1]-(2.5+(p[0]-1.1)))<1e-9);
+    assert.equal(q[2],p[2]);
+    assert.ok(Math.abs(r[0]-2*p[0])<1e-9);
+    assert.ok(Math.abs(r[1]-1.5*p[1])<1e-9);
+    assert.equal(r[2],p[2]);
+  }));
+});
 test('G2-2 stays grounded in its CAD footprint and rotates without changing height',()=>{
   const item=Object.freeze({code:'G2-2',x:0,y:0,width:4,height:2.4});
   const original=models.build(item),turned=models.build({...item,rotation:90}),resized=models.build({...item,width:8,height:4.8});
