@@ -11,7 +11,8 @@ test('Q2-3 has its own narrow photo model without mutating its CAD footprint',()
   assert.equal(JSON.stringify(item),before);
   assert.ok(faces.length>700);
   assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
-  assert.ok(points.every(([x,y,z])=>x>=item.x-1e-9 && x<=item.x+2.65+1e-9 && y>=item.y-1e-9 && y<=item.y+4+1e-9 && z>=0 && z<=2.30+1e-9));
+  const cx=item.x+item.width/2,cy=item.y+item.height/2;
+  assert.ok(points.every(([x,y,z])=>x>=cx-2-1e-9 && x<=cx+2+1e-9 && y>=cy-1.325-1e-9 && y<=cy+1.325+1e-9 && z>=0 && z<=2.30+1e-9));
   assert.equal(Math.min(...points.map(p=>p[2])),0);
   assert.ok(Math.abs(Math.max(...points.map(p=>p[2]))-2.30)<1e-9);
   for(const color of ['#dcd5b9','#927755','#329cba','#c56b32','#547d8d','#f2f0d8'])assert.ok(faces.some(f=>f.color===color));
@@ -19,7 +20,8 @@ test('Q2-3 has its own narrow photo model without mutating its CAD footprint',()
   assert.ok(!faces.some(f=>['#2d527e','#272a31','#53565b','#62696b'].includes(f.color)),'no blue QA 2 rolls or foam material');
 });
 test('Q2-3 exposes an empty right stock axle and guide bed, not the foam coil or adjacent green machine',()=>{
-  const faces=models.build({code:'Q2-3',x:0,y:0,width:4,height:2.65});
+  // Cancel the calibration only to inspect the original component coordinates.
+  const faces=models.build({code:'Q2-3',x:0,y:0,width:4,height:2.65,rotation:90});
   const stock=faces.filter(f=>f.points.every(p=>Math.abs(p[0]-3.29)<=.033+1e-9 && Math.abs(p[2]-1.38)<=.033+1e-9) && f.color==='#b9c3c3');
   assert.equal(stock.length,22);
   const floor=faces.filter(f=>f.color==='#329cba');
@@ -27,8 +29,8 @@ test('Q2-3 exposes an empty right stock axle and guide bed, not the foam coil or
   assert.ok(!faces.some(f=>Math.min(...f.points.map(p=>p[0]))<1.5 && Math.max(...f.points.map(p=>p[0]))>2.2 && Math.min(...f.points.map(p=>p[1]))<.5 && Math.max(...f.points.map(p=>p[1]))>1.9 && f.points.every(p=>p[2]>.8)),'no continuous material web');
   assert.ok(!faces.some(f=>['#297452','#2f734c','#32784f'].includes(f.color)),'neighbouring green drums excluded');
 });
-test('Q2-3 confirmed flow places stock feed on the right and discharge rolls on the left',()=>{
-  const item={code:'Q2-3',x:11.55,y:25.18,width:2.65,height:4};
+test('Q2-3 keeps its original feed and discharge components while turning the whole previous model CCW 90 degrees',()=>{
+  const item={code:'Q2-3',x:11.55,y:25.18,width:2.65,height:4,rotation:90};
   const faces=models.build(item),stockX=item.x+item.width*3.29/4;
   const stock=faces.filter(f=>f.color==='#b9c3c3' && f.points.every(p=>Math.abs(p[0]-stockX)<=item.width*.033/4+1e-9 && Math.abs(p[2]-1.38)<=.033+1e-9));
   assert.equal(stock.length,22);
@@ -50,10 +52,24 @@ test('Q2-3 rotates around its CAD center and resizes only in plan',()=>{
       assert.ok(Math.abs(q[0]-(1.325+(p[0]-1.325)*Math.cos(a)-(p[1]-2)*Math.sin(a)))<1e-9);
       assert.ok(Math.abs(q[1]-(2+(p[0]-1.325)*Math.sin(a)+(p[1]-2)*Math.cos(a)))<1e-9);
       assert.equal(q[2],p[2]);
-      assert.ok(Math.abs(r[0]-2*p[0])<1e-9 && Math.abs(r[1]-1.5*p[1])<1e-9);
+      assert.ok(Math.abs(r[0]-(2.65+1.5*(p[0]-1.325)))<1e-9 && Math.abs(r[1]-(3+2*(p[1]-2)))<1e-9);
       assert.equal(r[2],p[2]);
     }));
   }
+});
+test('Q2-3 CCW calibration is a rigid center rotation, not a mirror or nonuniform squeeze',()=>{
+  const item=Object.freeze({code:'Q2-3',x:11.55,y:25.18,width:2.65,height:4,rotation:0});
+  assert.equal(models.rotationOffset(item),-90);
+  for(const code of ['Q2-1','Q2-2','E1-1','B1-1'])assert.equal(models.rotationOffset({code}),0);
+  const corrected=models.build(item),previous=models.build({...item,rotation:90});
+  const cx=item.x+item.width/2,cy=item.y+item.height/2;
+  previous.forEach((face,i)=>face.points.forEach((p,j)=>{
+    const q=corrected[i].points[j];
+    assert.ok(Math.abs(q[0]-(cx+p[1]-cy))<1e-9);
+    assert.ok(Math.abs(q[1]-(cy-p[0]+cx))<1e-9);
+    assert.equal(q[2],p[2]);
+    assert.ok(Math.abs(Math.hypot(q[0]-cx,q[1]-cy)-Math.hypot(p[0]-cx,p[1]-cy))<1e-9);
+  }));
 });
 test('Q2-1/2 preserve their CAD records and have distinct photo structures',()=>{
   for(const [code,x,y] of [['Q2-1',23.95,22.94],['Q2-2',23.91,19.89]]) {

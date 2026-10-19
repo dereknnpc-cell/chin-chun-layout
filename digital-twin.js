@@ -10,7 +10,7 @@
   let gesture = null;
   let detail = false;
   const zh = {
-    q23Photo:'Q2-3：已確認平面圖右側入料、左側出料，特寫標示隨機台旋轉。保留米白側板、導輪、空料軸、藍色底板、斜面操作面板與燈架，不含泡棉、紙管或綠色雙滾輪鄰機。原平面位置、占地與角度不變；最高約 2.30 m 及細部尺寸仍為照片估算。',
+    q23Photo:'Q2-3：依最新確認，整台 2.5D 模型相對上一版逆時針轉 90°，不翻轉、不拉伸，入料／出料標示與占地框同步旋轉。中心位置與原始平面資料不變；尺寸不變，旋轉後長寬方向互換。不含泡棉、紙管或綠色鄰機；最高約 2.30 m 及細部尺寸仍為照片估算。',
     q23Feed:'入料', q23Discharge:'出料',
     q21Photo:'Q2-1：暫依封閉底櫃照片建立銀色滾輪、棕色導輪、低位側邊操作台及燈架。機台編號對應與入出料方向待確認；不含泡棉、料卷或紙管。占地、位置及角度沿用原平面資料；最高約 2.35 m 為照片估算。',
     q22Photo:'Q2-2：依照片中 QA 002 標示建立開放機架、雙藍色固定滾輪、棕色導輪、氣缸支臂、獨立橘色控制箱及燈架。不含泡棉料片、料卷與紙管套筒。占地、位置及角度沿用原平面資料；最高約 2.35 m 為照片估算，入出料方向及細部尺寸待確認。',
@@ -27,7 +27,7 @@
     updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', a1Photo:'A1-1 依新照片重畫：右端綠色輸送帶入料，經加工滾輪與靠右的大輪，帶材斜向左端取料滾輪。方向已確認；部件尺寸與高度仍是照片估算。', a1Entrance:'入料（綠色輸送帶）', a1Collection:'取料（銀色滾輪）', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
   };
   const th = {
-    q23Photo:'Q2-3: ยืนยันแล้วว่าป้อนเข้าด้านขวาและรับงานออกด้านซ้ายของแปลน ป้ายระยะใกล้หมุนตามเครื่อง คงแผ่นข้างสีครีม ลูกกลิ้งนำ แกนเปล่า แผ่นฐานสีฟ้า แผงควบคุมเอียงและโครงไฟ ไม่รวมโฟม แกนกระดาษหรือเครื่องลูกกลิ้งสีเขียวข้างเคียง ตำแหน่ง ขนาดฐานและมุมตามแปลนไม่เปลี่ยน ความสูงประมาณ 2.30 ม. และรายละเอียดเป็นการประมาณจากภาพ',
+    q23Photo:'Q2-3: ตามคำยืนยันล่าสุด หมุนแบบ 2.5D ทั้งเครื่องทวนเข็มนาฬิกา 90° จากรุ่นก่อน ไม่สะท้อนหรือยืดแบบ ป้ายป้อนเข้า/รับงานออกและกรอบฐานหมุนพร้อมกัน จุดศูนย์กลางและข้อมูลแปลนเดิมไม่เปลี่ยน ขนาดเดิมคงอยู่แต่แนวยาว/กว้างสลับกัน ไม่รวมโฟม แกนกระดาษหรือเครื่องสีเขียวข้างเคียง ความสูงประมาณ 2.30 ม. และรายละเอียดเป็นการประมาณจากภาพ',
     q23Feed:'ป้อนเข้า', q23Discharge:'รับงานออก',
     q21Photo:'Q2-1: ใช้ภาพเครื่องฐานตู้ปิดเป็นข้อมูลชั่วคราว มีลูกกลิ้งโลหะ ลูกกลิ้งนำสีน้ำตาล คอนโซลข้างแบบต่ำและโครงไฟ การจับคู่รหัสกับภาพและทิศทางงานต้องยืนยัน ไม่รวมโฟม ม้วนวัสดุหรือแกนกระดาษ คงตำแหน่ง ขนาดฐานและมุมตามแปลน สูงประมาณ 2.35 ม. จากภาพ',
     q22Photo:'Q2-2: อ้างอิงป้าย QA 002 ในภาพ มีโครงเปิด ลูกกลิ้งเครื่องสีน้ำเงินคู่ ลูกกลิ้งนำสีน้ำตาล แขนกระบอกลม ตู้ควบคุมสีส้มแยกและโครงไฟ ไม่รวมแผ่นโฟม ม้วนวัสดุหรือปลอกกระดาษ คงตำแหน่ง ขนาดฐานและมุมตามแปลน สูงประมาณ 2.35 ม. จากภาพ ทิศทางงานและรายละเอียดต้องยืนยัน',
@@ -72,7 +72,8 @@
     (floor==='2F' ? data.equipment_2f || [] : data.equipment || []).forEach(item => {
       const category = item.category || '';
       const z = isRamp(item) ? factoryRise : category==='Door' ? (/ROLL/i.test(item.code || '') ? 2.7 : 2.1) : category==='Window' ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
-      const points=rect(item);
+      const offset=window.ChinChunModels?.rotationOffset?.(item) || 0;
+      const points=rect(offset?{...item,rotation:n(item.rotation)+offset}:item);
       if(floor==='1F' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1){
         const center=points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
         points.forEach(p=>{p[0]-=center[0];});
@@ -558,7 +559,8 @@
   function updateInfo() {
     const s=selected, item=s?.item;
     dialog.querySelector('#twinName').textContent=item ? (item.code || item.name || item.id) : t('select');
-    dialog.querySelector('#twinDetails').textContent=item ? `${t(s.type)} · ${item.name || item.id}\n${t('position')}: ${n(item.x ?? item.x1).toFixed(2)}, ${n(item.y ?? item.y1).toFixed(2)} m\n${t('size')}: ${s.type==='wall'?Math.hypot(n(item.x2)-n(item.x1),n(item.y2)-n(item.y1)).toFixed(2)+' × '+n(item.thickness,.2).toFixed(2):n(item.width).toFixed(2)+' × '+n(item.height).toFixed(2)} m\n${t('rotation')}: ${n(item.rotation).toFixed(0)}°` : t('empty');
+    const displayRotation=item?n(item.rotation)+(window.ChinChunModels?.rotationOffset?.(item) || 0):0;
+    dialog.querySelector('#twinDetails').textContent=item ? `${t(s.type)} · ${item.name || item.id}\n${t('position')}: ${n(item.x ?? item.x1).toFixed(2)}, ${n(item.y ?? item.y1).toFixed(2)} m\n${t('size')}: ${s.type==='wall'?Math.hypot(n(item.x2)-n(item.x1),n(item.y2)-n(item.y1)).toFixed(2)+' × '+n(item.thickness,.2).toFixed(2):n(item.width).toFixed(2)+' × '+n(item.height).toFixed(2)} m\n${t('rotation')}: ${displayRotation.toFixed(0)}°` : t('empty');
     dialog.querySelector('#twinEdit').hidden=!s;
     dialog.querySelector('#twinFocus').hidden=!s;
     if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'A1-1':'a1Photo','F1-1':'f1Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo'})[String(item.code || '').trim().toUpperCase()] || 'photo');

@@ -2,6 +2,9 @@
 (() => {
   'use strict';
   const modelCode = item => String(item.code || '').trim().toUpperCase();
+  // Display-only calibration; rotate the entire Q2-3 mesh and its footprint
+  // rigidly about the same CAD center. Never rescale it to the old rectangle.
+  const rotationOffset = item => modelCode(item)==='Q2-3' ? -90 : 0;
   const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
@@ -803,11 +806,11 @@
     // Three owner photos: narrower upright CAD footprint than Q2-1/2.
     // The green twin rolls beside this machine belong to its neighbour.
     // Model the empty stock axle, never the large pale foam coil or yellow web.
-    // Owner correction: feed is CAD-right, discharge CAD-left. Turn only the
-    // display geometry inside the existing footprint, not the persisted layout.
+    // Owner clarified the previous displayed machine must turn 90° CCW as a
+    // whole. Keep all existing geometry, then apply the rigid display offset.
     const faces=[],cream='#dcd5b9',steel='#b9c3c3',dark='#323b3e',brown='#927755';
     const w=Math.max(.05,Number(item.width)||2.65),d=Math.max(.05,Number(item.height)||4);
-    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const a=((Number(item.rotation)||0)+rotationOffset(item))*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
     const world=([x,y,z])=>{
       const u=y/4*w-w/2,v=(1-x/2.65)*d-d/2;
       return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
@@ -912,5 +915,5 @@
       default: return null;
     }
   }
-  window.ChinChunModels = {matches,build};
+  window.ChinChunModels = {matches,build,rotationOffset};
 })();
