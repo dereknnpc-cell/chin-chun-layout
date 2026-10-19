@@ -4,6 +4,44 @@ global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
 const qc3={id:'eq_qc3_b1_3',code:'B1-3',x:60.53,y:15.18,width:2.2,height:5,rotation:0};
+test('J1-2 photo model preserves its CAD record and fits its existing footprint',()=>{
+  const item=Object.freeze({id:'eq_vcut1_j1_2',code:'J1-2',x:75.25,y:35.34,width:4.45,height:4.57,rotation:0});
+  const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
+  assert.ok(models.matches(item));assert.ok(models.matches({code:' j1-2 '}));
+  assert.equal(JSON.stringify(item),before);assert.equal(models.rotationOffset(item),0);
+  assert.ok(faces.length>600);
+  assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+  assert.ok(points.every(([x,y,z])=>x>=item.x-1e-9 && x<=item.x+item.width+1e-9 && y>=item.y-1e-9 && y<=item.y+item.height+1e-9 && z>=0 && z<=2.30+1e-9));
+  assert.equal(Math.min(...points.map(p=>p[2])),0);
+  assert.ok(Math.abs(Math.max(...points.map(p=>p[2]))-2.30)<1e-9);
+  for(const color of ['#ded7bd','#b8c4c4','#e8e5d5','#675346','#356e62','#303b3d'])assert.ok(faces.some(f=>f.color===color));
+  for(const code of ['J1-1','J1-3'])assert.equal(models.build({...item,code}),null,'other J machines are not changed');
+});
+test('J1-2 has two fixed work surfaces, a wooden edge and an open cutting throat without foam',()=>{
+  const faces=models.build({code:'J1-2',x:0,y:0,width:4.45,height:4.57});
+  const tops=faces.filter(f=>f.color==='#e8e5d5' && f.points.every(p=>Math.abs(p[2]-.995)<1e-9));
+  assert.equal(tops.length,2);
+  assert.ok(tops.every(f=>Math.max(...f.points.map(p=>p[1]))-Math.min(...f.points.map(p=>p[1]))>3.6));
+  const wood=faces.filter(f=>f.color==='#675346');
+  assert.equal(wood.length,6);assert.ok(wood.every(f=>f.points.every(p=>p[0]>=3.84-1e-9 && p[2]<=1.002+1e-9)));
+  const beam=faces.filter(f=>f.color==='#ded7bd' && f.points.length===8);
+  assert.equal(beam.length,2);
+  assert.ok(beam.every(f=>f.points.some(p=>Math.abs(p[0]-1.20)<1e-9 && Math.abs(p[2]-1.67)<1e-9)));
+  assert.ok(!faces.some(f=>['#329cba','#2d527e','#272a31','#53565b','#62696b'].includes(f.color)),'no foam or blue pallet');
+});
+test('J1-2 rotates about its CAD center and rescales only its plan dimensions',()=>{
+  const item={code:'J1-2',x:0,y:0,width:4.45,height:4.57},original=models.build(item),resized=models.build({...item,width:8.9,height:6.855});
+  for(const rotation of [90,-90,180]) {
+    const turned=models.build({...item,rotation}),a=rotation*Math.PI/180;
+    original.forEach((face,i)=>face.points.forEach((p,j)=>{
+      const q=turned[i].points[j],r=resized[i].points[j];
+      assert.ok(Math.abs(q[0]-(2.225+(p[0]-2.225)*Math.cos(a)-(p[1]-2.285)*Math.sin(a)))<1e-9);
+      assert.ok(Math.abs(q[1]-(2.285+(p[0]-2.225)*Math.sin(a)+(p[1]-2.285)*Math.cos(a)))<1e-9);
+      assert.equal(q[2],p[2]);assert.equal(r[2],p[2]);
+      assert.ok(Math.abs(r[0]-2*p[0])<1e-9 && Math.abs(r[1]-1.5*p[1])<1e-9);
+    }));
+  }
+});
 test('Q2-3 has its own narrow photo model without mutating its CAD footprint',()=>{
   const item=Object.freeze({code:'Q2-3',x:11.55,y:25.18,width:2.65,height:4,rotation:0});
   const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);

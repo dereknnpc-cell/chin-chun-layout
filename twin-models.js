@@ -5,7 +5,7 @@
   // Display-only calibration; rotate the entire Q2-3 mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => modelCode(item)==='Q2-3' ? -90 : 0;
-  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -897,6 +897,99 @@
     tube([.37,1.77,2.16],[1.97,1.77,2.16],.020,'#f2f0d8',12);
     return faces;
   }
+  function buildJ12(item) {
+    // Four owner photos: broad sliding worktable, open cream portal, a long
+    // aluminium fence and exposed under-table rails. No foam, pallet or carts.
+    // Plan orientation and 2.30 m overall height are provisional photo estimates.
+    const faces=[],cream='#ded7bd',steel='#b8c4c4',dark='#303b3d',rail='#356e62',wood='#675346';
+    const w=Math.max(.05,Number(item.width)||4.45),d=Math.max(.05,Number(item.height)||4.57);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{
+      const u=x/4.45*w-w/2,v=y/4.57*d-d/2;
+      return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
+    };
+    const face=(points,color)=>faces.push({points:points.map(world),color});
+    function box(x,y,z,bw,bd,bh,color=cream) {
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color=steel,n=16) {
+      const v=b.map((value,i)=>value-a[i]),len=Math.hypot(...v),u=v.map(value=>value/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);
+      const el=Math.hypot(...e);e=e.map(value=>value/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((value,j)=>value+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color));
+    }
+    // Cream table is permanent machine structure, not a sheet of foam.
+    // Two main panels and the dark wooden extension remain visibly separate.
+    for(const [x,bw] of [[.08,2.06],[2.18,1.63]]) {
+      box(x,.68,.91,bw,3.66,.075);
+      box(x,.68,.986,bw,3.66,.009,'#e8e5d5');
+      for(const y of [.75,4.20])box(x,y,.79,bw,.10,.12);
+    }
+    box(3.84,.68,.91,.51,3.66,.075);
+    box(3.84,.68,.987,.51,3.66,.015,wood);
+    for(const x of [.15,4.12]) {
+      box(x,.69,.76,.11,3.60,.14);
+      for(const y of [1.00,3.94]) {
+        box(x,y,.07,.10,.14,.72);
+        box(Math.max(.03,x-.12),y-.08,0,.32,.30,.065);
+      }
+    }
+    // Open sliding rails and central low drive base, not a closed pedestal.
+    for(const x of [.85,3.10]) {
+      box(x,.45,.58,.10,3.95,.11,dark);
+      box(x+.015,.45,.69,.07,3.95,.018,steel);
+    }
+    box(.64,.38,.09,3.11,.48,.49);
+    box(.64,.87,.12,3.11,.025,.36,'#cfc7ae');
+    for(const x of [.72,3.45])box(x,.35,0,.20,.58,.09);
+    // Portal's chamfered lower beam leaves the cutting opening unobstructed.
+    const beam=[[.16,2.30],[4.25,2.30],[4.25,1.47],[3.28,1.47],[3.05,1.67],[1.20,1.67],[.96,1.47],[.16,1.47]];
+    const near=beam.map(([x,z])=>[x,.15,z]),far=beam.map(([x,z])=>[x,.64,z]);
+    face([...near].reverse(),cream);face(far,cream);
+    near.forEach((p,i)=>face([p,near[(i+1)%near.length],far[(i+1)%far.length],far[i]],cream));
+    for(const x of [.16,3.77]) {
+      box(x,.15,.08,.48,.49,1.39);
+      box(Math.max(.02,x-.08),.05,0,.64,.72,.08);
+    }
+    box(.16,.15,2.285,4.09,.49,.015,'#8b8c80');
+    // Service cover, height-setting wheel, thin blade/guide at the throat.
+    box(2.93,.646,1.79,.56,.012,.36,'#cec6b0');
+    for(const x of [2.98,3.43])for(const z of [1.84,2.10])tube([x,.661,z],[x,.671,z],.014,dark,8);
+    box(2.10,.37,1.43,.14,.18,.24,steel);
+    box(2.158,.44,.995,.014,.025,.435,'#858f8f');
+    const wheel=(x,y,z,r)=>{
+      tube([x,y-.04,z],[x,y+.03,z],.034,dark,12);
+      for(let i=0;i<20;i++) {
+        const a=i*Math.PI/10,b=(i+1)*Math.PI/10;
+        tube([x+r*Math.cos(a),y,z+r*Math.sin(a)],[x+r*Math.cos(b),y,z+r*Math.sin(b)],.014,dark,6);
+        if(i%5===0)tube([x,y,z],[x+r*Math.cos(a),y,z+r*Math.sin(a)],.010,dark,6);
+      }
+      tube([x+r*.7,y,z+r*.7],[x+r*.7,y+.08,z+r*.7],.018,dark,8);
+    };
+    wheel(.66,.70,1.97,.16);
+    // Tall aluminium fence runs from the portal to the front table carriage.
+    box(2.08,.68,1.005,.10,3.62,.035,steel);
+    box(2.11,.68,1.04,.045,3.62,.27,steel);
+    for(const z of [1.07,1.25])box(2.158,.68,z,.012,3.62,.014,'#e1e6df');
+    for(const y of [.75,2.55,4.13])box(2.16,y,1.04,.05,.045,.27,dark);
+    box(2.04,4.20,.84,.24,.15,.21);
+    wheel(2.16,4.37,.98,.15);
+    for(const x of [.08,3.78]) {
+      box(x,.68,.87,.025,3.66,.05,rail);
+      box(x+.028,.68,.93,.018,3.66,.035,steel);
+    }
+    // Exposed drive motor and its cooling ribs below the portal.
+    tube([3.46,.67,.49],[3.46,1.11,.49],.18,dark,24);
+    for(let y=.70;y<1.08;y+=.055)tube([3.46,y,.49],[3.46,y+.018,.49],.188,'#465051',20);
+    box(3.29,.60,.25,.34,.38,.08);
+    box(3.84,.65,.43,.24,.015,.26,'#56786a');
+    for(const z of [.49,.59])tube([3.96,.669,z],[3.96,.679,z],.025,z===.49?'#9e4935':'#5d9c68',10);
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'H1-1': return buildH1(item);
@@ -912,6 +1005,7 @@
       case 'Q2-1':
       case 'Q2-2': return buildQ2(item);
       case 'Q2-3': return buildQ23(item);
+      case 'J1-2': return buildJ12(item);
       default: return null;
     }
   }
