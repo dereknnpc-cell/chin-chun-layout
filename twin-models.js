@@ -2,9 +2,9 @@
 (() => {
   'use strict';
   const modelCode = item => String(item.code || '').trim().toUpperCase();
-  // Display-only calibration; rotate the entire Q2-3 mesh and its footprint
+  // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
-  const rotationOffset = item => modelCode(item)==='Q2-3' ? -90 : 0;
+  const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
   const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
@@ -903,7 +903,9 @@
     // All material rolls, paper sleeves and the black web are omitted.
     const faces=[],cream='#ddd6bb',steel='#bbc7c8',chrome='#cbd5d5',dark='#303a3d',orange='#b96537';
     const w=Math.max(.05,Number(item.width)||2.4),d=Math.max(.05,Number(item.height)||4.19);
-    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    // Owner correction: turn the complete previous model 180° about its CAD
+    // center. Future 2D rotation remains additive; never mutate the CAD record.
+    const a=((Number(item.rotation)||0)+rotationOffset(item))*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
     const world=([x,y,z])=>{
       const u=x/2.4*w-w/2,v=y/4.19*d-d/2;
       return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];

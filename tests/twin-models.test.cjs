@@ -8,7 +8,7 @@ test('G2-1 has a separate photo model inside its unchanged CAD footprint',()=>{
   const item=Object.freeze({id:'eq_af1_g2_1',code:'G2-1',x:51.2,y:15.25,width:2.4,height:4.19,rotation:0});
   const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
   assert.ok(models.matches(item));assert.ok(models.matches({code:' g2-1 '}));
-  assert.equal(JSON.stringify(item),before);assert.equal(models.rotationOffset(item),0);
+  assert.equal(JSON.stringify(item),before);assert.equal(models.rotationOffset(item),180);
   assert.ok(faces.length>1200);
   assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
   assert.ok(points.every(([x,y,z])=>x>=item.x-1e-9 && x<=item.x+item.width+1e-9 && y>=item.y-1e-9 && y<=item.y+item.height+1e-9 && z>=0 && z<=2.35+1e-9));
@@ -18,7 +18,8 @@ test('G2-1 has a separate photo model inside its unchanged CAD footprint',()=>{
   for(const color of ['#ddd6bb','#bbc7c8','#cbd5d5','#b96537','#677071','#f2f2df'])assert.ok(faces.some(f=>f.color===color));
 });
 test('G2-1 keeps an empty stock axle, individual knives and open rear frame without material rolls',()=>{
-  const faces=models.build({code:'G2-1',x:0,y:0,width:2.4,height:4.19});
+  // Cancel the calibration only for original component-coordinate inspection.
+  const faces=models.build({code:'G2-1',x:0,y:0,width:2.4,height:4.19,rotation:-180});
   const axle=faces.filter(f=>f.color==='#bbc7c8' && f.points.every(p=>Math.abs(p[1]-3.78)<=.037+1e-9 && Math.abs(p[2]-1.16)<=.037+1e-9));
   assert.equal(axle.length,26);
   const blades=faces.filter(f=>f.color==='#929e9e');assert.equal(blades.length,13*18);
@@ -40,6 +41,19 @@ test('G2-1 follows 2D movement, rotation and plan resizing without changing its 
       assert.ok(Math.abs(m[0]-p[0]-3)<1e-9 && Math.abs(m[1]-p[1]-2)<1e-9);
     }));
   }
+});
+test('G2-1 correction rigidly turns every vertex 180 degrees around the same CAD center',()=>{
+  const item=Object.freeze({code:'G2-1',x:51.2,y:15.25,width:2.4,height:4.19,rotation:0});
+  const previous=models.build({...item,rotation:-180}),corrected=models.build(item);
+  const cx=item.x+item.width/2,cy=item.y+item.height/2;
+  previous.forEach((face,i)=>face.points.forEach((p,j)=>{
+    const q=corrected[i].points[j];
+    assert.ok(Math.abs(q[0]-(2*cx-p[0]))<1e-9 && Math.abs(q[1]-(2*cy-p[1]))<1e-9);
+    assert.equal(q[2],p[2]);
+    assert.ok(Math.abs(Math.hypot(q[0]-cx,q[1]-cy)-Math.hypot(p[0]-cx,p[1]-cy))<1e-9);
+  }));
+  assert.equal(models.rotationOffset({code:'G2-2'}),0);
+  assert.equal(models.rotationOffset({code:'Q2-3'}),-90);
 });
 test('J1-2 photo model preserves its CAD record and fits its existing footprint',()=>{
   const item=Object.freeze({id:'eq_vcut1_j1_2',code:'J1-2',x:75.25,y:35.34,width:4.45,height:4.57,rotation:0});
