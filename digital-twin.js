@@ -2,7 +2,9 @@
 (() => {
   'use strict';
   let data, bridge, dialog, canvas, ctx, floor = '1F', scene = [], hits = [];
-  let zoom = 1, pan = { x:0, y:0 }, angle = 0, pitch = Math.atan(1/Math.SQRT2), selected = null, frame = 0;
+  const defaultPitch = Math.atan(1/Math.SQRT2);
+  let zoom = 1, pan = { x:0, y:0 }, angle = 0, pitch = defaultPitch, selected = null, frame = 0;
+  let fitExtent = null;
   let width = 1, height = 1, baseScale = 1, bounds, labels = true;
   const baseHeight = .22;
   const factoryRise = 1.5;
@@ -22,9 +24,9 @@
     b13Photo:'B1-3：依三張照片建立雙灰色滾輪、棕色導輪、銀色品檢台及深灰色燈架。僅含機台本體，不含泡棉、紙管、推車或鄰機。占地沿用平面圖；最高約 2.3 m 為照片估算，方向與細部尺寸待確認。',
     g2Photo:'G2-2：依五張照片建立設備本體，不含泡棉、料卷或紙材。占地沿用平面圖；最高約 2.3 m 為照片估算，方向與細部尺寸待確認。',
     f1Photo:'F1-1：捲料軸位於平面圖右端，最高約 2.8 m（已確認）。僅顯示機台結構，不含泡棉材料。橘紅護欄、上層走台、直梯與滾輪依六張照片建模；其餘尺寸為照片估算。',
-    title:'廠房數位孿生', close:'返回平面圖', floor:'樓層', fit:'全覽', rotate:'旋轉視角', labels:'設備標籤',
+    title:'廠房數位孿生', close:'返回平面圖', floor:'樓層', fit:'全覽', rotate:'右轉90°', orbitLeft:'左轉90°', tiltUp:'俯視＋', tiltDown:'俯視−', resetView:'重設視角', cameraAngle:'水平', cameraPitch:'俯仰', labels:'設備標籤',
     select:'選取物件', all:'選擇設備／柱子／牆面', empty:'點選場景中的物件，查看尺寸與位置。', edit:'在平面圖編輯',
-    note:'配置同步 · 廠內外高差約 1.5 m；台階與月台細節為照片示意 · 未接入即時機台訊號', help:'拖曳巡覽 · 滾輪縮放 · ⌘＋橫滾旋轉、縱滾傾斜（Shift＋縱滾旋轉） · Esc 返回',
+    note:'2D 為主、配置同步 · 視角操作不改動機台尺寸或方向 · 廠內外高差約 1.5 m · 未接入即時機台訊號', help:'拖曳平移 · 滾動縮放 · ⌘／Shift＋滾動：左右旋轉 · ⌥＋滾動：上下俯仰 · 方向鍵：左右旋轉／上下俯仰 · 0 重設視角 · Esc 返回',
     equipment:'設備', column:'柱子', wall:'牆面', aisle:'走道', zone:'夾層區域', size:'平面尺寸', position:'座標', rotation:'角度', count:'物件',
     updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', a1Photo:'A1-1 依新照片重畫：右端綠色輸送帶入料，經加工滾輪與靠右的大輪，帶材斜向左端取料滾輪。方向已確認；部件尺寸與高度仍是照片估算。', a1Entrance:'入料（綠色輸送帶）', a1Collection:'取料（銀色滾輪）', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
   };
@@ -41,9 +43,9 @@
     b13Photo:'B1-3: จำลองจากภาพ 3 ภาพ มีลูกกลิ้งสีเทาคู่ ลูกกลิ้งนำสีน้ำตาล โต๊ะตรวจสีเงินและโครงไฟสีเทาเข้ม เฉพาะตัวเครื่อง ไม่รวมโฟม แกนกระดาษ รถเข็นหรือเครื่องข้างเคียง ขนาดฐานตามแปลน ความสูงประมาณ 2.3 ม. ทิศทางและรายละเอียดต้องยืนยัน',
     g2Photo:'G2-2: จำลองจากภาพ 5 ภาพ เฉพาะเครื่อง ไม่รวมวัสดุ ขนาดฐานตามแปลน ความสูงประมาณ 2.3 ม. และทิศทางยังไม่ยืนยัน',
     f1Photo:'F1-1: แกนม้วนอยู่ปลายขวาของแปลน สูงสุดประมาณ 2.8 ม. (ยืนยันแล้ว) แสดงเฉพาะโครงสร้างเครื่อง ไม่รวมวัสดุโฟม ราวสีส้ม ทางเดินด้านบน บันไดและลูกกลิ้งจำลองจากภาพ 6 ภาพ ขนาดส่วนอื่นประมาณจากภาพ',
-    title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'หมุนมุมมอง', labels:'ป้ายอุปกรณ์',
+    title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'ขวา90°', orbitLeft:'ซ้าย90°', tiltUp:'มุมก้ม＋', tiltDown:'มุมก้ม−', resetView:'คืนมุมมอง', cameraAngle:'แนวราบ', cameraPitch:'มุมก้ม', labels:'ป้ายอุปกรณ์',
     select:'เลือกวัตถุ', all:'เลือกอุปกรณ์ / เสา / ผนัง', empty:'คลิกวัตถุเพื่อดูขนาดและตำแหน่ง', edit:'แก้ไขในแปลน',
-    note:'ใช้ข้อมูลแปลนเดียวกัน · พื้นโรงงานสูงกว่าภายนอกประมาณ 1.5 ม.; ขั้นบันไดและท่าโหลดอ้างอิงภาพ · ยังไม่มีข้อมูลเครื่องจักรสด', help:'ลากเพื่อเลื่อน · ล้อเมาส์ซูม · ⌘ + เลื่อนแนวนอนหมุน แนวตั้งปรับมุมก้ม · Esc กลับ',
+    note:'ยึดแปลน 2D · กล้องไม่เปลี่ยนขนาดหรือทิศเครื่อง · พื้นในสูงกว่าภายนอกประมาณ 1.5 ม. · ยังไม่มีสัญญาณเครื่องสด', help:'ลากเลื่อน · ล้อซูม · ⌘/Shift＋เลื่อน: หมุนซ้ายขวา · ⌥＋เลื่อน: ปรับมุมก้ม · ลูกศร: ซ้ายขวาหมุน/ขึ้นลงปรับมุม · 0 คืนมุมมอง · Esc กลับ',
     equipment:'อุปกรณ์', column:'เสา', wall:'ผนัง', aisle:'ทางเดิน', zone:'พื้นที่ชั้นลอย', size:'ขนาดแปลน', position:'พิกัด', rotation:'มุม', count:'วัตถุ',
     updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', a1Photo:'วาด A1-1 ใหม่จากภาพล่าสุด: ป้อนวัสดุจากสายพานสีเขียวด้านขวา ผ่านลูกกลิ้งและดรัมใหญ่ที่อยู่ค่อนไปทางขวา แล้วแผ่นวัสดุลาดไปยังลูกกลิ้งรับงานด้านซ้าย ทิศทางยืนยันแล้ว แต่ขนาดและความสูงยังเป็นการประมาณจากภาพ', a1Entrance:'ป้อนเข้า (สายพานสีเขียว)', a1Collection:'รับงาน (ลูกกลิ้งสีเงิน)', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นทางเข้าสำนักงานยึดตำแหน่ง DOOR-1800; ความสูงเป็นภาพจำลองจากรูปถ่าย ต้องวัดจริง', dockSite:'ท่าโหลดฝั่งตะวันตกจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
   };
@@ -69,6 +71,7 @@
   }
   function rebuild() {
     if (!data) return;
+    fitExtent=null;
     dialog.querySelector('#twinFloor').value=floor;
     scene = [];
     const add = (item,type,points,z,color) => scene.push({item,type,points,z,color,model:type==='equipment'?window.ChinChunModels?.build(item):null});
@@ -149,7 +152,52 @@
     const path=new Path2D(); points.forEach((p,i)=>i?path.lineTo(...p):path.moveTo(...p)); path.closePath();
     ctx.fillStyle=fill;ctx.fill(path);ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke(path); return path;
   }
-  function requestDraw() { if(dialog?.open && !frame) frame=requestAnimationFrame(draw); }
+  function requestDraw() {
+    const status=dialog?.querySelector('#twinCameraStatus');
+    if(status)status.textContent=`${t('cameraAngle')} ${Math.round(angle*90)%360}° · ${t('cameraPitch')} ${Math.round(pitch*180/Math.PI)}°`;
+    if(dialog?.open && !frame)frame=requestAnimationFrame(draw);
+  }
+  function fittedScale(b,viewportWidth,viewportHeight) {
+    // Fit only on explicit fit/selection/layout changes. Orbit/tilt must not
+    // silently zoom the scene as the projected width and height change.
+    if(!fitExtent){
+      const raw=[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]].map(p=>iso(...p));
+      fitExtent={x:Math.max(...raw.map(p=>p[0]))-Math.min(...raw.map(p=>p[0]))+12,
+        y:Math.max(...raw.map(p=>p[1]))-Math.min(...raw.map(p=>p[1]))+14};
+    }
+    return Math.min(viewportWidth/fitExtent.x,viewportHeight/fitExtent.y)*.9;
+  }
+  function orbit(delta){angle=((angle+delta)%4+4)%4;requestDraw();}
+  function tilt(delta){pitch=Math.max(Math.PI*25/180,Math.min(Math.PI*65/180,pitch+delta));requestDraw();}
+  function resetView(){angle=0;pitch=defaultPitch;fit();}
+  function cameraKey(e){
+    if(e.target?.closest?.('input,select,textarea,[contenteditable="true"]') || e.metaKey || e.ctrlKey || e.altKey)return;
+    const step=5*Math.PI/180;
+    switch(e.key){
+      case 'ArrowLeft':orbit(-1/18);break;
+      case 'ArrowRight':orbit(1/18);break;
+      case 'ArrowUp':tilt(step);break;
+      case 'ArrowDown':tilt(-step);break;
+      case '0':resetView();break;
+      default:return;
+    }
+    e.preventDefault();
+  }
+  function cameraWheel(e){
+    e.preventDefault();
+    const unit=e.deltaMode===1?16:e.deltaMode===2?height:1;
+    const dx=e.deltaX*unit,dy=e.deltaY*unit;
+    // Exactly one camera axis per gesture, even with a diagonal trackpad swipe.
+    // Ambiguous modifier combinations do nothing rather than mixing axes.
+    if(e.altKey && (e.metaKey || e.shiftKey))return;
+    const delta=Math.abs(dx)>Math.abs(dy)?dx:dy;
+    if(e.altKey)tilt(delta*.0025);
+    else if(e.metaKey || e.shiftKey)orbit(delta*.0035);
+    else {
+      const r=canvas.getBoundingClientRect();
+      zoomAt(Math.exp(-dy*.001),e.clientX-r.left,e.clientY-r.top);
+    }
+  }
   function viewBounds() {
     if(!detail || !selected)return bounds;
     const xs=selected.points.map(p=>p[0]),ys=selected.points.map(p=>p[1]);
@@ -498,8 +546,7 @@
     const dpr=Math.min(devicePixelRatio || 1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
     const b=viewBounds(),visible=detail&&selected?[selected]:scene;
     const corners=[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]];
-    const raw=corners.map(p=>iso(...p));
-    baseScale=Math.min(width/(Math.max(...raw.map(p=>p[0]))-Math.min(...raw.map(p=>p[0]))+12),height/(Math.max(...raw.map(p=>p[1]))-Math.min(...raw.map(p=>p[1]))+14))*.9;
+    baseScale=fittedScale(b,width,height);
     hits=[];
     polygon(corners.map(p=>project(p,-1.4)),'#344938');
     polygon(corners.map(p=>project(p)),'#829477');
@@ -573,7 +620,7 @@
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
     dialog.querySelector('#twinObjects').value=item?.id || '';
   }
-  function fit(){zoom=detail?1.5:1;pan={x:0,y:0};requestDraw();}
+  function fit(){fitExtent=null;zoom=detail?1.5:1;pan={x:0,y:0};requestDraw();}
   function zoomAt(factor,x=width/2,y=height/2){const next=Math.max(.4,Math.min(8,zoom*factor)),ratio=next/zoom;pan={x:x-width/2-(x-width/2-pan.x)*ratio,y:y-height/2-(y-height/2-pan.y)*ratio};zoom=next;requestDraw();}
   function mount() {
     if(dialog)return;
@@ -584,32 +631,24 @@
     dialog.querySelector('.twin-toolbar').append(focus);
     focus.onclick=()=>{if(selected){detail=true;fit();}};
     // Keep CAD delete/rotate/undo shortcuts from changing the model behind the modal.
-    dialog.addEventListener('keydown',e=>e.stopPropagation());
+    dialog.addEventListener('keydown',e=>{cameraKey(e);e.stopPropagation();});
     dialog.addEventListener('keyup',e=>e.stopPropagation());
     dialog.querySelector('#twinClose').onclick=()=>dialog.close();
     dialog.querySelector('#twinFloor').onchange=e=>{floor=e.target.value;selected=null;rebuild();fit();};
     dialog.querySelector('#twinFit').onclick=()=>{detail=false;fit();};
-    dialog.querySelector('#twinRotate').onclick=()=>{angle=(angle+1)%4;fit();};
+    dialog.querySelector('#twinRotate').onclick=()=>orbit(1);
+    for(const [id,key,action] of [['twinOrbitLeft','orbitLeft',()=>orbit(-1)],['twinTiltUp','tiltUp',()=>tilt(5*Math.PI/180)],['twinTiltDown','tiltDown',()=>tilt(-5*Math.PI/180)],['twinResetView','resetView',resetView]]){
+      const button=document.createElement('button');button.id=id;button.dataset.twinText=key;button.onclick=action;
+      dialog.querySelector('.twin-toolbar').insertBefore(button,dialog.querySelector('#twinMinus'));
+    }
+    const cameraStatus=document.createElement('output');cameraStatus.id='twinCameraStatus';
+    dialog.querySelector('.twin-toolbar').append(cameraStatus);
     dialog.querySelector('#twinPlus').onclick=()=>zoomAt(1.25);
     dialog.querySelector('#twinMinus').onclick=()=>zoomAt(.8);
     dialog.querySelector('#twinLabels').onchange=e=>{labels=e.target.checked;requestDraw();};
     dialog.querySelector('#twinObjects').onchange=e=>{selected=scene.find(s=>s.item.id===e.target.value)||null;if(!selected)detail=false;updateInfo();if(detail)fit();else requestDraw();};
     dialog.querySelector('#twinEdit').onclick=()=>{if(selected){const id=selected.item.id;dialog.close();bridge?.edit(id,floor);}};
-    canvas.addEventListener('wheel',e=>{
-      e.preventDefault();
-      const unit=e.deltaMode===1?16:e.deltaMode===2?height:1;
-      let dx=e.deltaX*unit,dy=e.deltaY*unit;
-      if(e.metaKey){
-        // Trackpad/Magic Mouse: horizontal orbit, vertical tilt. Shift+wheel orbits on a regular mouse.
-        if(e.shiftKey && Math.abs(dx)<.01){dx=dy;dy=0;}
-        angle=((angle+dx*.0035)%4+4)%4;
-        pitch=Math.max(Math.PI/10,Math.min(Math.PI*7/18,pitch+dy*.0025));
-        requestDraw();
-      } else {
-        const r=canvas.getBoundingClientRect();
-        zoomAt(Math.exp(-dy*.001),e.clientX-r.left,e.clientY-r.top);
-      }
-    },{passive:false});
+    canvas.addEventListener('wheel',cameraWheel,{passive:false});
     canvas.onpointerdown=e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});gesture={x:e.clientX,y:e.clientY,moved:false};};
     canvas.onpointermove=e=>{
       const old=pointers.get(e.pointerId);if(!old || !gesture)return;
