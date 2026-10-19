@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const modelCode = item => String(item.code || '').trim().toUpperCase();
-  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -799,6 +799,99 @@
     }
     return faces;
   }
+  function buildQ23(item) {
+    // Three owner photos: narrower upright CAD footprint than Q2-1/2.
+    // The green twin rolls beside this machine belong to its neighbour.
+    // Model the empty stock axle, never the large pale foam coil or yellow web.
+    const faces=[],cream='#dcd5b9',steel='#b9c3c3',dark='#323b3e',brown='#927755';
+    const w=Math.max(.05,Number(item.width)||2.65),d=Math.max(.05,Number(item.height)||4);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{
+      const u=x/2.65*w-w/2,v=y/4*d-d/2;
+      return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
+    };
+    const face=(points,color)=>faces.push({points:points.map(world),color});
+    function box(x,y,z,bw,bd,bh,color=cream) {
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color=steel,n=16) {
+      const v=b.map((value,i)=>value-a[i]),len=Math.hypot(...v),u=v.map(value=>value/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);
+      const el=Math.hypot(...e);e=e.map(value=>value/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((value,j)=>value+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color));
+    }
+    const roll=(y,z,r,col=steel)=>{
+      tube([.17,y,z],[2.19,y,z],.025,steel,16);
+      tube([.31,y,z],[2.05,y,z],r,col,32);
+      for(const x of [.17,2.10])box(x,y-.065,z-.065,.10,.13,.13);
+    };
+    // Low cream chassis and thin blue floor pan (not a conveyor belt).
+    for(const x of [.12,2.14]) {
+      box(x,.15,.08,.13,3.65,.17);
+      for(const y of [.15,1.48,3.62])box(x,y,0,.13,.18,.09);
+    }
+    for(const y of [.16,1.52,3.65])box(.12,y,.16,2.15,.13,.14);
+    box(.26,.55,.255,1.87,3.10,.025,'#329cba');
+    // Shaped side cheeks supporting the empty rear stock axle.
+    const outline=[[2.08,.28],[3.77,.28],[3.77,1.40],[3.42,1.40],[3.29,1.27],[2.37,1.02],[2.08,.94]];
+    for(const x of [.17,2.08]) {
+      const near=outline.map(([y,z])=>[x,y,z]),far=outline.map(([y,z])=>[x+.10,y,z]);
+      face([...near].reverse(),cream);face(far,cream);
+      near.forEach((p,i)=>face([p,near[(i+1)%near.length],far[(i+1)%far.length],far[i]],cream));
+      box(x,3.16,1.27,.10,.25,.18,dark);
+    }
+    tube([.13,3.29,1.38],[2.24,3.29,1.38],.033,steel,20);
+    // Bearing hubs, not a material roll around the axle.
+    for(const x of [.13,2.15])tube([x,3.29,1.38],[x+.08,3.29,1.38],.075,dark,20);
+    // Fixed guide rolls exposed once the foam sheet is removed.
+    for(const [y,z,r,col] of [[.55,.98,.115,steel],[.91,1.01,.10,steel],[1.42,1.06,.057,brown],[1.86,1.00,.055,brown],[2.30,.98,.052,brown]]) {
+      roll(y,z,r,col);
+      for(const x of [.17,2.10])box(x,y-.065,.75,.10,.13,z-.75);
+    }
+    for(const x of [.17,2.10])box(x,.39,.28,.10,1.58,.47);
+    // Length measuring bar with two fixed counters and adjustment wheel.
+    tube([.18,1.19,1.21],[2.18,1.19,1.21],.019,steel,16);
+    for(const x of [.69,1.02]) {
+      box(x,1.13,1.19,.12,.13,.10,dark);
+      box(x+.015,1.145,1.29,.09,.09,.008,'#d2b34e');
+    }
+    tube([2.19,1.46,1.11],[2.30,1.46,1.11],.022,dark,12);
+    for(let i=0;i<12;i++) {
+      const a=i*Math.PI/6,b=(i+1)*Math.PI/6;
+      tube([2.30,1.46+.075*Math.cos(a),1.11+.075*Math.sin(a)],[2.30,1.46+.075*Math.cos(b),1.11+.075*Math.sin(b)],.008,dark,6);
+      if(i%3===0)tube([2.30,1.46,1.11],[2.30,1.46+.072*Math.cos(a),1.11+.072*Math.sin(a)],.006,dark,6);
+    }
+    // Cream side cabinet, inclined orange fascia and attached small monitor.
+    box(2.23,.22,.09,.35,1.37,1.00);
+    const panel=[[2.23,.28,1.09],[2.58,.28,1.09],[2.58,.55,1.29],[2.23,.55,1.29]];
+    face(panel,'#c56b32');face(panel.map(([x,y,z])=>[x,y,z-.035]).reverse(),cream);
+    for(const x of [2.29,2.40,2.51])for(const y of [.35,.46]) {
+      const z=1.09+(y-.28)*.20/.27;
+      tube([x,y,z],[x,y-.009,z+.012],.019,dark,10);
+    }
+    box(2.24,.63,1.09,.33,.89,.055);
+    box(2.37,.77,1.145,.045,.07,.16,steel);
+    box(2.24,.75,1.29,.33,.06,.24,steel);
+    box(2.26,.742,1.31,.29,.007,.20,'#547d8d');
+    box(2.586,.60,.19,.008,.83,.72,'#ccc7b4');
+    box(2.597,.68,.56,.015,.13,.025,steel);
+    // Low rear brake/drive and a short air cylinder on the axle support.
+    tube([.13,3.29,1.38],[.065,3.29,1.38],.10,dark,20);
+    box(.05,3.19,1.15,.12,.20,.13,dark);
+    tube([.21,3.51,.73],[.21,3.51,1.04],.042,steel,16);
+    tube([.21,3.51,1.04],[.21,3.51,1.27],.016,steel,12);
+    // Machine-mounted pipe light frame; the building column and mezzanine
+    // behind it are not part of the machine. Height 2.30 m remains estimated.
+    for(const x of [.19,2.15])tube([x,1.92,.27],[x,1.92,2.27],.023,cream,12);
+    tube([.19,1.92,2.27],[2.15,1.92,2.27],.03,cream,12);
+    box(.34,1.80,2.16,1.66,.16,.06,steel);
+    tube([.37,1.77,2.16],[1.97,1.77,2.16],.020,'#f2f0d8',12);
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'H1-1': return buildH1(item);
@@ -813,6 +906,7 @@
       case 'E1-2': return buildE1(item);
       case 'Q2-1':
       case 'Q2-2': return buildQ2(item);
+      case 'Q2-3': return buildQ23(item);
       default: return null;
     }
   }

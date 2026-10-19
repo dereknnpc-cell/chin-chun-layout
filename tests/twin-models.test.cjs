@@ -4,6 +4,43 @@ global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
 const qc3={id:'eq_qc3_b1_3',code:'B1-3',x:60.53,y:15.18,width:2.2,height:5,rotation:0};
+test('Q2-3 has its own narrow photo model without mutating its CAD footprint',()=>{
+  const item=Object.freeze({code:'Q2-3',x:11.55,y:25.18,width:2.65,height:4,rotation:0});
+  const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
+  assert.ok(models.matches(item));assert.ok(models.matches({code:' q2-3 '}));
+  assert.equal(JSON.stringify(item),before);
+  assert.ok(faces.length>700);
+  assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+  assert.ok(points.every(([x,y,z])=>x>=item.x-1e-9 && x<=item.x+2.65+1e-9 && y>=item.y-1e-9 && y<=item.y+4+1e-9 && z>=0 && z<=2.30+1e-9));
+  assert.equal(Math.min(...points.map(p=>p[2])),0);
+  assert.ok(Math.abs(Math.max(...points.map(p=>p[2]))-2.30)<1e-9);
+  for(const color of ['#dcd5b9','#927755','#329cba','#c56b32','#547d8d','#f2f0d8'])assert.ok(faces.some(f=>f.color===color));
+  for(const code of ['Q2-1','Q2-2'])assert.notDeepEqual(faces,models.build({...item,code}));
+  assert.ok(!faces.some(f=>['#2d527e','#272a31','#53565b','#62696b'].includes(f.color)),'no blue QA 2 rolls or foam material');
+});
+test('Q2-3 exposes an empty rear stock axle and guide bed, not the foam coil or adjacent green machine',()=>{
+  const faces=models.build({code:'Q2-3',x:0,y:0,width:2.65,height:4});
+  const stock=faces.filter(f=>f.points.every(p=>Math.abs(p[1]-3.29)<=.033+1e-9 && Math.abs(p[2]-1.38)<=.033+1e-9) && f.color==='#b9c3c3');
+  assert.equal(stock.length,22);
+  const floor=faces.filter(f=>f.color==='#329cba');
+  assert.ok(floor.every(f=>f.points.every(p=>p[2]<=.28+1e-9)),'blue surface stays at floor level');
+  assert.ok(!faces.some(f=>Math.min(...f.points.map(p=>p[0]))<.5 && Math.max(...f.points.map(p=>p[0]))>1.9 && Math.min(...f.points.map(p=>p[1]))<1.5 && Math.max(...f.points.map(p=>p[1]))>2.2 && f.points.every(p=>p[2]>.8)),'no continuous material web');
+  assert.ok(!faces.some(f=>['#297452','#2f734c','#32784f'].includes(f.color)),'neighbouring green drums excluded');
+});
+test('Q2-3 rotates around its CAD center and resizes only in plan',()=>{
+  const item={code:'Q2-3',x:0,y:0,width:2.65,height:4},original=models.build(item),resized=models.build({...item,width:5.3,height:6});
+  for(const rotation of [90,-90,180]) {
+    const turned=models.build({...item,rotation}),a=rotation*Math.PI/180;
+    original.forEach((face,i)=>face.points.forEach((p,j)=>{
+      const q=turned[i].points[j],r=resized[i].points[j];
+      assert.ok(Math.abs(q[0]-(1.325+(p[0]-1.325)*Math.cos(a)-(p[1]-2)*Math.sin(a)))<1e-9);
+      assert.ok(Math.abs(q[1]-(2+(p[0]-1.325)*Math.sin(a)+(p[1]-2)*Math.cos(a)))<1e-9);
+      assert.equal(q[2],p[2]);
+      assert.ok(Math.abs(r[0]-2*p[0])<1e-9 && Math.abs(r[1]-1.5*p[1])<1e-9);
+      assert.equal(r[2],p[2]);
+    }));
+  }
+});
 test('Q2-1/2 preserve their CAD records and have distinct photo structures',()=>{
   for(const [code,x,y] of [['Q2-1',23.95,22.94],['Q2-2',23.91,19.89]]) {
     const item=Object.freeze({code,x,y,width:4,height:2.65,rotation:0});
@@ -20,7 +57,7 @@ test('Q2-1/2 preserve their CAD records and have distinct photo structures',()=>
     for(const color of ['#dcd5b9','#927755','#c56b32','#329cba','#f2f0d8'])assert.ok(faces.some(f=>f.color===color));
     assert.ok(!faces.some(f=>['#272a31','#53565b','#62696b'].includes(f.color)),'no foam sheet or stock rolls');
   }
-  assert.equal(models.build({code:'Q2-3'}),null,'unphotographed third machine is unchanged');
+  assert.equal(models.build({code:'Q2-4'}),null,'unphotographed machines are unchanged');
 });
 test('Q2-2 has two blue driven rolls and an open bed, unlike closed-base Q2-1',()=>{
   const item={x:0,y:0,width:4,height:2.65};
