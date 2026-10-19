@@ -18,14 +18,28 @@ test('Q2-3 has its own narrow photo model without mutating its CAD footprint',()
   for(const code of ['Q2-1','Q2-2'])assert.notDeepEqual(faces,models.build({...item,code}));
   assert.ok(!faces.some(f=>['#2d527e','#272a31','#53565b','#62696b'].includes(f.color)),'no blue QA 2 rolls or foam material');
 });
-test('Q2-3 exposes an empty rear stock axle and guide bed, not the foam coil or adjacent green machine',()=>{
-  const faces=models.build({code:'Q2-3',x:0,y:0,width:2.65,height:4});
-  const stock=faces.filter(f=>f.points.every(p=>Math.abs(p[1]-3.29)<=.033+1e-9 && Math.abs(p[2]-1.38)<=.033+1e-9) && f.color==='#b9c3c3');
+test('Q2-3 exposes an empty right stock axle and guide bed, not the foam coil or adjacent green machine',()=>{
+  const faces=models.build({code:'Q2-3',x:0,y:0,width:4,height:2.65});
+  const stock=faces.filter(f=>f.points.every(p=>Math.abs(p[0]-3.29)<=.033+1e-9 && Math.abs(p[2]-1.38)<=.033+1e-9) && f.color==='#b9c3c3');
   assert.equal(stock.length,22);
   const floor=faces.filter(f=>f.color==='#329cba');
   assert.ok(floor.every(f=>f.points.every(p=>p[2]<=.28+1e-9)),'blue surface stays at floor level');
-  assert.ok(!faces.some(f=>Math.min(...f.points.map(p=>p[0]))<.5 && Math.max(...f.points.map(p=>p[0]))>1.9 && Math.min(...f.points.map(p=>p[1]))<1.5 && Math.max(...f.points.map(p=>p[1]))>2.2 && f.points.every(p=>p[2]>.8)),'no continuous material web');
+  assert.ok(!faces.some(f=>Math.min(...f.points.map(p=>p[0]))<1.5 && Math.max(...f.points.map(p=>p[0]))>2.2 && Math.min(...f.points.map(p=>p[1]))<.5 && Math.max(...f.points.map(p=>p[1]))>1.9 && f.points.every(p=>p[2]>.8)),'no continuous material web');
   assert.ok(!faces.some(f=>['#297452','#2f734c','#32784f'].includes(f.color)),'neighbouring green drums excluded');
+});
+test('Q2-3 confirmed flow places stock feed on the right and discharge rolls on the left',()=>{
+  const item={code:'Q2-3',x:11.55,y:25.18,width:2.65,height:4};
+  const faces=models.build(item),stockX=item.x+item.width*3.29/4;
+  const stock=faces.filter(f=>f.color==='#b9c3c3' && f.points.every(p=>Math.abs(p[0]-stockX)<=item.width*.033/4+1e-9 && Math.abs(p[2]-1.38)<=.033+1e-9));
+  assert.equal(stock.length,22);
+  assert.ok(stock.every(f=>f.points.every(p=>p[0]>item.x+item.width*.75)));
+  // Full-width caps of the two permanent discharge drums must be at local left.
+  for(const [y,z,r] of [[.55,.98,.115],[.91,1.01,.10]]) {
+    const center=item.x+item.width*y/4;
+    const parts=faces.filter(f=>f.color==='#b9c3c3' && f.points.every(p=>Math.abs(p[0]-center)<=item.width*r/4+1e-9 && Math.abs(p[2]-z)<=r+1e-9));
+    assert.equal(parts.length,52);
+    assert.ok(parts.every(f=>f.points.every(p=>p[0]<item.x+item.width*.30)));
+  }
 });
 test('Q2-3 rotates around its CAD center and resizes only in plan',()=>{
   const item={code:'Q2-3',x:0,y:0,width:2.65,height:4},original=models.build(item),resized=models.build({...item,width:5.3,height:6});

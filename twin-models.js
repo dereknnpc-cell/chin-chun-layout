@@ -803,11 +803,13 @@
     // Three owner photos: narrower upright CAD footprint than Q2-1/2.
     // The green twin rolls beside this machine belong to its neighbour.
     // Model the empty stock axle, never the large pale foam coil or yellow web.
+    // Owner correction: feed is CAD-right, discharge CAD-left. Turn only the
+    // display geometry inside the existing footprint, not the persisted layout.
     const faces=[],cream='#dcd5b9',steel='#b9c3c3',dark='#323b3e',brown='#927755';
     const w=Math.max(.05,Number(item.width)||2.65),d=Math.max(.05,Number(item.height)||4);
     const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
     const world=([x,y,z])=>{
-      const u=x/2.65*w-w/2,v=y/4*d-d/2;
+      const u=y/4*w-w/2,v=(1-x/2.65)*d-d/2;
       return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
     };
     const face=(points,color)=>faces.push({points:points.map(world),color});
