@@ -6,6 +6,7 @@
 .twin-header h2 { margin:0; font-size:20px; font-weight:600; letter-spacing:1px; }
 .twin-dialog button,.twin-dialog select { font:inherit; color:#f5eed7; border:1px solid #658473; background:#29463e; border-radius:6px; padding:8px 12px; cursor:pointer; }
 .twin-dialog button:hover { background:#46624b; }
+.twin-dialog button[aria-pressed="true"] { background:#46624b; border-color:#ead48a; }
 .twin-dialog button:focus-visible,.twin-dialog select:focus-visible { outline:3px solid #ead48a; outline-offset:2px; }
 .twin-toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 22px; background:#1d3931; }
 .twin-toolbar label { display:flex; align-items:center; gap:8px; font-size:12px; }

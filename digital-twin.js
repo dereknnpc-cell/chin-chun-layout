@@ -12,7 +12,11 @@
   const pointers = new Map();
   let gesture = null;
   let detail = false;
+  let restroomCutaway = true;
   const zh = {
+    restroomCutaway:'外牆剖視',
+    restroomNote:'廁所：四面牆，左牆中央單開門（暫按 0.90 m、向內開示意）；上方左牆有兩個小便斗，右側為三間各自有門的馬桶間，下方洗手台長 2.00 m。位置、占地及角度跟隨 2D。外牆剖視僅隱藏外牆與隔間上段以查看內部，可關閉查看完整四面牆；牆高暫以 2.4 m、隔間 1.8 m 示意，開門方向與未提供的部件尺寸待確認。',
+    restroomCompact:'目前占地較小，無法按一般使用尺度完整容納此配置；此為位置示意，請核對實際廁所長寬。',
     a12Photo:'A1-2：依 2D PDF 及紅字照片建立六段，從圖面左側起：\n1 捲取頭 · 2 壓合輪 · 3 貼合頭\n4 滾輪架 · 5 烘箱 · 6 上膠頭\n烘箱側視照已確認為第五段。PDF 參考為 16.0 × 2.0 m；顯示尺寸、位置與角度仍跟隨目前 2D，不自動覆蓋圖面。第四段滾輪架放回正常直線位置，不含旁邊綠色推車、堆料、料卷、紙管或鄰機。最高約 2.55 m、各段長度比例與部件尺寸為照片估算。',
     g21Photo:'G2-1：已依指示將整台模型相對上一版旋轉 180°，保留中心位置與 2.40 × 4.19 m 占地；這是模型基準方向校正，之後的移動、尺寸與旋轉仍跟隨 2D。保留滾輪主機、開放料軸架、斜面控制櫃、刀架、氣缸與燈架；不含泡棉、料卷、紙管或鄰機。最高約 2.35 m 與部件比例為照片估算。',
     j12Photo:'J1-2：依四張照片建立大型分片工作台、深色木質延伸邊、米白門形機身、中央鋁製導尺、手輪、滑軌與低位馬達。不含泡棉、堆料、紙管、藍色棧板及鄰機。平面位置、4.45 × 4.57 m 占地與角度沿用原資料；最高約 2.30 m、部件比例及朝向仍為照片估算，待現場確認。',
@@ -33,6 +37,9 @@
     updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', a1Photo:'A1-1 依新照片重畫：右端綠色輸送帶入料，經加工滾輪與靠右的大輪，帶材斜向左端取料滾輪。方向已確認；部件尺寸與高度仍是照片估算。', a1Entrance:'入料（綠色輸送帶）', a1Collection:'取料（銀色滾輪）', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
   };
   const th = {
+    restroomCutaway:'ตัดผนังดูภายใน',
+    restroomNote:'ห้องน้ำ: มีผนังสี่ด้าน ประตูบานเดี่ยวกลางผนังซ้าย (สมมติ 0.90 ม. เปิดเข้า) ด้านบนชิดผนังซ้ายมีโถปัสสาวะ 2 ใบ ด้านขวาเป็นห้องส้วมแยก 3 ห้อง แต่ละห้องมีประตู ด้านล่างเป็นอ่างล้างมือยาว 2.00 ม. ตำแหน่ง ขนาดพื้นที่และมุมตามแปลน 2D โหมดตัดผนังซ่อนเฉพาะส่วนบนเพื่อดูภายใน ปิดโหมดเพื่อดูผนังครบสี่ด้าน ความสูงผนังสมมติ 2.4 ม. และผนังกั้น 1.8 ม.; ทิศเปิดประตูและขนาดส่วนที่ไม่ได้ระบุต้องยืนยัน',
+    restroomCompact:'พื้นที่ปัจจุบันเล็กเกินกว่าจะจัดทั้งหมดตามขนาดใช้งานทั่วไป ภาพแสดงตำแหน่งเท่านั้น กรุณาตรวจสอบขนาดห้องน้ำจริง',
     a12Photo:'A1-2: จำลอง 6 ช่วงตาม PDF แปลน 2D และข้อความสีแดงในภาพ เรียงจากซ้ายของแปลน:\n1 ชุดม้วนเก็บ · 2 ลูกกลิ้งกด · 3 หัวลามิเนต\n4 โต๊ะลูกกลิ้ง · 5 เตาอบ · 6 หัวทากาว\nยืนยันแล้วว่าภาพด้านข้างเตาอบเป็นช่วงที่ 5 ขนาดอ้างอิง PDF 16.0 × 2.0 ม.; ขนาด ตำแหน่งและมุมที่แสดงยังตามแปลน 2D ปัจจุบัน โดยไม่เขียนทับแปลน ช่วงที่ 4 อยู่ในแนวใช้งานปกติ ไม่รวมรถเข็นสีเขียวข้างเครื่อง วัสดุ ม้วน แกนกระดาษหรือเครื่องข้างเคียง ความสูงสูงสุดประมาณ 2.55 ม. และสัดส่วนแต่ละช่วงประมาณจากภาพ',
     g21Photo:'G2-1: หมุนทั้งเครื่อง 180° จากรุ่นก่อนตามคำยืนยัน คงจุดศูนย์กลางและขนาดฐาน 2.40 × 4.19 ม. เป็นการปรับทิศตั้งต้นของแบบ การย้าย ปรับขนาดและหมุนต่อไปยังคงตามแปลน 2D มีตู้ลูกกลิ้ง ชุดแกนม้วนแบบเปิด ตู้ควบคุมลาดเอียง ชุดใบมีด กระบอกลมและโครงไฟ ไม่รวมโฟม ม้วนวัสดุ แกนกระดาษหรือเครื่องข้างเคียง ความสูงประมาณ 2.35 ม. และสัดส่วนเป็นการประมาณจากภาพ',
     j12Photo:'J1-2: สร้างจากภาพ 4 ภาพ มีโต๊ะขนาดใหญ่แบบแยกแผ่น ขอบต่อไม้สีเข้ม โครงซุ้มสีครีม รั้วนำอะลูมิเนียมตรงกลาง มือหมุน รางเลื่อนและมอเตอร์ด้านล่าง ไม่รวมโฟม วัสดุสะสม แกนกระดาษ พาเลทสีฟ้าหรือเครื่องข้างเคียง คงตำแหน่ง ขนาดฐาน 4.45 × 4.57 ม. และมุมตามแปลนเดิม ความสูงประมาณ 2.30 ม. สัดส่วนและทิศทางเป็นการประมาณจากภาพ รอยืนยันหน้างาน',
@@ -544,7 +551,7 @@
   function objectFaces(s) {
     const rise=elevation(s);
     const lift=faces=>rise?faces.map(f=>{const points=f.points.map(p=>[p[0],p[1],p[2]+rise]);return {...f,points,depth:faceDepth(points)};}):faces;
-    if(s.model)return lift(s.model.map(f=>({s,points:f.points,color:f.color,model:true,depth:faceDepth(f.points)})));
+    if(s.model)return lift(s.model.filter(f=>!(s===selected && restroomCutaway && referenceCode(s.item)==='WC-STALLS' && f.cutaway)).map(f=>({s,points:f.points,color:f.color,model:true,depth:faceDepth(f.points)})));
     if(s.type==='wall')return lift(wallFaces(s));
     if(s.type==='column')return lift(columnFaces(s));
     if(s.item.category==='Door')return lift(doorFaces(s));
@@ -626,7 +633,15 @@
     dialog.querySelector('#twinDetails').textContent=item ? `${t(s.type)} · ${item.name || item.id}\n${t('position')}: ${n(item.x ?? item.x1).toFixed(2)}, ${n(item.y ?? item.y1).toFixed(2)} m\n${t('size')}: ${s.type==='wall'?Math.hypot(n(item.x2)-n(item.x1),n(item.y2)-n(item.y1)).toFixed(2)+' × '+n(item.thickness,.2).toFixed(2):n(item.width).toFixed(2)+' × '+n(item.height).toFixed(2)} m\n${t('rotation')}: ${displayRotation.toFixed(0)}°` : t('empty');
     dialog.querySelector('#twinEdit').hidden=!s;
     dialog.querySelector('#twinFocus').hidden=!s;
-    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo'})[referenceCode(item)] || 'photo');
+    const restroom=referenceCode(item || {})==='WC-STALLS';
+    const cutawayButton=dialog.querySelector('#twinRestroomCutaway');
+    cutawayButton.hidden=!restroom;
+    cutawayButton.setAttribute('aria-pressed',String(restroomCutaway));
+    if(restroom){
+      dialog.querySelector('#twinDetails').textContent+='\n'+t('restroomNote');
+      if(window.ChinChunModels?.restroomLayout?.(item)?.compact)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('restroomCompact');
+    }
+    if(s?.model && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo'})[referenceCode(item)] || 'photo');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
@@ -641,6 +656,9 @@
     document.body.append(dialog);canvas=dialog.querySelector('canvas');ctx=canvas.getContext('2d');
     const focus=document.createElement('button');focus.id='twinFocus';focus.dataset.twinText='focus';focus.hidden=true;
     dialog.querySelector('.twin-toolbar').append(focus);
+    const cutawayButton=document.createElement('button');cutawayButton.id='twinRestroomCutaway';cutawayButton.dataset.twinText='restroomCutaway';cutawayButton.hidden=true;
+    cutawayButton.onclick=()=>{restroomCutaway=!restroomCutaway;updateInfo();requestDraw();};
+    dialog.querySelector('.twin-toolbar').append(cutawayButton);
     focus.onclick=()=>{if(selected){detail=true;fit();}};
     // Keep CAD delete/rotate/undo shortcuts from changing the model behind the modal.
     dialog.addEventListener('keydown',e=>{cameraKey(e);e.stopPropagation();});

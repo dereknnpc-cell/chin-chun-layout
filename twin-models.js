@@ -5,7 +5,79 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['H1-1', 'A1-1', 'A1-2', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
+  const matches = item => ['WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
+  function restroomLayout(item) {
+    const width=Math.max(.2,Number(item.width)||5),height=Math.max(.2,Number(item.height)||5);
+    const wall=Math.min(.15,width*.03,height*.03),doorWidth=Math.min(.9,height-2*wall);
+    const doorStart=(height-doorWidth)/2,doorEnd=(height+doorWidth)/2;
+    const upper=Math.max(.01,doorStart-wall),urinalSize=Math.min(.48,upper/2.6);
+    const urinals=[.25,.73].map(r=>({x:wall+.02,y:wall+upper*r-urinalSize/2,width:Math.min(.4,width*.12),height:urinalSize}));
+    const stallStart=Math.max(wall+Math.min(.4,width*.12)+.55,width*.36);
+    const stallWidth=Math.max(.02,(width-wall-stallStart)/3);
+    const stallDepth=Math.max(.02,Math.min(1.65,doorStart-wall-.10));
+    const stalls=Array.from({length:3},(_,i)=>({x:stallStart+i*stallWidth,y:wall,width:stallWidth,height:stallDepth,
+      doorWidth:Math.max(.01,Math.min(.65,stallWidth-.16))}));
+    const sink={x:wall+.12,y:height-wall-Math.min(.55,height*.13),width:Math.min(2,Math.max(.02,width-2*wall-.24)),height:Math.min(.55,height*.13)};
+    return {width,height,wall,doorWidth,doorStart,doorEnd,urinals,stalls,sink,
+      compact:upper<1.1 || stallWidth<.8 || stallDepth<1.2 || sink.width<2-.001};
+  }
+  function buildRestroom(item) {
+    const l=restroomLayout(item),faces=[],wallColor='#c7d6d3',white='#edf3ed',ceramic='#d2e6e7',doorColor='#af825b';
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{
+      const lx=x-l.width/2,ly=y-l.height/2;
+      return [(Number(item.x)||0)+l.width/2+lx*c-ly*s,(Number(item.y)||0)+l.height/2+lx*s+ly*c,z];
+    };
+    function box(x,y,z,w,d,h,color,part,cutaway=false) {
+      const p=[[x,y,z],[x+w,y,z],[x+w,y+d,z],[x,y+d,z],[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>faces.push({points:ids.map(i=>world(p[i])),color,part,cutaway}));
+    }
+    function panel(x,y,w,d,h,color,part) {
+      box(x,y,0,w,d,Math.min(.45,h),color,part);
+      if(h>.45)box(x,y,.45,w,d,h-.45,color,part,true);
+    }
+    function oval(cx,cy,z,rx,ry,h,color,part) {
+      const rings=[z,z+h].map(high=>Array.from({length:24},(_,i)=>world([cx+rx*Math.cos(i*Math.PI/12),cy+ry*Math.sin(i*Math.PI/12),high])));
+      faces.push({points:[...rings[0]].reverse(),color,part},{points:rings[1],color,part});
+      rings[0].forEach((p,i)=>{const j=(i+1)%24;faces.push({points:[p,rings[0][j],rings[1][j],rings[1][i]],color,part});});
+    }
+    const t=l.wall,w=l.width,h=l.height;
+    box(0,0,0,w,h,.035,'#b8c9c4','floor');
+    // All four exterior sides exist; only the centered left entrance is cut out.
+    panel(0,0,w,t,2.4,wallColor,'north-wall');panel(0,h-t,w,t,2.4,wallColor,'south-wall');
+    panel(w-t,t,t,h-2*t,2.4,wallColor,'east-wall');
+    panel(0,t,t,Math.max(.001,l.doorStart-t),2.4,wallColor,'west-wall');
+    panel(0,l.doorEnd,t,Math.max(.001,h-t-l.doorEnd),2.4,wallColor,'west-wall');
+    box(0,l.doorStart,2.05,t,l.doorWidth,.35,wallColor,'entrance-lintel',true);
+    // Single entrance door shown inward-open; handing and heights are illustrative.
+    panel(t,l.doorEnd-.035,l.doorWidth,.035,2.02,doorColor,'entrance-door');
+    for(const u of l.urinals){
+      box(u.x,u.y,.58,u.width*.28,u.height,.64,white,'urinal');
+      oval(u.x+u.width*.57,u.y+u.height/2,.55,u.width*.48,u.height*.43,.14,ceramic,'urinal');
+      oval(u.x+u.width*.57,u.y+u.height/2,.695,u.width*.30,u.height*.27,.008,'#749ba0','urinal');
+    }
+    const sy=l.stalls[0].y,sh=l.stalls[0].height;
+    for(const st of l.stalls){
+      panel(st.x,sy,.065,sh,1.8,wallColor,'stall-partition');
+      const gap=(st.width-st.doorWidth)/2,front=sy+sh;
+      panel(st.x,front,gap,.065,1.8,wallColor,'stall-front');
+      panel(st.x+gap+st.doorWidth,front,gap,.065,1.8,wallColor,'stall-front');
+      panel(st.x+gap,front,st.doorWidth,.04,1.72,doorColor,'stall-door');
+      const cx=st.x+st.width/2,cy=sy+sh*.48,bw=Math.min(.36,st.width*.48),bd=Math.min(.50,sh*.50);
+      box(cx-bw/2,sy+.08,.25,bw,Math.min(.18,sh*.18),.38,white,'toilet-tank');
+      oval(cx,cy,.10,bw*.42,bd*.42,.27,white,'toilet');
+      oval(cx,cy,.37,bw*.5,bd*.5,.045,ceramic,'toilet');
+      oval(cx,cy,.418,bw*.30,bd*.30,.005,'#789ca1','toilet');
+    }
+    const sink=l.sink;
+    box(sink.x,sink.y,.12,sink.width,sink.height,.64,'#a0b4ad','sink');
+    box(sink.x,sink.y,.76,sink.width,sink.height,.07,white,'sink');
+    for(const r of [.27,.73]){
+      oval(sink.x+sink.width*r,sink.y+sink.height*.52,.832,Math.min(.23,sink.width*.16),sink.height*.34,.008,'#83a8ae','basin');
+      box(sink.x+sink.width*r-.018,sink.y+sink.height*.82,.83,.036,.036,.15,'#b9cdd0','faucet');
+    }
+    return faces;
+  }
   function a12Point(item, [x,y,z]) {
     // PDF is the 16 x 2 m reference. Live CAD alone owns the actual footprint.
     const w=Math.max(.05,Number(item.width)||16),d=Math.max(.05,Number(item.height)||2);
@@ -1238,6 +1310,7 @@
   }
   function build(item) {
     switch(modelCode(item)) {
+      case 'WC-STALLS': return buildRestroom(item);
       case 'H1-1': return buildH1(item);
       case 'A1-1': return buildA1(item);
       case 'A1-2': return buildA12(item);
@@ -1257,5 +1330,5 @@
       default: return null;
     }
   }
-  window.ChinChunModels = {matches,build,rotationOffset,referenceCode:modelCode,sectionMarkers};
+  window.ChinChunModels = {matches,build,rotationOffset,referenceCode:modelCode,sectionMarkers,restroomLayout};
 })();

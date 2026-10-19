@@ -5143,6 +5143,33 @@
     return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"})[c]);
   }
 
+  function renderRestroomSvg(eq, pos) {
+    const l=window.ChinChunModels.restroomLayout(eq),s=SCALE,t=l.wall;
+    const rect=(x,y,w,h,attrs='')=>`<rect x="${pos.x+x*s}" y="${pos.y+y*s}" width="${w*s}" height="${h*s}" ${attrs}/>`;
+    let html=rect(0,0,l.width,l.height,'class="main-box" fill="#edf5f4" stroke="none"');
+    html+='<g fill="#779195" stroke="#405e63" stroke-width="0.6">';
+    html+=rect(0,0,l.width,t)+rect(0,l.height-t,l.width,t)+rect(l.width-t,t,t,l.height-2*t);
+    html+=rect(0,t,t,l.doorStart-t)+rect(0,l.doorEnd,t,l.height-t-l.doorEnd)+'</g>';
+    const hx=pos.x+t*s,hy=pos.y+l.doorEnd*s,d=l.doorWidth*s;
+    html+=`<g data-fixture="entrance" data-width="${l.doorWidth}"><line x1="${hx}" y1="${hy}" x2="${hx+d}" y2="${hy}" stroke="#98683e" stroke-width="1.5"/><path d="M ${hx} ${hy-d} A ${d} ${d} 0 0 1 ${hx+d} ${hy}" fill="none" stroke="#98683e" stroke-width="0.7" stroke-dasharray="2,1"/></g>`;
+    for(const u of l.urinals){
+      html+='<g data-fixture="urinal">'+rect(u.x,u.y,u.width,u.height,'rx="2" fill="white" stroke="#407d91" stroke-width="0.7"');
+      html+=rect(u.x+u.width*.3,u.y+u.height*.2,u.width*.5,u.height*.6,'rx="1" fill="#b7dce4"')+'</g>';
+    }
+    for(const st of l.stalls){
+      const front=pos.y+(st.y+st.height)*s,gap=(st.width-st.doorWidth)/2;
+      html+=`<g data-fixture="stall" fill="none" stroke="#56757a" stroke-width="1"><path d="M ${pos.x+st.x*s} ${pos.y+st.y*s} V ${front} H ${pos.x+(st.x+gap)*s} M ${pos.x+(st.x+gap+st.doorWidth)*s} ${front} H ${pos.x+(st.x+st.width)*s}"/>`;
+      html+=`<line data-fixture="stall-door" x1="${pos.x+(st.x+gap)*s}" y1="${front}" x2="${pos.x+(st.x+gap+st.doorWidth)*s}" y2="${front}" stroke="#98683e" stroke-width="1.3"/>`;
+      const cx=pos.x+(st.x+st.width/2)*s,cy=pos.y+(st.y+st.height*.48)*s;
+      html+=`<ellipse data-fixture="toilet" cx="${cx}" cy="${cy}" rx="${Math.min(.18,st.width*.24)*s}" ry="${Math.min(.25,st.height*.25)*s}" fill="white" stroke="#407d91" stroke-width="0.7"/></g>`;
+    }
+    const sk=l.sink;
+    html+=`<g data-fixture="sink" data-length="${sk.width}">`+rect(sk.x,sk.y,sk.width,sk.height,'fill="white" stroke="#407d91" stroke-width="1"');
+    for(const r of [.27,.73])html+=`<ellipse cx="${pos.x+(sk.x+sk.width*r)*s}" cy="${pos.y+(sk.y+sk.height/2)*s}" rx="${Math.min(.23,sk.width*.16)*s}" ry="${sk.height*.34*s}" fill="#b7dce4"/>`;
+    html+=`</g><text x="${pos.x+l.width*.6*s}" y="${pos.y+l.height*.65*s}" font-size="8.5" font-weight="800" fill="#0369a1" text-anchor="middle" dominant-baseline="central">${eq.code}</text>`;
+    return html;
+  }
+
   function renderSingleItemSvg(item, floor, opacity) {
     const eq = {...item, name: escapeEquipmentText(item.name), code: escapeEquipmentText(item.code)};
     const pos = metersToSvg(eq.x, eq.y);
@@ -5168,7 +5195,9 @@
       itemHtml += `<rect x="${pos.x - clrPx}" y="${pos.y - clrPx}" width="${ew + clrPx * 2}" height="${eh + clrPx * 2}" fill="${color}" fill-opacity="0.08" stroke="${color}" stroke-width="0.8" stroke-dasharray="3,3" rx="4"/>`;
     }
 
-    if (cat === "Door") {
+    if (window.ChinChunModels?.referenceCode(item) === "WC-STALLS" && window.ChinChunModels.restroomLayout) {
+      itemHtml += renderRestroomSvg(eq, pos);
+    } else if (cat === "Door") {
       // Architectural Door (門片與 90° 開啟擺動弧線)
       itemHtml += `
         <rect x="${pos.x}" y="${pos.y}" width="${ew}" height="${eh}" fill="none" stroke="#2563EB" stroke-width="1.2"/>
