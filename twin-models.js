@@ -5,7 +5,7 @@
   // Display-only calibration; rotate the entire Q2-3 mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => modelCode(item)==='Q2-3' ? -90 : 0;
-  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -897,6 +897,115 @@
     tube([.37,1.77,2.16],[1.97,1.77,2.16],.020,'#f2f0d8',12);
     return faces;
   }
+  function buildG21(item) {
+    // G2-1 has a closed roll cabinet, sloped side console and separate open
+    // rear stock stand. Do not reuse G2-2's arched pneumatic knife-head model.
+    // All material rolls, paper sleeves and the black web are omitted.
+    const faces=[],cream='#ddd6bb',steel='#bbc7c8',chrome='#cbd5d5',dark='#303a3d',orange='#b96537';
+    const w=Math.max(.05,Number(item.width)||2.4),d=Math.max(.05,Number(item.height)||4.19);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{
+      const u=x/2.4*w-w/2,v=y/4.19*d-d/2;
+      return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
+    };
+    const face=(points,color)=>faces.push({points:points.map(world),color});
+    function box(x,y,z,bw,bd,bh,color=cream) {
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color=steel,n=16) {
+      const v=b.map((value,i)=>value-a[i]),len=Math.hypot(...v),u=v.map(value=>value/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);
+      const el=Math.hypot(...e);e=e.map(value=>value/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((value,j)=>value+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color));
+    }
+    const roll=(y,z,r,color=chrome)=>{
+      tube([.14,y,z],[1.96,y,z],.025,steel,16);
+      tube([.25,y,z],[1.85,y,z],r,color,32);
+      for(const x of [.12,1.88])box(x,y-.055,z-.06,.10,.11,.12,dark);
+    };
+    // Main closed cabinet with separate front access doors and orange rear fascia.
+    box(.12,.38,.12,1.88,1.48,.72);
+    for(const x of [.15,1.82])box(x,.35,0,.16,1.54,.12);
+    for(const x of [.18,1.08]) {
+      box(x,.365,.18,.84,.012,.59,'#cdc6b0');
+      box(x+.025,.350,.205,.79,.010,.54);
+      box(x+.68,.335,.43,.035,.015,.09,steel);
+    }
+    box(.20,1.867,.24,1.70,.018,.36,orange);
+    // Side cheeks stay separate; no material plane bridges the exposed rolls.
+    for(const x of [.10,1.89])box(x,.40,.84,.12,1.48,.57);
+    for(const [y,z,r] of [[.51,.93,.10],[.88,1.14,.13],[1.28,1.16,.13],[1.72,1.07,.065],[2.24,1.02,.055],[2.64,.98,.055]])roll(y,z,r);
+    // Front bare shaft: paper cores and partially wound product are consumables.
+    tube([.07,.27,1.03],[2.04,.27,1.03],.031,steel,20);
+    for(const x of [.11,1.91])tube([x-.02,.27,1.03],[x+.06,.27,1.03],.075,dark,20);
+    // Steel measuring bar and an orange knife rail with individual metal heads.
+    box(.17,1.48,1.43,1.77,.055,.06,orange);
+    box(.18,1.54,1.46,1.75,.025,.035,steel);
+    for(let i=0;i<31;i++)box(.23+i*.053,1.568,1.462,.004,.005,i%5===0?.025:.012,dark);
+    for(let i=0;i<13;i++) {
+      const x=.78+i*.075;
+      box(x,1.44,1.30,.025,.12,.17,steel);
+      tube([x,1.47,1.29],[x+.015,1.47,1.29],.055,'#929e9e',16);
+    }
+    // Sloping right console, two gauge faces, displays and discrete buttons.
+    box(2.02,.37,.06,.34,1.54,1.08);
+    const panel=[[2.02,.38,1.14],[2.36,.38,1.14],[2.36,1.23,1.40],[2.02,1.23,1.40]];
+    face(panel,'#677071');
+    face([[2.02,.38,1.14],[2.02,1.23,1.40],[2.02,1.90,1.40],[2.02,1.90,1.14]],cream);
+    face([[2.36,.38,1.14],[2.36,1.90,1.14],[2.36,1.90,1.40],[2.36,1.23,1.40]],cream);
+    box(2.02,1.23,1.14,.34,.67,.26);
+    for(const x of [2.10,2.27]) {
+      tube([x,1.02,1.337],[x,1.012,1.350],.053,dark,20);
+      tube([x,1.010,1.352],[x,1.005,1.360],.043,'#e0e1d1',20);
+      box(x-.045,.66,1.235,.09,.09,.012,dark);
+      for(const y of [.45,.55,.78]) {
+        const z=1.14+(y-.38)*.26/.85;
+        tube([x,y,z],[x,y-.009,z+.015],.018,y===.45?'#baa73d':dark,10);
+      }
+    }
+    box(2.367,.63,.20,.012,1.06,.82,'#d0c8b2');
+    box(2.382,1.11,.57,.007,.035,.10,steel);
+    tube([2.18,1.62,1.40],[2.18,1.62,1.49],.035,cream,12);
+    tube([2.18,1.62,1.49],[2.18,1.62,1.51],.09,cream,20);
+    tube([2.23,1.62,1.51],[2.23,1.62,1.60],.018,dark,10);
+    // Rear stock stand is open, on parallel floor rails, with shaped axle arms.
+    for(const x of [.12,1.88]) {
+      box(x,2.03,0,.12,2.10,.08,steel);
+      box(x,2.09,.10,.13,1.95,.15);
+      for(const y of [2.12,3.77])box(x,y,.08,.15,.26,.08);
+      const outline=[[2.05,.26],[3.96,.26],[3.96,1.15],[3.69,1.15],[2.05,.70]];
+      const p=outline.map(([y,z])=>[x,y,z]),q=outline.map(([y,z])=>[x+.12,y,z]);
+      face([...p].reverse(),cream);face(q,cream);
+      p.forEach((point,i)=>face([point,p[(i+1)%p.length],q[(i+1)%q.length],q[i]],cream));
+      box(x-.006,3.76,.70,.132,.18,.48,orange);
+    }
+    for(const y of [2.08,3.87])box(.12,y,.19,1.91,.13,.13);
+    tube([.06,3.78,1.16],[2.10,3.78,1.16],.037,steel,24);
+    for(const x of [.11,1.91])tube([x-.02,3.78,1.16],[x+.08,3.78,1.16],.08,dark,20);
+    tube([.08,3.78,1.16],[.025,3.78,1.16],.16,cream,24);
+    for(const y of [2.26,2.65])for(const x of [.14,1.89])box(x,y-.06,.26,.10,.12,.75);
+    // Pneumatic cylinders outside both main cheeks and small red air lines.
+    for(const x of [.065,2.005]) {
+      tube([x,.53,1.18],[x,1.01,1.18],.045,steel,16);
+      tube([x,1.01,1.18],[x,1.42,1.18],.018,chrome,12);
+      for(const y of [.52,1.00])box(x-.03,y-.025,1.115,.06,.05,.13);
+      const path=[[x,.62,1.13],[x,.55,.62],[x,.85,.20],[x,1.60,.20]];
+      for(let i=1;i<path.length;i++)tube(path[i-1],path[i],.009,'#b74630',6);
+    }
+    // Machine-mounted overhead rectangular light frame, not building columns.
+    for(const x of [.08,2.28])for(const y of [.42,3.03])tube([x,y,.10],[x,y,2.32],.022,cream,12);
+    for(const y of [.42,3.03])tube([.08,y,2.32],[2.28,y,2.32],.025,cream,12);
+    for(const x of [.08,2.28])tube([x,.42,2.32],[x,3.03,2.32],.025,cream,12);
+    for(const y of [.52,2.83]) {
+      box(.31,y,2.23,1.75,.10,.06,steel);
+      tube([.34,y-.01,2.22],[2.02,y-.01,2.22],.018,'#f2f2df',12);
+    }
+    return faces;
+  }
   function buildJ12(item) {
     // Four owner photos: broad sliding worktable, open cream portal, a long
     // aluminium fence and exposed under-table rails. No foam, pallet or carts.
@@ -995,6 +1104,7 @@
       case 'H1-1': return buildH1(item);
       case 'A1-1': return buildA1(item);
       case 'F1-1': return buildF1(item);
+      case 'G2-1': return buildG21(item);
       case 'G2-2': return buildG2(item);
       case 'B1-1':
       case 'B1-2': return buildB12(item);

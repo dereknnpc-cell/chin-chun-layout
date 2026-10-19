@@ -4,6 +4,43 @@ global.window={};
 require('../twin-models.js');
 const models=window.ChinChunModels;
 const qc3={id:'eq_qc3_b1_3',code:'B1-3',x:60.53,y:15.18,width:2.2,height:5,rotation:0};
+test('G2-1 has a separate photo model inside its unchanged CAD footprint',()=>{
+  const item=Object.freeze({id:'eq_af1_g2_1',code:'G2-1',x:51.2,y:15.25,width:2.4,height:4.19,rotation:0});
+  const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
+  assert.ok(models.matches(item));assert.ok(models.matches({code:' g2-1 '}));
+  assert.equal(JSON.stringify(item),before);assert.equal(models.rotationOffset(item),0);
+  assert.ok(faces.length>1200);
+  assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+  assert.ok(points.every(([x,y,z])=>x>=item.x-1e-9 && x<=item.x+item.width+1e-9 && y>=item.y-1e-9 && y<=item.y+item.height+1e-9 && z>=0 && z<=2.35+1e-9));
+  assert.equal(Math.min(...points.map(p=>p[2])),0);
+  assert.ok(Math.max(...points.map(p=>p[2]))>2.34);
+  assert.notDeepEqual(faces,models.build({...item,code:'G2-2'}));
+  for(const color of ['#ddd6bb','#bbc7c8','#cbd5d5','#b96537','#677071','#f2f2df'])assert.ok(faces.some(f=>f.color===color));
+});
+test('G2-1 keeps an empty stock axle, individual knives and open rear frame without material rolls',()=>{
+  const faces=models.build({code:'G2-1',x:0,y:0,width:2.4,height:4.19});
+  const axle=faces.filter(f=>f.color==='#bbc7c8' && f.points.every(p=>Math.abs(p[1]-3.78)<=.037+1e-9 && Math.abs(p[2]-1.16)<=.037+1e-9));
+  assert.equal(axle.length,26);
+  const blades=faces.filter(f=>f.color==='#929e9e');assert.equal(blades.length,13*18);
+  assert.ok(blades.every(f=>f.points.every(p=>p[1]>=1.415-1e-9 && p[1]<=1.525+1e-9)));
+  assert.ok(!faces.some(f=>['#3297b9','#272a31','#53565b','#62696b'].includes(f.color)),'no G2-2 arched lines or foam');
+  assert.ok(!faces.some(f=>Math.max(...f.points.map(p=>p[0]))-Math.min(...f.points.map(p=>p[0]))>1 && Math.max(...f.points.map(p=>p[1]))-Math.min(...f.points.map(p=>p[1]))>.8 && f.points.every(p=>p[1]>2 && p[2]>.7)),'no stock coil, sheet or invented rear belt');
+});
+test('G2-1 follows 2D movement, rotation and plan resizing without changing its height',()=>{
+  const item={code:'G2-1',x:0,y:0,width:2.4,height:4.19};
+  const original=models.build(item),moved=models.build({...item,x:3,y:2}),resized=models.build({...item,width:4.8,height:6.285});
+  for(const rotation of [90,-90,180]) {
+    const turned=models.build({...item,rotation}),a=rotation*Math.PI/180;
+    original.forEach((face,i)=>face.points.forEach((p,j)=>{
+      const q=turned[i].points[j],r=resized[i].points[j],m=moved[i].points[j];
+      assert.ok(Math.abs(q[0]-(1.2+(p[0]-1.2)*Math.cos(a)-(p[1]-2.095)*Math.sin(a)))<1e-9);
+      assert.ok(Math.abs(q[1]-(2.095+(p[0]-1.2)*Math.sin(a)+(p[1]-2.095)*Math.cos(a)))<1e-9);
+      assert.equal(q[2],p[2]);assert.equal(r[2],p[2]);assert.equal(m[2],p[2]);
+      assert.ok(Math.abs(r[0]-2*p[0])<1e-9 && Math.abs(r[1]-1.5*p[1])<1e-9);
+      assert.ok(Math.abs(m[0]-p[0]-3)<1e-9 && Math.abs(m[1]-p[1]-2)<1e-9);
+    }));
+  }
+});
 test('J1-2 photo model preserves its CAD record and fits its existing footprint',()=>{
   const item=Object.freeze({id:'eq_vcut1_j1_2',code:'J1-2',x:75.25,y:35.34,width:4.45,height:4.57,rotation:0});
   const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
