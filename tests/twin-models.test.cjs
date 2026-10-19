@@ -416,7 +416,7 @@ test('H1-1 gets photo-reference geometry and input is unchanged',()=>{
   const faces=models.build(input);
   assert.ok(faces.length>500);
   assert.equal(JSON.stringify(input),before);
-  assert.equal(models.build({...base,code:'A1-2'}),null);
+  assert.equal(models.build({...base,code:'A1-3'}),null);
   for(const face of faces) {
     assert.ok(face.points.length>=3);
     assert.match(face.color,/^#[0-9a-f]{6}$/i);
@@ -429,7 +429,7 @@ test('A1-1 has its own grounded photo-reference geometry inside the CAD footprin
   assert.ok(models.matches(input));
   assert.ok(faces.length>300);
   assert.equal(JSON.stringify(input),before);
-  assert.equal(models.build({...input,code:'A1-2'}),null);
+  assert.equal(models.build({...input,code:'A1-3'}),null);
   const points=faces.flatMap(f=>f.points);
   assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
   assert.ok(points.every(p=>p[0]>=eva.x-1e-9 && p[0]<=eva.x+eva.width+1e-9));

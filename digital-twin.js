@@ -13,6 +13,7 @@
   let gesture = null;
   let detail = false;
   const zh = {
+    a12Photo:'A1-2：依 2D PDF 及紅字照片建立六段，從圖面左側起：\n1 捲取頭 · 2 壓合輪 · 3 貼合頭\n4 滾輪架 · 5 烘箱 · 6 上膠頭\n烘箱側視照已確認為第五段。PDF 參考為 16.0 × 2.0 m；顯示尺寸、位置與角度仍跟隨目前 2D，不自動覆蓋圖面。第四段滾輪架放回正常直線位置，不含旁邊綠色推車、堆料、料卷、紙管或鄰機。最高約 2.55 m、各段長度比例與部件尺寸為照片估算。',
     g21Photo:'G2-1：已依指示將整台模型相對上一版旋轉 180°，保留中心位置與 2.40 × 4.19 m 占地；這是模型基準方向校正，之後的移動、尺寸與旋轉仍跟隨 2D。保留滾輪主機、開放料軸架、斜面控制櫃、刀架、氣缸與燈架；不含泡棉、料卷、紙管或鄰機。最高約 2.35 m 與部件比例為照片估算。',
     j12Photo:'J1-2：依四張照片建立大型分片工作台、深色木質延伸邊、米白門形機身、中央鋁製導尺、手輪、滑軌與低位馬達。不含泡棉、堆料、紙管、藍色棧板及鄰機。平面位置、4.45 × 4.57 m 占地與角度沿用原資料；最高約 2.30 m、部件比例及朝向仍為照片估算，待現場確認。',
     q23Photo:'Q2-3：依最新確認，整台 2.5D 模型相對上一版逆時針轉 90°，不翻轉、不拉伸，入料／出料標示與占地框同步旋轉。中心位置與原始平面資料不變；尺寸不變，旋轉後長寬方向互換。不含泡棉、紙管或綠色鄰機；最高約 2.30 m 及細部尺寸仍為照片估算。',
@@ -32,6 +33,7 @@
     updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', a1Photo:'A1-1 依新照片重畫：右端綠色輸送帶入料，經加工滾輪與靠右的大輪，帶材斜向左端取料滾輪。方向已確認；部件尺寸與高度仍是照片估算。', a1Entrance:'入料（綠色輸送帶）', a1Collection:'取料（銀色滾輪）', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
   };
   const th = {
+    a12Photo:'A1-2: จำลอง 6 ช่วงตาม PDF แปลน 2D และข้อความสีแดงในภาพ เรียงจากซ้ายของแปลน:\n1 ชุดม้วนเก็บ · 2 ลูกกลิ้งกด · 3 หัวลามิเนต\n4 โต๊ะลูกกลิ้ง · 5 เตาอบ · 6 หัวทากาว\nยืนยันแล้วว่าภาพด้านข้างเตาอบเป็นช่วงที่ 5 ขนาดอ้างอิง PDF 16.0 × 2.0 ม.; ขนาด ตำแหน่งและมุมที่แสดงยังตามแปลน 2D ปัจจุบัน โดยไม่เขียนทับแปลน ช่วงที่ 4 อยู่ในแนวใช้งานปกติ ไม่รวมรถเข็นสีเขียวข้างเครื่อง วัสดุ ม้วน แกนกระดาษหรือเครื่องข้างเคียง ความสูงสูงสุดประมาณ 2.55 ม. และสัดส่วนแต่ละช่วงประมาณจากภาพ',
     g21Photo:'G2-1: หมุนทั้งเครื่อง 180° จากรุ่นก่อนตามคำยืนยัน คงจุดศูนย์กลางและขนาดฐาน 2.40 × 4.19 ม. เป็นการปรับทิศตั้งต้นของแบบ การย้าย ปรับขนาดและหมุนต่อไปยังคงตามแปลน 2D มีตู้ลูกกลิ้ง ชุดแกนม้วนแบบเปิด ตู้ควบคุมลาดเอียง ชุดใบมีด กระบอกลมและโครงไฟ ไม่รวมโฟม ม้วนวัสดุ แกนกระดาษหรือเครื่องข้างเคียง ความสูงประมาณ 2.35 ม. และสัดส่วนเป็นการประมาณจากภาพ',
     j12Photo:'J1-2: สร้างจากภาพ 4 ภาพ มีโต๊ะขนาดใหญ่แบบแยกแผ่น ขอบต่อไม้สีเข้ม โครงซุ้มสีครีม รั้วนำอะลูมิเนียมตรงกลาง มือหมุน รางเลื่อนและมอเตอร์ด้านล่าง ไม่รวมโฟม วัสดุสะสม แกนกระดาษ พาเลทสีฟ้าหรือเครื่องข้างเคียง คงตำแหน่ง ขนาดฐาน 4.45 × 4.57 ม. และมุมตามแปลนเดิม ความสูงประมาณ 2.30 ม. สัดส่วนและทิศทางเป็นการประมาณจากภาพ รอยืนยันหน้างาน',
     q23Photo:'Q2-3: ตามคำยืนยันล่าสุด หมุนแบบ 2.5D ทั้งเครื่องทวนเข็มนาฬิกา 90° จากรุ่นก่อน ไม่สะท้อนหรือยืดแบบ ป้ายป้อนเข้า/รับงานออกและกรอบฐานหมุนพร้อมกัน จุดศูนย์กลางและข้อมูลแปลนเดิมไม่เปลี่ยน ขนาดเดิมคงอยู่แต่แนวยาว/กว้างสลับกัน ไม่รวมโฟม แกนกระดาษหรือเครื่องสีเขียวข้างเคียง ความสูงประมาณ 2.30 ม. และรายละเอียดเป็นการประมาณจากภาพ',
@@ -278,6 +280,15 @@
     const z=elevation(s);
     if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,z+.02)):path.moveTo(...project(p,z+.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
     if(labels || s===selected){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,z+2.7);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
+    if(detail && referenceCode(s.item)==='A1-2'){
+      // Section markers use the same live-CAD transform as the six rigid units.
+      for(const marker of window.ChinChunModels?.sectionMarkers?.(s.item) || []){
+        const p=project(marker.point,z+marker.point[2]);
+        ctx.font='bold 15px monospace';ctx.textAlign='center';ctx.lineWidth=5;
+        ctx.strokeStyle='#18332e';ctx.strokeText(String(marker.number),p[0],p[1]);
+        ctx.fillStyle='#ffe5a1';ctx.fillText(String(marker.number),p[0],p[1]);
+      }
+    }
     if(detail && referenceCode(s.item)==='H1-1'){
       // Labels follow local CAD ends through both equipment and camera rotation.
       [[0,3,'collect'],[1,2,'feed']].forEach(([i,j,key])=>{
@@ -615,7 +626,7 @@
     dialog.querySelector('#twinDetails').textContent=item ? `${t(s.type)} · ${item.name || item.id}\n${t('position')}: ${n(item.x ?? item.x1).toFixed(2)}, ${n(item.y ?? item.y1).toFixed(2)} m\n${t('size')}: ${s.type==='wall'?Math.hypot(n(item.x2)-n(item.x1),n(item.y2)-n(item.y1)).toFixed(2)+' × '+n(item.thickness,.2).toFixed(2):n(item.width).toFixed(2)+' × '+n(item.height).toFixed(2)} m\n${t('rotation')}: ${displayRotation.toFixed(0)}°` : t('empty');
     dialog.querySelector('#twinEdit').hidden=!s;
     dialog.querySelector('#twinFocus').hidden=!s;
-    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'A1-1':'a1Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo'})[referenceCode(item)] || 'photo');
+    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo'})[referenceCode(item)] || 'photo');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');

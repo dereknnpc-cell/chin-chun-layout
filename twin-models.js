@@ -5,7 +5,142 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['H1-1', 'A1-1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
+  const matches = item => ['H1-1', 'A1-1', 'A1-2', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
+  function a12Point(item, [x,y,z]) {
+    // PDF is the 16 x 2 m reference. Live CAD alone owns the actual footprint.
+    const w=Math.max(.05,Number(item.width)||16),d=Math.max(.05,Number(item.height)||2);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const lx=x/16*w-w/2,ly=y/2*d-d/2;
+    return [(Number(item.x)||0)+w/2+lx*c-ly*s,(Number(item.y)||0)+d/2+lx*s+ly*c,z];
+  }
+  function sectionMarkers(item) {
+    if(modelCode(item)!=='A1-2')return [];
+    return [.8,2.25,4.45,6.8,10.9,15.15].map((x,i)=>({number:i+1,point:a12Point(item,[x,1,2.8])}));
+  }
+  function buildA12(item) {
+    // Six distinct units, numbered from CAD-left to CAD-right as in the PDF.
+    // Corrected D7413BEC photo belongs to section 5 (oven), not section 4.
+    // Section lengths/heights are estimates; no stock, carts beside the line,
+    // building columns, people, material rolls or freestanding fans are modeled.
+    const faces=[],cream='#ded5b7',steel='#aebcbd',chrome='#d0d9d8',dark='#333e3e';
+    const red='#c65333',green='#86a437',brown='#a17852',mesh='#544c40';
+    let section=1;
+    const face=(points,color)=>faces.push({points:points.map(p=>a12Point(item,p)),color,section});
+    function box(x,y,z,w,d,h,color=cream) {
+      const p=[[x,y,z],[x+w,y,z],[x+w,y+d,z],[x,y+d,z],[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color));
+    }
+    function tube(a,b,r,color=chrome,segments=16) {
+      const v=b.map((n,i)=>n-a[i]),len=Math.hypot(...v),u=v.map(n=>n/len);
+      const ref=Math.abs(u[2])<.9?[0,0,1]:[0,1,0];
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,ref);const el=Math.hypot(...e);e=e.map(n=>n/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:segments},(_,i)=>p.map((n,j)=>n+r*(e[j]*Math.cos(i*2*Math.PI/segments)+f[j]*Math.sin(i*2*Math.PI/segments))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color);face(rb,color);
+      ra.forEach((p,i)=>{const j=(i+1)%segments;face([p,ra[j],rb[j],rb[i]],color);});
+    }
+    const roller=(x,z,r,color=chrome)=>tube([x,.19,z],[x,1.81,z],r,color,24);
+    function frame(x,w,top=1.0) {
+      for(const y of [.05,1.83]) {
+        box(x,y,.13,w,.12,.13);
+        box(x,y,top,w,.12,.10);
+        for(const px of [x,x+w-.12])box(px,y,.04,.12,.12,top);
+      }
+      for(const px of [x,x+w-.12])box(px,.05,.22,.12,1.90,.10);
+    }
+    function handwheel(x,y,z,r=.12) {
+      tube([x,y-.025,z],[x,y+.025,z],r,dark,20);
+      for(let i=0;i<4;i++){const a=i*Math.PI/2;tube([x,y-.03,z],[x+Math.cos(a)*r,y-.03,z+Math.sin(a)*r],.009,chrome,6);}
+    }
+    function control(x,y,z,w=.34,h=.65) {
+      box(x,y,z,w,.15,h,red);
+      box(x+.06,y-.012,z+h-.22,w-.12,.012,.13,dark);
+      for(const dz of [.12,.28])tube([x+w/2,y-.018,z+dz],[x+w/2,y-.006,z+dz],.025,dz===.12?'#9e3d2a':'#41834a',10);
+    }
+    // 1. Winder: two fixed silver drums and rear guide bars, not a stock coil.
+    frame(.08,1.38,.81);box(.08,.05,.17,1.38,1.90,.56);
+    for(const x of [.40,.95])roller(x,.99,.22);
+    for(const x of [1.17,1.39])roller(x,1.28,.045,steel);
+    box(.98,1.79,.83,.07,.08,.74);control(.86,1.72,1.46,.35,.57);
+    // 2. Separate vertical press pair with two screw-adjustment towers.
+    section=2;frame(1.65,1.18,.65);
+    roller(2.23,.66,.27,steel);roller(2.23,1.20,.27,chrome);
+    for(const y of [.07,1.82]) {
+      for(const x of [1.98,2.49])box(x,y,.13,.075,.10,1.78);
+      box(1.98,y,1.82,.59,.10,.08);
+      tube([2.23,y+.05,1.26],[2.23,y+.05,2.04],.025,steel,10);
+      tube([2.23,y+.05,2.05],[2.23,y+.05,2.08],.11,dark,20);
+    }
+    tube([2.23,.93,.31],[2.23,1.32,.31],.15,dark,20);
+    control(2.49,1.72,1.93,.31,.53);
+    // 3. Laminating station: green entry belt at the right, brown nip rolls,
+    // two independently driven silver rolls nearer the left, and open bed.
+    section=3;frame(3.05,2.93,.83);
+    box(4.65,.15,.81,1.27,1.70,.11,'#365d48');
+    face([[4.67,.18,.94],[5.90,.18,.94],[5.90,1.82,.94],[4.67,1.82,.94]],'#35694f');
+    for(const [x,z,r,col] of [[3.40,1.02,.24,chrome],[3.99,1.02,.24,steel],[4.70,1.26,.24,brown],[5.16,1.22,.23,brown],[5.71,.98,.07,brown]])roller(x,z,r,col);
+    for(const x of [3.39,3.98,4.72])for(const y of [.08,1.82]) {
+      box(x-.09,y,.72,.18,.10,.86);tube([x,y+.05,1.52],[x,y+.05,1.79],.032,steel,10);
+    }
+    for(const x of [3.42,4.0]) {
+      tube([x,1.73,1.77],[x,1.90,1.77],.13,'#596364',20);
+      tube([x,.04,.48],[x,.29,.48],.13,dark,16);
+    }
+    roller(4.97,1.96,.045,steel);
+    for(const y of [.09,1.84])box(4.92,y,.05,.07,.07,2.48,green);
+    box(4.92,.09,2.48,.07,1.82,.07,green);
+    control(3.10,.04,1.57,.35,.65);
+    // 4. Inline wheeled roller bridge. The green trolley beside it is excluded.
+    section=4;frame(6.20,1.16,.90);
+    for(const x of [6.26,6.49,6.72,6.95,7.18])roller(x,1.0,.045);
+    for(const x of [6.27,7.12])for(const y of [.16,1.84]) {
+      tube([x,y-.04,.075],[x,y+.04,.075],.075,dark,12);
+      box(x-.035,y-.04,.10,.07,.08,.08,steel);
+    }
+    // 5. Long low insulated conveyor oven with open underside, green trims,
+    // brown mesh/red belt edges, output extraction hood, blower and controls.
+    section=5;frame(7.49,6.87,.88);
+    box(8.12,.06,.92,5.51,1.88,.34);
+    box(8.12,.045,1.10,5.51,.035,.13,green);
+    box(8.12,1.92,1.10,5.51,.035,.13,green);
+    box(8.12,.08,1.26,5.51,1.84,.025,'#bdc4b5');
+    // The belt is a fixed machine component; no production sheet is added.
+    box(7.50,.20,.88,6.84,1.60,.035,mesh);
+    for(const y of [.20,1.77])box(7.50,y,.917,6.84,.03,.012,'#ad4243');
+    for(const x of [7.53,14.27])roller(x,.87,.09,mesh);
+    // Hollow trapezoidal hood over the oven's section-4 / discharge end.
+    const hood=[[7.70,.13,1.23],[8.76,.13,1.23],[8.76,1.87,1.23],[7.70,1.87,1.23],
+      [8.04,.65,1.80],[8.46,.65,1.80],[8.46,1.35,1.80],[8.04,1.35,1.80]];
+    [[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>hood[i]),cream));
+    for(const y of [.70,1.31])tube([8.25,y-.07,2.02],[8.25,y+.07,2.02],.22,'#303638',24);
+    box(8.15,.73,1.79,.21,.54,.12,dark);
+    tube([8.25,.93,2.02],[8.25,1.07,2.02],.11,steel,16);
+    box(12.92,.41,1.29,.61,1.18,.35,'#bbbbaa');
+    box(12.95,.395,1.33,.55,.015,.27,cream);
+    for(const x of [13.04,13.23,13.42])box(x,.38,1.46,.09,.02,.09,dark);
+    for(const x of [9.35,11.15]) {
+      tube([x,.93,1.29],[x,.93,1.48],.008,dark,6);
+      tube([x,.91,1.49],[x,.95,1.49],.025,steel,10);
+    }
+    // 6. Glue head at the rightmost end; entry roller bank, angled glue tray,
+    // orange side cabinet, lower pneumatic cylinder and overhead light frame.
+    section=6;frame(14.60,1.30,.85);
+    roller(15.27,1.22,.18,steel);roller(15.27,.86,.16,'#dfdfc9');
+    for(const x of [14.70,15.72])roller(x,.71,.045,chrome);
+    for(const y of [.06,1.82]) {
+      box(15.12,y,.65,.14,.12,.93);
+      tube([15.17,y+.07,.27],[15.17,y+.07,.57],.045,steel,12);
+      tube([15.17,y+.07,.57],[15.17,y+.07,.81],.018,chrome,10);
+      handwheel(15.56,y+.06,1.40,.10);
+      box(14.82,y,.04,.07,.07,2.39);
+    }
+    face([[15.32,.21,1.33],[15.74,.21,1.48],[15.74,1.79,1.48],[15.32,1.79,1.33]],'#928966');
+    box(14.82,.06,2.39,.07,1.83,.07);
+    box(14.91,.18,2.36,.06,1.62,.04,'#e8ece7');
+    control(15.34,.04,1.73,.42,.65);
+    tube([15.34,.08,.50],[15.34,.26,.50],.14,dark,16);
+    return faces;
+  }
   function buildH1(item) {
     const faces = [], cream = '#d8d1ad', steel = '#a8b9ba', dark = '#303b3c', red = '#c94e31';
     // Owner confirmed oven top = 2.4 m; other component heights remain estimates.
@@ -1105,6 +1240,7 @@
     switch(modelCode(item)) {
       case 'H1-1': return buildH1(item);
       case 'A1-1': return buildA1(item);
+      case 'A1-2': return buildA12(item);
       case 'F1-1': return buildF1(item);
       case 'G2-1': return buildG21(item);
       case 'G2-2': return buildG2(item);
@@ -1121,5 +1257,5 @@
       default: return null;
     }
   }
-  window.ChinChunModels = {matches,build,rotationOffset,referenceCode:modelCode};
+  window.ChinChunModels = {matches,build,rotationOffset,referenceCode:modelCode,sectionMarkers};
 })();
