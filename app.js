@@ -5139,7 +5139,12 @@
   }
 
   // --- Specialized Architectural Component SVG Renderer ---
-  function renderSingleItemSvg(eq, floor, opacity) {
+  function escapeEquipmentText(value) {
+    return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"})[c]);
+  }
+
+  function renderSingleItemSvg(item, floor, opacity) {
+    const eq = {...item, name: escapeEquipmentText(item.name), code: escapeEquipmentText(item.code)};
     const pos = metersToSvg(eq.x, eq.y);
     const ew = eq.width * SCALE;
     const eh = eq.height * SCALE;
@@ -5155,6 +5160,7 @@
       <g id="${eq.id}" class="svg-equipment-group svg-interactive-item ${isSelected ? 'selected' : ''}" 
          transform="rotate(${rot} ${centerX} ${centerY})"
          data-id="${eq.id}" data-floor="${floor}" opacity="${opacity}">
+        <title>雙擊可編輯設備名稱與編號 / Double-click to edit text</title>
     `;
 
     // Clearance buffer
@@ -5367,6 +5373,8 @@
         e.stopPropagation();
         e.preventDefault();
         const id = el.getAttribute("data-id");
+        // Equipment double-clicks are tracked by ID across SVG re-renders.
+        if (findItemRecord(id)?.type === "equipment") return;
         selectItem(id);
         openQuickRenameBox(id, e.clientX, e.clientY);
       });
@@ -6061,10 +6069,44 @@
 
   // --- Quick Rename Box Controller (Double-click on Canvas) ---
   let activeRenameId = null;
+  let equipmentPress = null;
+  let lastEquipmentClick = null;
+  const equipmentClickSlop = 5;
+
+  function beginEquipmentTextGesture(id, e) {
+    const previous = lastEquipmentClick;
+    lastEquipmentClick = null;
+    if (previous && previous.id === id && previous.floor === currentFloor &&
+        Date.now() - previous.time <= 450 &&
+        Math.hypot(e.clientX - previous.x, e.clientY - previous.y) <= equipmentClickSlop) {
+      equipmentPress = null;
+      selectItem(id);
+      openQuickRenameBox(id, e.clientX, e.clientY);
+      return true;
+    }
+    equipmentPress = {id, floor: currentFloor, x: e.clientX, y: e.clientY};
+    return false;
+  }
+
+  function finishEquipmentTextGesture(e) {
+    if (!equipmentPress) return;
+    const press = equipmentPress;
+    lastEquipmentClick = !dragHasMoved && e.button === 0 && press.floor === currentFloor &&
+      Math.hypot(e.clientX - press.x, e.clientY - press.y) <= equipmentClickSlop
+      ? {...press, time: Date.now()} : null;
+    equipmentPress = null;
+  }
+
+  function preservePhotoModelReference(item) {
+    const models = window.ChinChunModels;
+    if (!item.photoModelCode && models?.matches(item)) {
+      item.photoModelCode = models.referenceCode(item);
+    }
+  }
 
   function openQuickRenameBox(id, clientX, clientY) {
     const rec = findItemRecord(id);
-    if (!rec) return;
+    if (!rec || isRecordLayerLocked(rec)) return;
     activeRenameId = id;
 
     const box = document.getElementById("quickRenameBox");
@@ -6084,12 +6126,14 @@
       codeGroup.style.display = "none";
     }
 
-    // Position box near mouse cursor
+    // Measure the actual popover, keeping both fields and buttons in view.
+    box.style.display = "flex";
+    const boxRect = box.getBoundingClientRect();
     const vpRect = viewportEl.getBoundingClientRect();
     let left = clientX - vpRect.left + 15;
     let top = clientY - vpRect.top + 15;
-    if (left + 300 > vpRect.width) left = vpRect.width - 310;
-    if (top + 180 > vpRect.height) top = vpRect.height - 190;
+    if (left + boxRect.width > vpRect.width) left = vpRect.width - boxRect.width - 10;
+    if (top + boxRect.height > vpRect.height) top = vpRect.height - boxRect.height - 10;
     left = Math.max(10, left);
     top = Math.max(10, top);
 
@@ -6097,8 +6141,9 @@
     box.style.top = `${top}px`;
     box.style.display = "flex";
 
-    nameInp.focus();
-    nameInp.select();
+    const focusInput = item.code !== undefined ? codeInp : nameInp;
+    focusInput.focus();
+    focusInput.select();
   }
 
   function closeQuickRenameBox() {
@@ -6110,13 +6155,19 @@
   function saveQuickRename() {
     if (!activeRenameId) return;
     const rec = findItemRecord(activeRenameId);
-    if (!rec) { closeQuickRenameBox(); return; }
+    if (!rec || isRecordLayerLocked(rec)) { closeQuickRenameBox(); return; }
 
     const nameInp = document.getElementById("quickRenameName");
     const codeInp = document.getElementById("quickRenameCode");
     const newName = nameInp.value.trim();
     const newCode = codeInp.value.trim();
 
+    const nameField = rec.type === "wall" ? "description" : "name";
+    const nameChanged = Boolean(newName && newName !== rec.item[nameField]);
+    const codeChanged = Boolean(newCode && rec.item.code !== undefined && newCode !== rec.item.code);
+    if (!nameChanged && !codeChanged) { closeQuickRenameBox(); return; }
+    pushHistoryState("編輯設備文字");
+    if (codeChanged) preservePhotoModelReference(rec.item);
     if (rec.type === "wall") {
       rec.item.description = newName || rec.item.description;
     } else {
@@ -6684,6 +6735,9 @@
       }
 
       if (isDragging && selectedId) {
+        // A click or double-click must not snap the machine to a new position.
+        if (equipmentPress && !dragHasMoved &&
+            Math.hypot(e.clientX - equipmentPress.x, e.clientY - equipmentPress.y) <= equipmentClickSlop) return;
         const rec = findItemRecord(selectedId);
         if (!rec) return;
 
@@ -6846,6 +6900,10 @@
     });
 
     viewportEl.addEventListener("mousedown", (e) => {
+      if (e.target.closest("#quickRenameBox")) return;
+      equipmentPress = null;
+      const pressedId = e.target.closest(".svg-interactive-item")?.getAttribute("data-id");
+      if (e.button !== 0 || findItemRecord(pressedId)?.type !== "equipment" || isDrawingRoute) lastEquipmentClick = null;
       if (isDrawingRoute) return;
 
       const svgPt = clientToSvgCoords(e.clientX, e.clientY);
@@ -6932,7 +6990,13 @@
         const id = itemGroup.getAttribute("data-id");
         const rec = findItemRecord(id);
         if (isRecordLayerLocked(rec)) {
+          lastEquipmentClick = null;
           showToast("此圖層已鎖定，物件不會移動", "info", 1600);
+          return;
+        }
+        if (rec?.type === "equipment" && beginEquipmentTextGesture(id, e)) {
+          e.preventDefault();
+          dragInitialLayoutSnapshot = null;
           return;
         }
         selectItem(id);
@@ -6956,7 +7020,9 @@
       }
     });
 
-    window.addEventListener("mouseup", () => {
+    window.addEventListener("mouseup", (e) => {
+      const equipmentClickOnly = equipmentPress && !dragHasMoved;
+      finishEquipmentTextGesture(e);
       if (isDragging) {
         if (dragHasMoved && dragInitialLayoutSnapshot) {
           undoStack.push({ name: "移動或拉伸物件", data: dragInitialLayoutSnapshot, floor: currentFloor });
@@ -6967,8 +7033,10 @@
         dragInitialLayoutSnapshot = null;
         dragHasMoved = false;
         currentWallSnapInfo = null;
-        saveToLocalStorage();
-        renderSvg();
+        if (!equipmentClickOnly) {
+          saveToLocalStorage();
+          renderSvg();
+        }
       }
       isDragging = false;
       isPanning = false;
@@ -7027,6 +7095,7 @@
       const rec = findItemRecord(selectedId);
       if (!rec || !rec.item) return;
       if (rec.item.code !== undefined) {
+        preservePhotoModelReference(rec.item);
         rec.item.code = e.target.value;
         saveToLocalStorage();
         renderSvg();
@@ -7290,13 +7359,14 @@
     const btnQuickClose = document.getElementById("quickRenameClose");
     if (btnQuickClose) btnQuickClose.addEventListener("click", closeQuickRenameBox);
 
-    const quickRenameNameInp = document.getElementById("quickRenameName");
-    if (quickRenameNameInp) {
-      quickRenameNameInp.addEventListener("keydown", (e) => {
+    ["quickRenameName", "quickRenameCode"].forEach(id => {
+      document.getElementById(id)?.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Enter" || e.key === "Escape") e.preventDefault();
         if (e.key === "Enter") saveQuickRename();
         else if (e.key === "Escape") closeQuickRenameBox();
       });
-    }
+    });
 
     // --- Add Equipment Modal Handlers ---
     const btnOpenAddModal = document.getElementById("btnOpenAddModal");

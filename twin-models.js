@@ -1,7 +1,7 @@
 /* Photo-informed display geometry only. Never writes CAD dimensions or cloud data. */
 (() => {
   'use strict';
-  const modelCode = item => String(item.code || '').trim().toUpperCase();
+  const modelCode = item => String(item.photoModelCode || item.code || '').trim().toUpperCase();
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
@@ -1121,5 +1121,5 @@
       default: return null;
     }
   }
-  window.ChinChunModels = {matches,build,rotationOffset};
+  window.ChinChunModels = {matches,build,rotationOffset,referenceCode:modelCode};
 })();

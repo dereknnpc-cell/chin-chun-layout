@@ -268,18 +268,18 @@
       </div>
 
       <!-- Quick Rename Popover Box -->
-      <div id="quickRenameBox" class="quick-rename-box" style="display: none;">
+      <div id="quickRenameBox" class="quick-rename-box" role="dialog" aria-labelledby="quickRenameTitle" style="display: none;">
         <div class="quick-rename-header">
           <span id="quickRenameTitle">✏️ 編輯模組名稱與編號</span>
-          <button id="quickRenameClose" class="btn-close" type="button">&times;</button>
+          <button id="quickRenameClose" class="btn-close" type="button" aria-label="關閉文字編輯">&times;</button>
         </div>
         <div class="quick-rename-body">
           <div class="rename-field">
-            <label>模組/設備名稱</label>
+            <label for="quickRenameName">模組/設備名稱</label>
             <input type="text" id="quickRenameName" class="cad-input" placeholder="輸入名稱">
           </div>
           <div class="rename-field" id="quickRenameCodeGroup">
-            <label>設備識別編號</label>
+            <label for="quickRenameCode">設備識別編號</label>
             <input type="text" id="quickRenameCode" class="cad-input" placeholder="輸入編號">
           </div>
         </div>
@@ -773,10 +773,10 @@
 
   <!-- Load Application Logic -->
   <link rel="stylesheet" href="digital-twin.css?v=camera-axis-lock-20261019">
-  <script src="twin-models.js?v=g2-1-turn180-20261019"></script>
-  <script src="digital-twin.js?v=camera-axis-lock-20261019"></script>
+  <script src="twin-models.js?v=stable-model-reference-20261019"></script>
+  <script src="digital-twin.js?v=stable-model-reference-20261019"></script>
   <script src="i18n.js?v=3.0.1_a1_1_model"></script>
   <script src="cloud-sync.js?v=3.0.1_password_login"></script>
-  <script src="app.js?v=3.0.1_label_fit_20261007"></script>
+  <script src="app.js?v=equipment-text-editor-20261019"></script>
 </body>
 </html>

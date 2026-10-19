@@ -7,6 +7,7 @@
   let fitExtent = null;
   let width = 1, height = 1, baseScale = 1, bounds, labels = true;
   const baseHeight = .22;
+  const referenceCode = item => window.ChinChunModels?.referenceCode?.(item) || String(item.code || '').trim().toUpperCase();
   const factoryRise = 1.5;
   const pointers = new Map();
   let gesture = null;
@@ -277,20 +278,20 @@
     const z=elevation(s);
     if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,z+.02)):path.moveTo(...project(p,z+.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
     if(labels || s===selected){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,z+2.7);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
-    if(detail && String(s.item.code || '').toUpperCase()==='H1-1'){
+    if(detail && referenceCode(s.item)==='H1-1'){
       // Labels follow local CAD ends through both equipment and camera rotation.
       [[0,3,'collect'],[1,2,'feed']].forEach(([i,j,key])=>{
         const p=project([(s.points[i][0]+s.points[j][0])/2,(s.points[i][1]+s.points[j][1])/2],z+1.55);
         ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#18332e';ctx.strokeText(t(key),p[0],p[1]);ctx.fillStyle='#fff5d7';ctx.fillText(t(key),p[0],p[1]);
       });
     }
-    if(detail && String(s.item.code || '').toUpperCase()==='A1-1'){
+    if(detail && referenceCode(s.item)==='A1-1'){
       [[0,3,'a1Collection'],[1,2,'a1Entrance']].forEach(([i,j,key])=>{
         const p=project([(s.points[i][0]+s.points[j][0])/2,(s.points[i][1]+s.points[j][1])/2],z+1.55);
         ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#18332e';ctx.strokeText(t(key),p[0],p[1]);ctx.fillStyle='#fff5d7';ctx.fillText(t(key),p[0],p[1]);
       });
     }
-    if(detail && String(s.item.code || '').trim().toUpperCase()==='Q2-3'){
+    if(detail && referenceCode(s.item)==='Q2-3'){
       // Local left/right CAD edges move with equipment and camera rotation.
       [[0,3,'q23Discharge'],[1,2,'q23Feed']].forEach(([i,j,key])=>{
         const p=project([(s.points[i][0]+s.points[j][0])/2,(s.points[i][1]+s.points[j][1])/2],z+1.55);
@@ -614,7 +615,7 @@
     dialog.querySelector('#twinDetails').textContent=item ? `${t(s.type)} · ${item.name || item.id}\n${t('position')}: ${n(item.x ?? item.x1).toFixed(2)}, ${n(item.y ?? item.y1).toFixed(2)} m\n${t('size')}: ${s.type==='wall'?Math.hypot(n(item.x2)-n(item.x1),n(item.y2)-n(item.y1)).toFixed(2)+' × '+n(item.thickness,.2).toFixed(2):n(item.width).toFixed(2)+' × '+n(item.height).toFixed(2)} m\n${t('rotation')}: ${displayRotation.toFixed(0)}°` : t('empty');
     dialog.querySelector('#twinEdit').hidden=!s;
     dialog.querySelector('#twinFocus').hidden=!s;
-    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'A1-1':'a1Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo'})[String(item.code || '').trim().toUpperCase()] || 'photo');
+    if(s?.model)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'A1-1':'a1Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo'})[referenceCode(item)] || 'photo');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
