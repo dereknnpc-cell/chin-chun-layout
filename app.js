@@ -4488,9 +4488,10 @@
         const poly = getWallPolygon(w);
         if (!poly) return;
         const isSelected = w.id === selectedId;
+        const ghostWall = !isWallOnActiveFloor(w);
 
         html += `
-          <g id="${w.id}" class="svg-wall-group svg-interactive-item ${isSelected ? 'selected' : ''}" data-id="${w.id}">
+          <g id="${w.id}" class="svg-wall-group svg-interactive-item ${isSelected ? 'selected' : ''} ${ghostWall ? 'svg-layer-locked' : ''}" data-id="${w.id}">
             <polygon points="${poly.points}" class="wall-double-poly" stroke-linejoin="round"/>
             <line x1="${poly.c1.x}" y1="${poly.c1.y}" x2="${poly.c2.x}" y2="${poly.c2.y}" class="wall-centerline"/>
         `;
@@ -5011,9 +5012,13 @@
       </g>
     `;
 
-    // L4 edit controls stay above equipment/columns while the wall body remains in L1.
+    // L1 remains visually below equipment, but its narrow picking surface must
+    // not be intercepted by equipment fills, clearance zones or column labels.
+    html += renderWallHitTargets();
+
+    // L4 edit controls stay above equipment/columns and wall picking surfaces.
     const selectedWallRecord = selectedId ? findItemRecord(selectedId) : null;
-    if (selectedWallRecord?.type === "wall" && !isLayerLocked("walls")) {
+    if (selectedWallRecord?.type === "wall" && layerState.walls && !isLayerLocked("walls") && isWallOnActiveFloor(selectedWallRecord.item)) {
       const selectedWall = selectedWallRecord.item;
       const poly = getWallPolygon(selectedWall);
       if (poly) {
@@ -5035,6 +5040,30 @@
     scaleDrawingText();
     attachSvgClickListeners();
     refreshAnnotationVisibility();
+  }
+
+  function isWallOnActiveFloor(wall) {
+    return currentFloor === "OVERLAY" || (wall.floor || "1F") === currentFloor;
+  }
+
+  function renderWallHitTargets() {
+    if (!layerState.walls || isLayerLocked("walls")) return "";
+    const walls=(layoutData.walls || []).filter(isWallOnActiveFloor);
+    // The selected wall wins at wall/wall junctions. L4 endpoint/center handles
+    // are rendered afterwards and still have the highest interaction priority.
+    walls.sort((a,b)=>Number(a.id===selectedId)-Number(b.id===selectedId));
+    let html='<g id="layerWallHitTargets" data-layer-rank="wall-picking">';
+    for (const wall of walls) {
+      const poly=getWallPolygon(wall);
+      if (!poly) continue;
+      const id=escapeEquipmentText(wall.id);
+      html+=`<g class="svg-wall-hit-target svg-interactive-item ${wall.id===selectedId?'selected':''}" data-id="${id}">
+        <title>點選牆線可選取，拖曳可平移整面牆 / Select and drag wall</title>
+        <polygon points="${poly.points}" class="wall-hit-body"/>
+        <line x1="${poly.c1.x}" y1="${poly.c1.y}" x2="${poly.c2.x}" y2="${poly.c2.y}" class="wall-hit-line"/>
+      </g>`;
+    }
+    return html+'</g>';
   }
 
   function refreshAnnotationVisibility() {
@@ -5575,7 +5604,7 @@
 
       propName.value = item.description || "建築隔間實體牆";
       propCode.value = item.type === "exterior" ? "外牆 (Exterior)" : "隔間牆 (Interior)";
-      propZone.value = "1F · 建築隔間雙線牆 (可調整/刪除)";
+      propZone.value = `${item.floor || '1F'} · 建築隔間雙線牆 (可調整/刪除)`;
 
       cardStandardDims.style.display = "none";
       cardStandardCoords.style.display = "none";
@@ -6260,6 +6289,10 @@
   }
   // --- Add New Wall Function ---
   function addNewWall() {
+    if (isLayerLocked("walls")) {
+      showToast("牆面圖層已鎖定，請先解鎖牆面圖層再新增", "info", 2400);
+      return;
+    }
     const centerSvg = {
       x: viewBox.x + viewBox.width / 2,
       y: viewBox.y + viewBox.height / 2
@@ -6276,11 +6309,21 @@
       y2: snapY,
       thickness: 0.3,
       type: "interior",
+      floor: currentFloor === "OVERLAY" ? "1F" : currentFloor,
       name: "單面實體隔間牆",
       description: "新建單面實體雙線牆 (可端點拉伸與自動磁吸)"
     };
 
     if (!layoutData.walls) layoutData.walls = [];
+    // A newly created wall must not disappear into a hidden wall layer.
+    if (!layerState.walls) {
+      layerState.walls = true;
+      const toggle=document.getElementById("toggleWalls");
+      if (toggle) {
+        toggle.checked=true;
+        toggle.closest("label")?.classList.add("active");
+      }
+    }
     pushHistoryState("新增單面牆體");
     layoutData.walls.push(newWall);
     saveToLocalStorage();

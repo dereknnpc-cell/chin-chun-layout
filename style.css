@@ -1043,6 +1043,23 @@ body.theme-cad-dark .wall-double-poly {
   transition: filter 0.15s ease;
 }
 
+/* Picking only: preserve L1 paint order and real wall thickness. The screen-
+   sized stroke stays usable at overview zoom without covering whole machines. */
+.svg-wall-hit-target { cursor: move; }
+.wall-hit-body { fill: transparent; stroke: none; pointer-events: all; }
+.wall-hit-line {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 12px;
+  stroke-linecap: butt;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+}
+.svg-wall-hit-target:hover .wall-hit-line,
+.svg-wall-hit-target.selected .wall-hit-line {
+  stroke: rgba(37, 99, 235, 0.16);
+}
+
 .svg-wall-group:hover .wall-double-poly {
   stroke: var(--cad-selection) !important;
   stroke-width: 2.5px !important;
