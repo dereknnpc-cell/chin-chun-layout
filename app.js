@@ -3541,7 +3541,8 @@
     const buildingRepair=window.ChinChunBuilding?.repair(candidate);
     if(buildingRepair?.changed || buildingRepair?.blocked)return {
       layout:buildingRepair.layout,migrated:buildingRepair.changed,
-      buildingRepaired:buildingRepair.changed,buildingBlocked:buildingRepair.blocked
+      buildingRepaired:buildingRepair.changed,buildingBlocked:buildingRepair.blocked,
+      leftBoundaryCorrected:Boolean(buildingRepair.leftBoundaryOnly)
     };
     if(window.ChinChunBuilding?.get(candidate))return {layout:candidate,migrated:false};
     if (candidate.source_geometry_revision === SOURCE_GEOMETRY_REVISION) {
@@ -3580,6 +3581,7 @@
   let layoutData = JSON.parse(JSON.stringify(INITIAL_LAYOUT));
   let sourceGeometryMigrated = false;
   let buildingRepairedOnLoad = false;
+  let leftBoundaryCorrectedOnLoad = false;
   try {
     const savedLayout = localStorage.getItem(STORAGE_KEY_LAYOUT);
     if (savedLayout) {
@@ -3589,6 +3591,7 @@
         layoutData = result.layout;
         sourceGeometryMigrated = result.migrated;
         buildingRepairedOnLoad = Boolean(result.buildingRepaired);
+        leftBoundaryCorrectedOnLoad = Boolean(result.leftBoundaryCorrected);
       }
     }
   } catch (err) {
@@ -4201,7 +4204,9 @@
         if (geometryResult.migrated || layerLockMigrated) {
           window.setTimeout(() => {
             window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
-            if (geometryResult.buildingRepaired) {
+            if (geometryResult.leftBoundaryCorrected) {
+              showToast('外棚左界已依紅線右移一個柱距；隔間、設備及右界未改動','success');
+            } else if (geometryResult.buildingRepaired) {
               showToast('已從本檔封存還原原繪隔間，外棚邊界依紅線更正；設備未搬動','success');
             } else if (geometryResult.migrated) {
               showToast("已套用 2026 EPS 精準尺寸、牆面與 152 支柱位", "success");
@@ -4231,7 +4236,8 @@
     initializeCloudSync();
 
     setTimeout(() => {
-      if(buildingRepairedOnLoad)showToast('已還原你原本的牆線與隔間，外棚邊界依紅線更正','success');
+      if(leftBoundaryCorrectedOnLoad)showToast('外棚左界已依紅線右移一個柱距，其他配置未改動','success');
+      else if(buildingRepairedOnLoad)showToast('已還原你原本的牆線與隔間，外棚邊界依紅線更正','success');
       else if(!window.ChinChunBuilding?.get(layoutData))showToast("📐 V2.6：已依 2026 Layout for AI.eps 校正設備尺寸、牆面與柱位", "info", 5000);
     }, 600);
   }
@@ -5073,14 +5079,14 @@
       }
       if(b){
         document.getElementById('buildingReviewSummary').textContent=thai?'ยึดแปลนเดิม · ขอบตามเส้นแดง':'以你的原繪圖為準 · 紅線邊界';
-        document.getElementById('buildingReviewNote').textContent=thai?'ผนังกั้นใช้แบบเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอก X30–100 ส่วนต่อเติม X90–100 เครื่อง เสา ประตูและทางเดินไม่ย้าย พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกเดิมคงอยู่ ไม่ได้ประมาณใหม่':'廠內牆線與隔間沿用你的原繪圖，不採A3比例描繪。外棚左界X30、右界X100；最新增建X90–100。設備、柱位、門窗與動線未搬動。原廠+1.50／外棚+1.00／路面0米；外棚縱深沿用現值，不另行推算。';
+        document.getElementById('buildingReviewNote').textContent=thai?'ผนังกั้นใช้แบบเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอก X35–100 ส่วนต่อเติม X90–100 เครื่อง เสา ประตูและทางเดินไม่ย้าย พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกเดิมคงอยู่ ไม่ได้ประมาณใหม่':'廠內牆線與隔間沿用你的原繪圖，不採A3比例描繪。外棚左界X35、右界X100；最新增建X90–100。設備、柱位、門窗與動線未搬動。原廠+1.50／外棚+1.00／路面0米；外棚縱深沿用現值，不另行推算。';
         if(b.restoration){const li=document.createElement('li');li.textContent=thai?`กู้ผนังเดิม ${b.restoration.restoredWalls} ชิ้น คงผนังอื่น ${b.restoration.retainedWalls} ชิ้น`:`從本檔封存還原 ${b.restoration.restoredWalls} 段原牆；保留其他 ${b.restoration.retainedWalls} 段牆。被撤回的推算牆另行封存，未永久刪除。`;list.append(li);}
       }
     }
     if(currentFloor==='1F'){
       floorIndicatorEl.textContent=b?'1F 原廠 +1.50M / 外棚 +1.00M':'1F 主廠房 (EL.+0.60M)';
       gridBayInfoEl.textContent=b?'以你的原繪牆線、隔間及柱網為準':'5.00 m 柱距 · 立柱與牆體自由編輯/移動/刪除';
-      mezzanineStatsEl.textContent=b?'原廠100×40M · 外棚X30–100／增建X90–100':'廠房總跨度: 100.0 M × 40.0 M';
+      mezzanineStatsEl.textContent=b?'原廠100×40M · 外棚X35–100／增建X90–100':'廠房總跨度: 100.0 M × 40.0 M';
       const pill=document.querySelector('#btnFloor_1F .floor-elev'),first=layoutData.floors?.find(q=>q.id==='1F');
       if(pill && first){pill.textContent=first.elev;pill.closest('.floor-btn').title=first.desc || '';}
     }
@@ -5091,7 +5097,7 @@
     const problem=window.ChinChunBuilding.recoveryProblem(layoutData);
     if(problem)return showToast(problem,'error');
     const thai=document.documentElement.lang.startsWith('th');
-    if(!confirm(thai?'ใช้ขอบเส้นแดง X30–100 ต่อเติม X90–100 โดยไม่เปลี่ยนผนังกั้นเดิมหรือย้ายเครื่อง?':'套用紅線邊界：外棚X30–100、增建X90–100？\n廠內隔間以你的原繪圖為準，不重新描繪、不搬動設備。'))return;
+    if(!confirm(thai?'ใช้ขอบเส้นแดง X35–100 ต่อเติม X90–100 โดยไม่เปลี่ยนผนังกั้นเดิมหรือย้ายเครื่อง?':'套用紅線邊界：外棚X35–100、增建X90–100？\n廠內隔間以你的原繪圖為準，不重新描繪、不搬動設備。'))return;
     const calibrated=window.ChinChunBuilding.apply(layoutData);
     pushHistoryState('套用紅線邊界（保留原繪隔間）');
     layoutData=calibrated;

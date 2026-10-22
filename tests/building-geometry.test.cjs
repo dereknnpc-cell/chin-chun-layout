@@ -20,11 +20,11 @@ function legacy(input=fixture()){
   d.building_geometry={revision:'a3-180-20261022',previousMainWalls:original,main:{width:97.8},annex:{x:32.82,width:64.69},extension:{x:87.51}};
   d.grid.factory_width=97.8;return d;
 }
-test('red lines align annex X30..100 and right-end section X90..100, not rejected PDF inference',()=>{
+test('16:38 red line aligns annex X35..100 while right-end section stays X90..100',()=>{
   const b=building.reference();near(b.main.width,100);near(b.main.height,40);
-  near(b.annex.x,30);near(b.annex.width,70);near(b.annex.x+b.annex.width,100);
+  near(b.annex.x,35);near(b.annex.width,65);near(b.annex.x+b.annex.width,100);
   near(b.extension.x,90);near(b.extension.width,10);near(b.extension.x+b.extension.width,100);
-  near(b.roof.x,30);near(b.roof.width,70);assert.equal(b.partitionAccuracy,'user-drawing');
+  near(b.roof.x,35);near(b.roof.width,65);assert.equal(b.partitionAccuracy,'user-drawing');
   assert.ok(!('sourceRotation' in b));assert.match(b.source,/使用者/);assert.ok(!('partitions' in building));
 });
 test('unaffected user drawings retain every wall, equipment field, column, route and upper-floor record',()=>{
@@ -59,6 +59,23 @@ test('post-A3 new walls and existing same-ID user edits survive, including their
   const later=plain(r);later.walls[0].x1=9.2;later.building_geometry.annex.x=31;
   assert.deepEqual(plain(building.repair(later).layout),later,'no repeated correction overwrites');
 });
+test('r1 upgrade moves only left annex/roof edge; original walls and all other geometry remain byte-identical',()=>{
+  const d=building.apply(fixture());d.building_geometry.revision='user-boundary-20261022-r1';
+  d.building_geometry.annex.x=30;d.building_geometry.annex.width=70;
+  d.building_geometry.roof.x=30;d.building_geometry.roof.width=70;
+  d.building_geometry.restoration={restoredWalls:30,retainedWalls:5};
+  const before=JSON.stringify(d),r=building.repair(d);
+  assert.equal(r.changed,true);assert.equal(r.leftBoundaryOnly,true);assert.equal(JSON.stringify(d),before);
+  for(const key of ['walls','equipment','columns','flows','equipment_2f','grid','floors','layer_settings'])assert.equal(JSON.stringify(r.layout[key]),JSON.stringify(d[key]),key);
+  for(const key of ['main','extension','restoration'])assert.equal(JSON.stringify(r.layout.building_geometry[key]),JSON.stringify(d.building_geometry[key]),key);
+  const b=r.layout.building_geometry;assert.equal(b.annex.x,35);assert.equal(b.annex.width,65);assert.equal(b.roof.x,35);assert.equal(b.roof.width,65);
+  assert.equal(b.annex.y,d.building_geometry.annex.y);assert.equal(b.annex.height,d.building_geometry.annex.height);
+  assert.equal(b.boundaryCorrections.length,1);assert.equal(building.repair(r.layout).changed,false);
+  const custom=plain(d);custom.building_geometry.annex.width=72;custom.building_geometry.roof.width=73;
+  const updated=building.apply(custom).building_geometry;near(updated.annex.x+updated.annex.width,102);near(updated.roof.x+updated.roof.width,103);
+  const broken=plain(d);delete broken.building_geometry.roof;
+  const blocked=building.repair(broken);assert.equal(blocked.blocked,true);assert.equal(blocked.layout,broken);assert.ok(building.recoveryProblem(broken));
+});
 test('missing, malformed or duplicate archive blocks ALL repair and never substitutes baseline walls',()=>{
   for(const archive of [undefined,null,{},[{id:'bad',x1:NaN,y1:0,x2:1,y2:0}],
     [fixture().walls[0],fixture().walls[0]]]){
@@ -84,14 +101,14 @@ test('local/cloud/import common loader repairs original walls before any EPS bas
 });
 test('main/annex/road elevations follow the corrected live boundaries',()=>{
   const d=building.apply(fixture());assert.equal(building.floorLevel(d,[99,39]),1.5);
-  assert.equal(building.floorLevel(d,[30.5,41]),1);assert.equal(building.floorLevel(d,[99.5,58]),1);
-  assert.equal(building.floorLevel(d,[29,45]),0);assert.equal(building.floorLevel(d,[101,58]),0);
+  assert.equal(building.floorLevel(d,[35.5,41]),1);assert.equal(building.floorLevel(d,[99.5,58]),1);
+  assert.equal(building.floorLevel(d,[34,45]),0);assert.equal(building.floorLevel(d,[101,58]),0);
   assert.equal(building.floorLevel({},[55,41]),null);assert.equal(building.get(legacy()),null);
   d.building_geometry.annex.rise=NaN;assert.equal(building.get(d),null);
 });
 test('2D overlay shows user drawing and red-line bounds without false A3 conflict circles',()=>{
   const d=building.apply(fixture()),svg=building.svg(d,24,{x:100,y:200},true);
-  assert.match(svg,/pointer-events="none"/);assert.match(svg,/原繪圖/);assert.match(svg,/紅線邊界/);assert.match(svg,/X=30–100/);
+  assert.match(svg,/pointer-events="none"/);assert.match(svg,/原繪圖/);assert.match(svg,/紅線邊界/);assert.match(svg,/X=35–100/);
   assert.ok(!svg.includes('97.80'));assert.ok(!svg.includes('64.69'));assert.ok(!svg.includes('data-conflict-id'));
   assert.ok(!svg.includes('NaN'));assert.match(building.svg(d,24,{x:100,y:200},true,true),/เส้นแดง/);
   assert.equal(building.audit(d).length,0);
@@ -100,7 +117,7 @@ test('2.5D roof and frame use the same corrected bounds and never mutate layout'
   const d=building.apply(fixture()),before=JSON.stringify(d),open=building.frameFaces(d),roof=building.frameFaces(d,true);
   assert.ok(open.length>50);assert.ok(!open.some(f=>f.part==='canopy-roof'));
   const points=roof.filter(f=>f.part==='canopy-roof').flatMap(f=>f.points);
-  near(Math.min(...points.map(p=>p[0])),30);near(Math.max(...points.map(p=>p[0])),100);
+  near(Math.min(...points.map(p=>p[0])),35);near(Math.max(...points.map(p=>p[0])),100);
   near(Math.min(...open.flatMap(f=>f.points.map(p=>p[2]))),1);
   assert.ok(open.some(f=>f.color==='#32984b' && f.points.some(p=>Math.abs(p[2]-5.6)<1e-8)));
   assert.equal(JSON.stringify(d),before);
@@ -111,7 +128,7 @@ test('twin elevations follow corrected boundaries and fall back safely for older
   const c={window:{ChinChunBuilding:building},data:building.apply(fixture()),floor:'1F',isRamp:()=>false,inFactory:p=>p[1]<=40,isOfficeEntry:()=>false,factoryRise:1.5,dieGround:null};
   vm.createContext(c);vm.runInContext(section.replace('const elevation =','var elevation ='),c);
   const s=(x,y)=>({item:{id:'m'},type:'equipment',points:[[x,y],[x+1,y],[x+1,y+1],[x,y+1]]});
-  assert.equal(c.elevation(s(30,42)),1);assert.equal(c.elevation(s(98,20)),1.5);assert.equal(c.elevation(s(10,42)),0);
+  assert.equal(c.elevation(s(35,42)),1);assert.equal(c.elevation(s(98,20)),1.5);assert.equal(c.elevation(s(34,42)),0);
   c.data={};assert.equal(c.elevation(s(55,42)),0);c.floor='2F';assert.equal(c.elevation(s(55,20)),0);
 });
 test('UI cannot reintroduce the rejected inferred partitions',()=>{
