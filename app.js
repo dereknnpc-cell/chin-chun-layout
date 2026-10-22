@@ -3536,6 +3536,14 @@
     if (!candidate || (!candidate.equipment && !candidate.dimensions)) {
       return { layout: candidate, migrated: false };
     }
+    // The user's original drawing wins over both the rejected A3 trace and
+    // baseline migrations. Recover only from this document's own archive.
+    const buildingRepair=window.ChinChunBuilding?.repair(candidate);
+    if(buildingRepair?.changed || buildingRepair?.blocked)return {
+      layout:buildingRepair.layout,migrated:buildingRepair.changed,
+      buildingRepaired:buildingRepair.changed,buildingBlocked:buildingRepair.blocked
+    };
+    if(window.ChinChunBuilding?.get(candidate))return {layout:candidate,migrated:false};
     if (candidate.source_geometry_revision === SOURCE_GEOMETRY_REVISION) {
       return { layout: candidate, migrated: false };
     }
@@ -3571,6 +3579,7 @@
   // --- State Variables ---
   let layoutData = JSON.parse(JSON.stringify(INITIAL_LAYOUT));
   let sourceGeometryMigrated = false;
+  let buildingRepairedOnLoad = false;
   try {
     const savedLayout = localStorage.getItem(STORAGE_KEY_LAYOUT);
     if (savedLayout) {
@@ -3579,6 +3588,7 @@
         const result = applySourceGeometryRevision(parsed);
         layoutData = result.layout;
         sourceGeometryMigrated = result.migrated;
+        buildingRepairedOnLoad = Boolean(result.buildingRepaired);
       }
     }
   } catch (err) {
@@ -4191,7 +4201,9 @@
         if (geometryResult.migrated || layerLockMigrated) {
           window.setTimeout(() => {
             window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
-            if (geometryResult.migrated) {
+            if (geometryResult.buildingRepaired) {
+              showToast('已從本檔封存還原原繪隔間，外棚邊界依紅線更正；設備未搬動','success');
+            } else if (geometryResult.migrated) {
               showToast("已套用 2026 EPS 精準尺寸、牆面與 152 支柱位", "success");
             } else {
               showToast("柱子圖層已恢復為可編輯；需要時仍可按鎖頭鎖定", "success");
@@ -4219,7 +4231,8 @@
     initializeCloudSync();
 
     setTimeout(() => {
-      showToast("📐 V2.6：已依 2026 Layout for AI.eps 校正設備尺寸、牆面與柱位", "info", 5000);
+      if(buildingRepairedOnLoad)showToast('已還原你原本的牆線與隔間，外棚邊界依紅線更正','success');
+      else if(!window.ChinChunBuilding?.get(layoutData))showToast("📐 V2.6：已依 2026 Layout for AI.eps 校正設備尺寸、牆面與柱位", "info", 5000);
     }, 600);
   }
 
@@ -4698,7 +4711,7 @@
           <line x1="${totalX1}" y1="${OFFSET_Y - 30}" x2="${totalX1}" y2="${dimY2 - 5}" stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="2,2"/>
           <line x1="${totalX2}" y1="${OFFSET_Y - 30}" x2="${totalX2}" y2="${dimY2 - 5}" stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="2,2"/>
           <line x1="${totalX1 + 4}" y1="${dimY2}" x2="${totalX2 - 4}" y2="${dimY2}" stroke="var(--cad-dim-line)" stroke-width="1.5" marker-start="url(#dimArrowStart)" marker-end="url(#dimArrowEnd)"/>
-          <text x="${(totalX1 + totalX2) / 2}" y="${dimY2 - 8}" font-size="13" font-weight="800" fill="var(--cad-dim-text)" text-anchor="middle">${window.ChinChunBuilding?.get(layoutData) ? 'EPS 參考柱網 100.00 M（非 A3 建築外框）' : '廠房總寬度 100.00 M (20 跨 × 5.00 M)'}</text>
+          <text x="${(totalX1 + totalX2) / 2}" y="${dimY2 - 8}" font-size="13" font-weight="800" fill="var(--cad-dim-text)" text-anchor="middle">廠房總寬度 100.00 M (20 跨 × 5.00 M)</text>
         `;
 
         const dimX1 = OFFSET_X - 80;
@@ -5048,24 +5061,26 @@
 
   function refreshBuildingReview() {
     const b=window.ChinChunBuilding?.get(layoutData),thai=document.documentElement.lang.startsWith('th');
+    const blocked=window.ChinChunBuilding?.recoveryProblem(layoutData);
     const button=document.getElementById('btnApplyA3'),panel=document.getElementById('buildingReview');
-    if(button){button.disabled=Boolean(b);button.textContent=b?(thai?'✓ ใช้เกณฑ์อาคาร A3 แล้ว':'✓ 已套用 A3 建築基準'):(thai?'📐 ใช้เกณฑ์อาคาร A3':'📐 套用 A3 建築基準');}
+    if(button){button.disabled=Boolean(b || blocked);button.textContent=b?(thai?'✓ ยึดแปลนเดิมและเส้นแดง':'✓ 原繪隔間／紅線邊界'):(thai?'📐 ใช้ขอบเส้นแดง ไม่เปลี่ยนผนัง':'📐 套用紅線邊界（不動隔間）');}
     if(panel){
-      panel.hidden=!b;
+      panel.hidden=!b && !blocked;
+      const list=document.getElementById('buildingReviewIssues');list.replaceChildren();
+      if(blocked){
+        document.getElementById('buildingReviewSummary').textContent=thai?'⚠ ต้องใช้ไฟล์สำรองเดิมเพื่อกู้ผนัง':'⚠ 原繪隔間待還原';
+        document.getElementById('buildingReviewNote').textContent=thai?'ไม่มีข้อมูลผนังเดิมครบถ้วน ไม่ได้ใช้แปลนตั้งต้นแทน กรุณานำเข้าไฟล์สำรองเดิม':blocked;
+      }
       if(b){
-        const issues=window.ChinChunBuilding.audit(layoutData);
-        document.getElementById('buildingReviewSummary').textContent=thai?`A3 · ${issues.length} รายการรอตรวจ`:`A3 建築校正 · ${issues.length} 項待覆核`;
-        document.getElementById('buildingReviewNote').textContent=thai?'หมุนแปลน 180°; ต่อเติม 10 ม. อยู่ขวา พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ผนังกั้นประมาณจากสัดส่วน เสา EPS คงเดิมไม่ใช่ผลสำรวจ เครื่องและประตูคงตำแหน่ง ต้องตรวจช่องประตูกับผนังใหม่ ผนังเดิมเก็บใน building_geometry.previousMainWalls ของไฟล์สำรอง':'圖面旋轉180°；10米增建在右端。原廠+1.50／外棚+1.00／路面0米。隔間為比例描繪，EPS柱位未重測；設備及門窗保留原位，門窗與新牆的對應仍待覆核。原牆已封存於備份的 building_geometry.previousMainWalls，可用復原回到套用前。';
-        const list=document.getElementById('buildingReviewIssues');list.replaceChildren();
-        for(const issue of issues){
-          const li=document.createElement('li');li.textContent=`${issue.code || issue.id} · ${thai?(issue.kind==='wall'?'ตัดกับผนัง A3':'ข้ามขอบอาคาร A3'):issue.message}`;list.append(li);
-        }
+        document.getElementById('buildingReviewSummary').textContent=thai?'ยึดแปลนเดิม · ขอบตามเส้นแดง':'以你的原繪圖為準 · 紅線邊界';
+        document.getElementById('buildingReviewNote').textContent=thai?'ผนังกั้นใช้แบบเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอก X30–100 ส่วนต่อเติม X90–100 เครื่อง เสา ประตูและทางเดินไม่ย้าย พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกเดิมคงอยู่ ไม่ได้ประมาณใหม่':'廠內牆線與隔間沿用你的原繪圖，不採A3比例描繪。外棚左界X30、右界X100；最新增建X90–100。設備、柱位、門窗與動線未搬動。原廠+1.50／外棚+1.00／路面0米；外棚縱深沿用現值，不另行推算。';
+        if(b.restoration){const li=document.createElement('li');li.textContent=thai?`กู้ผนังเดิม ${b.restoration.restoredWalls} ชิ้น คงผนังอื่น ${b.restoration.retainedWalls} ชิ้น`:`從本檔封存還原 ${b.restoration.restoredWalls} 段原牆；保留其他 ${b.restoration.retainedWalls} 段牆。被撤回的推算牆另行封存，未永久刪除。`;list.append(li);}
       }
     }
     if(currentFloor==='1F'){
       floorIndicatorEl.textContent=b?'1F 原廠 +1.50M / 外棚 +1.00M':'1F 主廠房 (EL.+0.60M)';
-      gridBayInfoEl.textContent=b?'EPS 100×40M 柱網僅參考 · A3隔間待量測':'5.00 m 柱距 · 立柱與牆體自由編輯/移動/刪除';
-      mezzanineStatsEl.textContent=b?'A3 原廠97.80×40.00M · 外棚64.69×19.00M':'廠房總跨度: 100.0 M × 40.0 M';
+      gridBayInfoEl.textContent=b?'以你的原繪牆線、隔間及柱網為準':'5.00 m 柱距 · 立柱與牆體自由編輯/移動/刪除';
+      mezzanineStatsEl.textContent=b?'原廠100×40M · 外棚X30–100／增建X90–100':'廠房總跨度: 100.0 M × 40.0 M';
       const pill=document.querySelector('#btnFloor_1F .floor-elev'),first=layoutData.floors?.find(q=>q.id==='1F');
       if(pill && first){pill.textContent=first.elev;pill.closest('.floor-btn').title=first.desc || '';}
     }
@@ -5073,15 +5088,16 @@
 
   function applyA3Building() {
     if(!window.ChinChunBuilding || window.ChinChunBuilding.get(layoutData))return;
-    if(isLayerLocked('walls'))return showToast('請先解鎖 L1 牆面圖層再套用 A3 建築基準','info',3500);
+    const problem=window.ChinChunBuilding.recoveryProblem(layoutData);
+    if(problem)return showToast(problem,'error');
     const thai=document.documentElement.lang.startsWith('th');
-    if(!confirm(thai?'ใช้แปลน A3 หมุน 180° ต่อเติม 10 ม. อยู่ขวา? เปลี่ยนผนังเดิม 1F เป็นผนังตามสัดส่วน เก็บผนังเก่าในไฟล์สำรอง ย้อนกลับได้ เครื่อง เสา ประตูและทางเดินไม่ย้าย ข้อขัดแย้งต้องตรวจหน้างาน':'套用已確認的 A3（旋轉180°、10米增建在右端）？\n將以 A3 外框及比例描繪隔間替換原廠1F牆線，舊牆封存於備份，可按復原還原。\n設備、門窗、柱位、動線不搬移、不縮放；衝突及門窗對應需現場覆核。'))return;
+    if(!confirm(thai?'ใช้ขอบเส้นแดง X30–100 ต่อเติม X90–100 โดยไม่เปลี่ยนผนังกั้นเดิมหรือย้ายเครื่อง?':'套用紅線邊界：外棚X30–100、增建X90–100？\n廠內隔間以你的原繪圖為準，不重新描繪、不搬動設備。'))return;
     const calibrated=window.ChinChunBuilding.apply(layoutData);
-    pushHistoryState('套用 A3 建築基準（設備不移動）');
+    pushHistoryState('套用紅線邊界（保留原繪隔間）');
     layoutData=calibrated;
     deselectAll();renderFloorSelector();renderSvg();saveToLocalStorage();
     document.getElementById('buildingReview').open=true;
-    showToast(thai?'ใช้เกณฑ์ A3 แล้ว คงตำแหน่งเครื่อง โปรดตรวจรายการขัดแย้ง':'已套用 A3；設備原位保留，請查看建築待覆核清單','success',5000);
+    showToast(thai?'ใช้ขอบเส้นแดงแล้ว คงผนังกั้นเดิมและตำแหน่งเครื่อง':'已依紅線修正外棚邊界；廠內隔間沿用原繪，設備未搬動','success',5000);
   }
 
   function isWallOnActiveFloor(wall) {

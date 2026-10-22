@@ -9,76 +9,114 @@ const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} vs ${b}`);
 const fixture=()=>({source_geometry_revision:'existing-eps',grid:{factory_width:100,factory_depth:40,cols_x:21},
   equipment:[{id:'machine',code:'M1',x:55,y:41,width:3,height:4,rotation:33},{id:'office',code:'OFFICE',category:'Office',x:45,y:30,width:5,height:9}],
   columns:[{id:'user-column',x:100,y:40}],equipment_2f:[{id:'upstairs',x:1,y:1}],flows:[{id:'route',points:[{x:1,y:2},{x:3,y:4}]}],
-  walls:[{id:'old',x1:0,y1:40,x2:100,y2:40},{id:'CNC',x1:81.5,y1:56.5,x2:100.7,y2:56.5},{id:'2F',floor:'2F',x1:0,y1:0,x2:5,y2:0}],
-  floors:[{id:'1F',name:'first'}],title_block:{status:'APPROVED'},layer_settings:{locks:{walls:false}},custom:'retained'});
-
-test('A3 dimension chain, 180 degree placement and right-end extension are exact',()=>{
-  const b=building.reference();near(b.main.width,97.8);near(b.main.height,40);
-  near(b.annex.x,32.82);near(b.annex.width,64.69);near(b.annex.height,19);near(b.annex.axisDepth+b.annex.eave,19);
-  near(b.extension.x,87.51);near(b.extension.x+b.extension.width,b.annex.x+b.annex.width);
-  assert.equal(b.sourceRotation,180);assert.deepEqual(plain(b.extension.axisBays),[5,5]);
-  near(b.roof.x,31.44);near(b.roof.width,66.07);
+  walls:[{id:'old',x1:0,y1:40,x2:100,y2:40,thickness:.32,name:'User custom wall'},
+    {id:'interior',x1:45,y1:30,x2:45,y2:39.6,color:'#123456'},
+    {id:'CNC',x1:81.5,y1:56.5,x2:100.7,y2:56.5},{id:'2F',floor:'2F',x1:0,y1:0,x2:5,y2:0}],
+  floors:[{id:'1F',name:'first'}],title_block:{status:'APPROVED'},layer_settings:{locks:{walls:true}},custom:'retained'});
+function legacy(input=fixture()){
+  const d=plain(input),original=d.walls.slice(0,2);
+  d.walls=[...d.walls.slice(2),{id:'a3_wall_1',source:'A3 L-02',x1:0,y1:0,x2:97.8,y2:0},
+    {id:'a3_wall_2',source:'A3 L-02',x1:55,y1:5,x2:55,y2:20}];
+  d.building_geometry={revision:'a3-180-20261022',previousMainWalls:original,main:{width:97.8},annex:{x:32.82,width:64.69},extension:{x:87.51}};
+  d.grid.factory_width=97.8;return d;
+}
+test('red lines align annex X30..100 and right-end section X90..100, not rejected PDF inference',()=>{
+  const b=building.reference();near(b.main.width,100);near(b.main.height,40);
+  near(b.annex.x,30);near(b.annex.width,70);near(b.annex.x+b.annex.width,100);
+  near(b.extension.x,90);near(b.extension.width,10);near(b.extension.x+b.extension.width,100);
+  near(b.roof.x,30);near(b.roof.width,70);assert.equal(b.partitionAccuracy,'user-drawing');
+  assert.ok(!('sourceRotation' in b));assert.match(b.source,/使用者/);assert.ok(!('partitions' in building));
 });
-test('calibration preserves every equipment field, columns, flows, upper floor and external CNC walls',()=>{
+test('unaffected user drawings retain every wall, equipment field, column, route and upper-floor record',()=>{
   const original=fixture(),before=JSON.stringify(original),result=building.apply(original);
-  assert.equal(JSON.stringify(original),before,'pure input');
-  for(const key of ['equipment','columns','equipment_2f','flows','layer_settings','custom','source_geometry_revision'])assert.deepEqual(plain(result[key]),original[key],key);
-  assert.ok(result.walls.some(q=>q.id==='CNC'));assert.ok(result.walls.some(q=>q.id==='2F'));
-  assert.deepEqual(plain(result.building_geometry.previousMainWalls),[original.walls[0]]);
-  assert.equal(result.grid.cols_x,21);assert.equal(result.grid.factory_width,97.8);
-  assert.ok(!result.title_block.status.includes('APPROVED'));
+  assert.equal(JSON.stringify(original),before);
+  for(const key of ['walls','equipment','columns','equipment_2f','flows','layer_settings','custom','source_geometry_revision'])assert.deepEqual(plain(result[key]),original[key],key);
+  assert.equal(result.grid.cols_x,21);assert.ok(!result.title_block.spec.includes('97.80'));
   result.walls[0].x1=84;result.equipment[0].x=56;const edited=JSON.stringify(result);
-  assert.equal(JSON.stringify(building.apply(result)),edited,'reapply never erases post-calibration edits');
+  assert.equal(JSON.stringify(building.apply(result)),edited,'reapply never erases later edits');
+  assert.equal(building.repair(result).changed,false);
 });
-test('main, annex and road elevations use the same live building record',()=>{
-  const d=building.apply(fixture());assert.equal(building.floorLevel(d,[55,39]),1.5);
-  assert.equal(building.floorLevel(d,[55,41]),1);assert.equal(building.floorLevel(d,[90,58]),1);
-  assert.equal(building.floorLevel(d,[15,45]),0);assert.equal(building.floorLevel(d,[98,58]),0);
-  assert.equal(building.floorLevel({},[55,41]),null);d.building_geometry.annex.rise=NaN;assert.equal(building.get(d),null);
+test('rejected A3 is repaired from its own original-wall archive, never from default geometry',()=>{
+  const d=legacy(),before=JSON.stringify(d),result=building.repair(d);
+  assert.equal(result.changed,true);assert.equal(result.blocked,false);assert.equal(JSON.stringify(d),before);
+  const r=result.layout;assert.equal(r.grid.factory_width,100);
+  for(const w of fixture().walls)assert.deepEqual(plain(r.walls.find(q=>q.id===w.id)),w);
+  assert.ok(!r.walls.some(w=>/^a3_wall_/.test(w.id)));
+  assert.equal(r.building_geometry.restoration.restoredWalls,2);
+  assert.equal(r.building_geometry.restoration.retainedWalls,2);
+  assert.equal(r.building_geometry.rejectedInterpretation.walls.length,2);
+  assert.deepEqual(plain(r.building_geometry.previousMainWalls),fixture().walls.slice(0,2));
+  for(const key of ['equipment','columns','equipment_2f','flows','layer_settings','custom','source_geometry_revision'])assert.deepEqual(plain(r[key]),d[key]);
 });
-test('unmeasured partitions are explicit estimates and rotate once without machine transforms',()=>{
-  const walls=building.partitions();assert.equal(new Set(walls.map(q=>q.id)).size,walls.length);
-  assert.ok(walls.length>40);assert.ok(walls.slice(0,4).every(q=>q.sourceAccuracy==='dimension-chain'));
-  assert.ok(walls.slice(4).every(q=>q.sourceAccuracy==='scaled-trace' && q.description.includes('待現場量測')));
-  const q=walls.find(q=>q.name==='東側原有房間');near(q.x1,87.3);near(q.y1,40);near(q.y2,20);
+test('post-A3 new walls and existing same-ID user edits survive, including their exact fields',()=>{
+  const d=legacy(),newWall={id:'new',x1:2,y1:3,x2:4,y2:3},edited={...fixture().walls[0],x1:1.37};
+  d.walls.push(newWall,edited,{id:'user-copy',source:'A3 L-02',x1:4,y1:5,x2:8,y2:5});
+  const r=building.apply(d);
+  assert.deepEqual(plain(r.walls.find(w=>w.id==='new')),newWall);
+  assert.deepEqual(plain(r.walls.find(w=>w.id==='old')),edited);
+  assert.equal(r.walls.filter(w=>w.id==='old').length,1);assert.ok(r.walls.some(w=>w.id==='user-copy'));
+  assert.deepEqual(plain(r.building_geometry.restoration.keptCurrentIds),['old']);
+  const later=plain(r);later.walls[0].x1=9.2;later.building_geometry.annex.x=31;
+  assert.deepEqual(plain(building.repair(later).layout),later,'no repeated correction overwrites');
 });
-test('conflicts flag crossing and contained walls plus annex boundary without moving any equipment',()=>{
-  const d=building.apply(fixture());d.equipment=[{id:'m',code:'M1',x:50,y:20,width:5,height:5},
-    {id:'room',code:'CNC Room',is_room:true,x:81.5,y:56.5,width:19.72,height:10.12},
-    {id:'door',category:'Door',x:50,y:20,width:5,height:5}];
-  d.walls=[{id:'short',source:'A3 L-02',x1:51,y1:21,x2:52,y2:22}];
-  const before=JSON.stringify(d),issues=building.audit(d);assert.equal(issues.length,2);
-  assert.deepEqual(plain(issues[0].walls),['short']);assert.equal(issues[1].kind,'annex-boundary');
-  assert.equal(JSON.stringify(d),before);
-  d.equipment[0].rotation=45;assert.ok(building.audit(d).some(q=>q.id==='m'));
+test('missing, malformed or duplicate archive blocks ALL repair and never substitutes baseline walls',()=>{
+  for(const archive of [undefined,null,{},[{id:'bad',x1:NaN,y1:0,x2:1,y2:0}],
+    [fixture().walls[0],fixture().walls[0]]]){
+    const d=legacy();d.building_geometry.previousMainWalls=archive;
+    const before=JSON.stringify(d),result=building.repair(d);
+    assert.equal(result.changed,false);assert.equal(result.blocked,true);assert.equal(result.layout,d);
+    assert.equal(JSON.stringify(d),before);assert.throws(()=>building.apply(d));assert.ok(result.reason);
+  }
+  const d=legacy();d.building_geometry.previousMainWalls=[];assert.equal(building.repair(d).changed,true,'empty original document is valid');
 });
-test('2D reference overlay is non-interactive, bilingual and escapes conflict identifiers',()=>{
-  const d=building.apply(fixture());d.equipment=[{id:'x" onload="bad',x:50,y:20,width:5,height:5}];
-  d.walls=[{source:'A3 L-02',x1:51,y1:21,x2:52,y2:22}];
-  const svg=building.svg(d,24,{x:100,y:200},true);
-  assert.match(svg,/pointer-events="none"/);assert.match(svg,/最新增建/);assert.match(svg,/&quot;/);assert.ok(!svg.includes(' onload="'));
-  assert.ok(!svg.includes('NaN'));assert.match(building.svg(d,24,{x:100,y:200},true,true),/ส่วนต่อเติม/);
+test('local/cloud/import common loader repairs original walls before any EPS baseline migration',()=>{
+  const app=fs.readFileSync(require.resolve('../app.js'),'utf8');
+  const section=app.slice(app.indexOf('  function applySourceGeometryRevision('),app.indexOf('  // --- State Variables ---'));
+  const c={window:{ChinChunBuilding:building},SOURCE_GEOMETRY_REVISION:'new-eps',INITIAL_LAYOUT:{equipment:[],walls:[{id:'NOT_USER'}]},BASELINE_EQUIPMENT_IDS:new Set()};
+  vm.createContext(c);vm.runInContext(section,c);
+  const repaired=c.applySourceGeometryRevision(legacy());assert.equal(repaired.buildingRepaired,true);
+  assert.deepEqual(plain(repaired.layout.equipment),fixture().equipment);
+  assert.ok(repaired.layout.walls.some(w=>w.id==='interior'));assert.ok(!repaired.layout.walls.some(w=>w.id==='NOT_USER'));
+  const current=building.apply(fixture());assert.equal(c.applySourceGeometryRevision(current).layout,current);
+  const broken=legacy();delete broken.building_geometry.previousMainWalls;
+  const blocked=c.applySourceGeometryRevision(broken);assert.equal(blocked.buildingBlocked,true);assert.equal(blocked.layout,broken);
+  assert.ok((app.match(/applySourceGeometryRevision\(/g) || []).length>=4,'shared by local, cloud, JSON import');
 });
-test('2.5D structural depiction uses absolute floor levels; roof is opt-in and data is immutable',()=>{
+test('main/annex/road elevations follow the corrected live boundaries',()=>{
+  const d=building.apply(fixture());assert.equal(building.floorLevel(d,[99,39]),1.5);
+  assert.equal(building.floorLevel(d,[30.5,41]),1);assert.equal(building.floorLevel(d,[99.5,58]),1);
+  assert.equal(building.floorLevel(d,[29,45]),0);assert.equal(building.floorLevel(d,[101,58]),0);
+  assert.equal(building.floorLevel({},[55,41]),null);assert.equal(building.get(legacy()),null);
+  d.building_geometry.annex.rise=NaN;assert.equal(building.get(d),null);
+});
+test('2D overlay shows user drawing and red-line bounds without false A3 conflict circles',()=>{
+  const d=building.apply(fixture()),svg=building.svg(d,24,{x:100,y:200},true);
+  assert.match(svg,/pointer-events="none"/);assert.match(svg,/原繪圖/);assert.match(svg,/紅線邊界/);assert.match(svg,/X=30–100/);
+  assert.ok(!svg.includes('97.80'));assert.ok(!svg.includes('64.69'));assert.ok(!svg.includes('data-conflict-id'));
+  assert.ok(!svg.includes('NaN'));assert.match(building.svg(d,24,{x:100,y:200},true,true),/เส้นแดง/);
+  assert.equal(building.audit(d).length,0);
+});
+test('2.5D roof and frame use the same corrected bounds and never mutate layout',()=>{
   const d=building.apply(fixture()),before=JSON.stringify(d),open=building.frameFaces(d),roof=building.frameFaces(d,true);
-  assert.ok(open.length>50);assert.ok(!open.some(f=>f.part==='canopy-roof'));assert.ok(roof.some(f=>f.part==='canopy-roof'));
-  for(const f of roof)for(const p of f.points)assert.ok(p.every(Number.isFinite));
+  assert.ok(open.length>50);assert.ok(!open.some(f=>f.part==='canopy-roof'));
+  const points=roof.filter(f=>f.part==='canopy-roof').flatMap(f=>f.points);
+  near(Math.min(...points.map(p=>p[0])),30);near(Math.max(...points.map(p=>p[0])),100);
   near(Math.min(...open.flatMap(f=>f.points.map(p=>p[2]))),1);
   assert.ok(open.some(f=>f.color==='#32984b' && f.points.some(p=>Math.abs(p[2]-5.6)<1e-8)));
   assert.equal(JSON.stringify(d),before);
 });
-test('twin elevations follow calibrated A3 and fall back safely for older layouts',()=>{
+test('twin elevations follow corrected boundaries and fall back safely for older layouts',()=>{
   const twin=fs.readFileSync(require.resolve('../digital-twin.js'),'utf8');
   const section=twin.slice(twin.indexOf('  const elevation ='),twin.indexOf('  function localize()'));
   const c={window:{ChinChunBuilding:building},data:building.apply(fixture()),floor:'1F',isRamp:()=>false,inFactory:p=>p[1]<=40,isOfficeEntry:()=>false,factoryRise:1.5,dieGround:null};
   vm.createContext(c);vm.runInContext(section.replace('const elevation =','var elevation ='),c);
   const s=(x,y)=>({item:{id:'m'},type:'equipment',points:[[x,y],[x+1,y],[x+1,y+1],[x,y+1]]});
-  assert.equal(c.elevation(s(55,42)),1);assert.equal(c.elevation(s(55,20)),1.5);assert.equal(c.elevation(s(10,42)),0);
+  assert.equal(c.elevation(s(30,42)),1);assert.equal(c.elevation(s(98,20)),1.5);assert.equal(c.elevation(s(10,42)),0);
   c.data={};assert.equal(c.elevation(s(55,42)),0);c.floor='2F';assert.equal(c.elevation(s(55,20)),0);
 });
-test('build and UI include the A3 module, reversible explicit application and non-intercepting roof',()=>{
-  const app=fs.readFileSync(require.resolve('../app.js'),'utf8'),html=fs.readFileSync(require.resolve('../index.html'),'utf8'),twin=fs.readFileSync(require.resolve('../digital-twin.js'),'utf8');
-  assert.ok(html.indexOf('src="building-geometry.js')<html.indexOf('src="digital-twin.js'));
-  assert.match(app,/pushHistoryState\('套用 A3/);assert.match(app,/const calibrated=window.ChinChunBuilding.apply\(layoutData\)/);
-  assert.match(twin,/nonInteractive:true/);assert.match(twin,/faces.filter\(f=>!f.nonInteractive\)/);
+test('UI cannot reintroduce the rejected inferred partitions',()=>{
+  const app=fs.readFileSync(require.resolve('../app.js'),'utf8'),html=fs.readFileSync(require.resolve('../index.html'),'utf8');
+  assert.match(app,/pushHistoryState\('套用紅線邊界/);assert.match(html,/套用紅線邊界（不動隔間）/);
+  assert.ok(!html.includes('套用 A3 建築基準'));assert.ok(!app.includes('97.80×40.00M'));
+  assert.ok(!source.includes("['東側原有房間'"));
 });

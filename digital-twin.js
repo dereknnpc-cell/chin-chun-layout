@@ -69,8 +69,8 @@
     updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', a1Photo:'วาด A1-1 ใหม่จากภาพล่าสุด: ป้อนวัสดุจากสายพานสีเขียวด้านขวา ผ่านลูกกลิ้งและดรัมใหญ่ที่อยู่ค่อนไปทางขวา แล้วแผ่นวัสดุลาดไปยังลูกกลิ้งรับงานด้านซ้าย ทิศทางยืนยันแล้ว แต่ขนาดและความสูงยังเป็นการประมาณจากภาพ', a1Entrance:'ป้อนเข้า (สายพานสีเขียว)', a1Collection:'รับงาน (ลูกกลิ้งสีเงิน)', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นทางเข้าสำนักงานยึดตำแหน่ง DOOR-1800; ความสูงเป็นภาพจำลองจากรูปถ่าย ต้องวัดจริง', dockSite:'ท่าโหลดฝั่งตะวันตกจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
   };
   zh.buildingRoof='外棚屋頂';th.buildingRoof='หลังคาอาคารต่อเติม';
-  zh.buildingNote='A3 建築基準旋轉180°；10米最新增建在右端。地坪：原廠+1.50／外棚+1.00／路面0米。隔間按圖比例描繪、EPS柱位保留作參考，待現場覆核；棚架與屋頂為外觀示意，非結構施工圖。';
-  th.buildingNote='เกณฑ์ A3 หมุน 180° ส่วนต่อเติมล่าสุด 10 ม. อยู่ขวา ระดับเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ผนังกั้นประมาณจากสัดส่วน เสา EPS เป็นข้อมูลอ้างอิง ต้องตรวจหน้างาน โครงและหลังคาเป็นภาพประกอบ ไม่ใช่แบบโครงสร้าง';
+  zh.buildingNote='以使用者原繪圖為準：廠內隔間、牆線及柱位不採A3比例描繪。外棚邊界依紅線X30–100，最新增建X90–100。2D與2.5D共用資料，設備未搬動。地坪：原廠+1.50／外棚+1.00／路面0米；外棚縱深、棚高沿用示意值，未另行推算。';
+  th.buildingNote='ยึดแปลนเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอกตามเส้นแดง X30–100 ส่วนต่อเติม X90–100 ใช้ข้อมูลเดียวกับ 2D ไม่ย้ายเครื่อง พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกและความสูงโครงคงค่าภาพประกอบเดิม ไม่ประมาณใหม่';
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
   const n = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
   const isRamp = item => /^RAMP(?:-|$)/i.test(String(item?.code || ''));
@@ -712,9 +712,6 @@
     if(building){
       dialog.querySelector('[data-twin-text="note"]').textContent=t('buildingNote');
       if(!item)dialog.querySelector('#twinDetails').textContent+='\n'+t('buildingNote');
-      const conflicts=window.ChinChunBuilding.audit(data).filter(q=>q.id===item?.id);
-      if(conflicts.length)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+(document.documentElement.lang.startsWith('th')?'ขัดกับผนังหรือขอบอาคาร A3 คงตำแหน่ง รอตรวจหน้างาน':'與 A3 牆線或建築邊界衝突；原位保留，待現場覆核');
-      if(item?.sourceAccuracy==='scaled-trace')dialog.querySelector('#twinDetails').textContent+='\n'+(document.documentElement.lang.startsWith('th')?'ผนังกั้นประมาณจากสัดส่วน รอวัดจริง':'A3 隔間按比例描繪；未標尺寸，待現場量測');
     }else dialog.querySelector('[data-twin-text="note"]').textContent=t('note');
     dialog.querySelector('#twinEdit').hidden=!s;
     dialog.querySelector('#twinFocus').hidden=!s;
