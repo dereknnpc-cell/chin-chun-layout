@@ -5,7 +5,103 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
+  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item));
+  // Site relationship is a display overlay derived from live 2D, not another
+  // equipment record or a mutation of the wall. Dimensions remain provisional.
+  function dieCutSite(layout) {
+    const item=(layout.equipment || []).find(q=>modelCode(q)==='DIE CUT');
+    if(!item || (item.floor || '1F')!=='1F')return null;
+    const w=Number(item.width),h=Number(item.height),x=Number(item.x),y=Number(item.y);
+    if(![w,h,x,y].every(Number.isFinite) || w<=0 || h<=0)return null;
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const point=(u,v)=>[x+w/2+(u-w/2)*c-(v-h/2)*s,y+h/2+(u-w/2)*s+(v-h/2)*c];
+    const footprint=[[0,0],[w,0],[w,h],[0,h]].map(p=>point(...p));
+    const out=point(w/2,0),feed=point(w/2,h),boundary=Number(layout.grid?.factory_depth)||40;
+    // Never invent a connection if moved inside, turned away, or far from the wall.
+    if(c<.85 || Math.min(...footprint.map(p=>p[1]))<=boundary+.1)return null;
+    const travel=(out[1]-boundary)/c;
+    if(travel<0 || travel>3)return null;
+    const cx=out[0]+s*travel,openingWidth=w*.70,lo=cx-openingWidth/2,hi=cx+openingWidth/2;
+    const wall=(layout.walls || []).find(q=>(q.floor || '1F')==='1F' && Math.abs(Number(q.y1)-boundary)<.05 && Math.abs(Number(q.y2)-boundary)<.05 && Math.min(q.x1,q.x2)<=lo && Math.max(q.x1,q.x2)>=hi);
+    const l41=(layout.equipment || []).find(q=>modelCode(q)==='L4-1');
+    if(!wall || !l41 || hi>=Number(l41.x)-.1)return null;
+    const collection={x:lo-.15,y:boundary-2.5,width:openingWidth+.3,height:2.2};
+    const table={x:lo+.05,y:boundary-.85,width:openingWidth-.1,height:out[1]-boundary+.88};
+    const pad={x:Math.min(lo-.35,...footprint.map(p=>p[0]))-.1,y:boundary+.11,
+      width:Math.max(hi+.35,...footprint.map(p=>p[0]))-Math.min(lo-.35,...footprint.map(p=>p[0]))+.2,
+      height:Math.max(...footprint.map(p=>p[1]))-boundary+.25};
+    return {item,wall,footprint,out,feed,opening:{x:lo,y:boundary,width:openingWidth,sill:.35,top:1.6},collection,table,pad,
+      // Owner confirmed this filled extension is only 0.5 m below the main floor.
+      insideRise:1.5,outsideRise:1.0,beltHeight:1.0};
+  }
+  function dieCutSiteFaces(site) {
+    const faces=[];
+    const box=(x,y,z,w,d,h,color,part)=>{
+      const p=[[x,y,z],[x+w,y,z],[x+w,y+d,z],[x,y+d,z],[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])faces.push({points:ids.map(i=>p[i]),color,part});
+    };
+    const p=site.pad,t=site.table;
+    box(p.x,p.y,0,p.width,p.height,site.outsideRise,'#9caa91','filled-ground');
+    const r=site.collection;
+    for(const y of [r.y,r.y+r.height-.025])box(r.x,y,site.insideRise+.005,r.width,.025,.015,'#229d80','collection-zone');
+    for(const x of [r.x,r.x+r.width-.025])box(x,r.y,site.insideRise+.005,.025,r.height,.015,'#229d80','collection-zone');
+    box(t.x,t.y,1.96,t.width,t.height,.04,'#a47c54','collection-table');
+    for(const x of [t.x+.06,t.x+t.width-.12])for(const y of [t.y+.05,t.y+t.height-.12]){
+      const base=y<site.opening.y?site.insideRise:site.outsideRise;
+      box(x,y,base,.06,.06,1.96-base,'#aab7b3','collection-table-leg');
+    }
+    return faces;
+  }
+  function buildDieCut(item) {
+    const faces=[],cream='#e4e3d5',steel='#b9c9c8',dark='#3e4b50',green='#16836d',yellow='#e8b831';
+    const w=Math.max(.05,Number(item.width)||3.25),h=Math.max(.05,Number(item.height)||3);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{const u=x/3.25*w-w/2,v=y/3*h-h/2;return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+h/2+u*s+v*c,z];};
+    function box(x,y,z,bw,bd,bh,color=cream,part='frame') {
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])faces.push({points:ids.map(i=>world(p[i])),color,part});
+    }
+    function roller(x,y,z,length,r,color=steel,part='roller') {
+      const rings=[x,x+length].map(v=>Array.from({length:16},(_,i)=>world([v,y+r*Math.cos(i*Math.PI/8),z+r*Math.sin(i*Math.PI/8)])));
+      faces.push({points:[...rings[0]].reverse(),color,part},{points:rings[1],color,part});
+      rings[0].forEach((p,i)=>{const j=(i+1)%16;faces.push({points:[p,rings[0][j],rings[1][j],rings[1][i]],color,part});});
+    }
+    // Local top is discharge toward the original building; bottom is extension feed.
+    box(.37,.08,.88,2.45,2.77,.10,cream,'conveyor-frame');
+    box(.48,.08,.98,2.22,2.72,.025,green,'green-belt');
+    for(const x of [.39,2.72])for(const y of [.14,2.66])box(x,y,0,.08,.10,.88,steel,'conveyor-leg');
+    for(const x of [.39,2.72])box(x,.16,.22,.07,2.60,.07,cream);
+    // Full-height cheeks, open working throat, open-top housing and exposed ribs.
+    for(const x of [.34,2.70]) {
+      box(x,1.12,0,.19,.76,2.34,cream,'press-cheek');
+      box(x-.01,1.13,.55,.21,.73,1.30,dark,'dark-side-cover');
+    }
+    box(.34,1.12,1.58,2.55,.12,.76,cream,'open-top-housing');
+    box(.34,1.77,1.58,2.55,.12,.76,cream,'open-top-housing');
+    for(const x of [.74,1.36,1.98,2.58])box(x,1.24,1.94,.035,.53,.22,steel,'housing-rib');
+    for(const x of [1.00,2.03])box(x,1.37,2.10,.36,.28,.15,dark,'drive-motor');
+    box(.53,1.16,.22,2.17,.60,.32,cream,'press-base');
+    box(.53,1.16,1.13,2.17,.60,.20,'#a64b37','press-crossbeam');
+    box(.53,1.13,1.03,2.17,.65,.10,yellow,'press-platen');
+    for(const y of [1.04,1.95])roller(.51,y,1.54,2.20,.024,steel,'actuator-rail');
+    for(const x of [.72,1.54,2.35]) {
+      box(x,1.92,1.28,.10,.09,.36,steel,'actuator');
+      box(x+.035,1.91,1.07,.03,.10,.24,dark,'actuator-rod');
+    }
+    // Yellow mesh guards are permanent equipment, not surrounding stored material.
+    for(const x of [.34,2.80])for(const [y,d] of [[.08,1.00],[1.93,.88]]){
+      for(const z of [1.02,1.57])box(x,y,z,.035,d,.035,yellow,'safety-guard');
+      for(const yy of [y,y+d-.035])box(x,yy,1.02,.035,.035,.585,yellow,'safety-guard');
+      for(let yy=y+.1;yy<y+d-.03;yy+=.1)box(x,yy,1.06,.013,.012,.50,yellow,'guard-mesh');
+      for(let z=1.15;z<1.55;z+=.1)box(x,y,z,.013,d,.012,yellow,'guard-mesh');
+    }
+    for(const y of [2.86,2.95])roller(.36,y,.96,2.47,.022,steel,'feed-guide');
+    box(.01,1.13,0,.29,.66,1.63,cream,'control-cabinet');
+    box(.015,1.115,1.07,.27,.016,.44,'#398f91','control-panel');
+    box(.05,1.095,1.22,.20,.016,.22,'#253e46','touchscreen');
+    box(.05,1.09,.94,.045,.03,.045,'#b6412c','emergency-stop');
+    return faces;
+  }
   function restroomLayout(item) {
     const width=Math.max(.2,Number(item.width)||5),height=Math.max(.2,Number(item.height)||5);
     const wall=Math.min(.15,width*.03,height*.03),doorWidth=Math.min(.9,height-2*wall);
@@ -1310,6 +1406,7 @@
   }
   function build(item) {
     switch(modelCode(item)) {
+      case 'DIE CUT': return buildDieCut(item);
       case 'WC-STALLS': return buildRestroom(item);
       case 'H1-1': return buildH1(item);
       case 'A1-1': return buildA1(item);
@@ -1330,5 +1427,5 @@
       default: return null;
     }
   }
-  window.ChinChunModels = {matches,build,rotationOffset,referenceCode:modelCode,sectionMarkers,restroomLayout};
+  window.ChinChunModels = {matches,build,rotationOffset,referenceCode:modelCode,sectionMarkers,restroomLayout,dieCutSite,dieCutSiteFaces};
 })();

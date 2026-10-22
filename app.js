@@ -4955,6 +4955,7 @@
       eq1List.forEach(eq => {
         html += renderSingleItemSvg(eq, "1F", isOverlay ? "0.38" : "1.0");
       });
+      html += renderDieCutSiteSvg(layoutData);
     }
 
     // 2F Equipment & Components
@@ -5141,6 +5142,23 @@
   // --- Specialized Architectural Component SVG Renderer ---
   function escapeEquipmentText(value) {
     return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"})[c]);
+  }
+
+  function renderDieCutSiteSvg(layout) {
+    const site=window.ChinChunModels?.dieCutSite?.(layout);
+    if(!site)return '';
+    const {opening:o,collection:r,out,feed}=site;
+    const a=metersToSvg(r.x,r.y),b=metersToSvg(o.x,o.y),p=metersToSvg(...out),q=metersToSvg(...feed);
+    const thai=document.documentElement.lang.startsWith('th');
+    return `<g id="dieCutSiteOverlay" pointer-events="none" data-height-difference="0.5">
+      <rect x="${a.x}" y="${a.y}" width="${r.width*SCALE}" height="${r.height*SCALE}" fill="#10b981" fill-opacity="0.10" stroke="#059669" stroke-width="1.4" stroke-dasharray="4,3"/>
+      <text x="${a.x+r.width*SCALE/2}" y="${a.y+14}" font-size="8" font-weight="700" fill="#047857" text-anchor="middle">${thai?'พื้นที่รับงาน Die Cut':'Die Cut 出料收集區'}</text>
+      <line data-site-part="wall-opening" x1="${b.x}" y1="${b.y}" x2="${b.x+o.width*SCALE}" y2="${b.y}" stroke="#f59e0b" stroke-width="6"/>
+      <text x="${b.x+o.width*SCALE/2}" y="${b.y-6}" font-size="7" fill="#a16207" text-anchor="middle">${thai?'ช่องส่งงาน (ประมาณ)':'出料牆洞（示意）'}</text>
+      <path d="M ${q.x} ${q.y-5} L ${p.x} ${p.y} L ${b.x+o.width*SCALE/2} ${b.y-12}" fill="none" stroke="#059669" stroke-width="1.6" stroke-dasharray="4,3"/>
+      <path d="M ${b.x+o.width*SCALE/2-4} ${b.y-6} L ${b.x+o.width*SCALE/2} ${b.y-12} L ${b.x+o.width*SCALE/2+4} ${b.y-6}" fill="none" stroke="#059669" stroke-width="1.6"/>
+      <text x="${q.x}" y="${q.y+10}" font-size="7" fill="#047857" text-anchor="middle">${thai?'ป้อนเข้า · พื้นต่าง 0.5 ม.':'擴建區入料 · 高差 0.5 m'}</text>
+    </g>`;
   }
 
   function renderRestroomSvg(eq, pos) {

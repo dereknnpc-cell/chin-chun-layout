@@ -13,7 +13,12 @@
   let gesture = null;
   let detail = false;
   let restroomCutaway = true;
+  let dieSite = null;
+  let dieGround = null;
   const zh = {
+    dieCutPhoto:'Die Cut（未編號）：機身與入料端全部在下方擴建區，不進入原建物；出料經原建物牆洞，送至 L4-1 左方收集區。此段已填高，室內比擴建區高 0.50 m（已確認），不套用其他區域的 1.5 m 高差。模型依八張照片示意，綠色帶面、白色壓床、深灰側罩、黃色護網與側控制櫃隨 2D 位置、占地及旋轉聯動。牆洞、收集桌、局部填高範圍及機高約 2.34 m 為示意，待量測；桌子不算機身。',
+    dieCutDisconnected:'目前 2D 位置／方向與原建物牆面或 L4-1 左側不匹配，已停用穿牆連接示意，請回 2D 核對。',
+    dieCutFeed:'擴建區入料',dieCutCollect:'原建物收集區 · L4-1 左方',dieCutOpening:'出料牆洞（示意）',dieCutLevel:'局部填高 · 高差 0.50 m',
     restroomCutaway:'外牆剖視',
     restroomNote:'廁所：四面牆，左牆中央單開門（暫按 0.90 m、向內開示意）；上方左牆有兩個小便斗，右側為三間各自有門的馬桶間，下方洗手台長 2.00 m。位置、占地及角度跟隨 2D。外牆剖視僅隱藏外牆與隔間上段以查看內部，可關閉查看完整四面牆；牆高暫以 2.4 m、隔間 1.8 m 示意，開門方向與未提供的部件尺寸待確認。',
     restroomCompact:'目前占地較小，無法按一般使用尺度完整容納此配置；此為位置示意，請核對實際廁所長寬。',
@@ -32,11 +37,14 @@
     f1Photo:'F1-1：捲料軸位於平面圖右端，最高約 2.8 m（已確認）。僅顯示機台結構，不含泡棉材料。橘紅護欄、上層走台、直梯與滾輪依六張照片建模；其餘尺寸為照片估算。',
     title:'廠房數位孿生', close:'返回平面圖', floor:'樓層', fit:'全覽', rotate:'右轉90°', orbitLeft:'左轉90°', tiltUp:'俯視＋', tiltDown:'俯視−', resetView:'重設視角', cameraAngle:'水平', cameraPitch:'俯仰', labels:'設備標籤',
     select:'選取物件', all:'選擇設備／柱子／牆面', empty:'點選場景中的物件，查看尺寸與位置。', edit:'在平面圖編輯',
-    note:'2D 為主、配置同步 · 視角操作不改動機台尺寸或方向 · 廠內外高差約 1.5 m · 未接入即時機台訊號', help:'拖曳平移 · 滾動縮放 · ⌘／Shift＋滾動：左右旋轉 · ⌥＋滾動：上下俯仰 · 方向鍵：左右旋轉／上下俯仰 · 0 重設視角 · Esc 返回',
+    note:'2D 為主、配置同步 · 視角操作不改動機台尺寸或方向 · 一般廠內外高差約 1.5 m（局部例外詳設備） · 未接入即時機台訊號', help:'拖曳平移 · 滾動縮放 · ⌘／Shift＋滾動：左右旋轉 · ⌥＋滾動：上下俯仰 · 方向鍵：左右旋轉／上下俯仰 · 0 重設視角 · Esc 返回',
     equipment:'設備', column:'柱子', wall:'牆面', aisle:'走道', zone:'夾層區域', size:'平面尺寸', position:'座標', rotation:'角度', count:'物件',
     updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'烘箱頂部 2.40 m（已確認）\n平面圖左側收料、右側入料\n其餘部件比例為照片估算', a1Photo:'A1-1 依新照片重畫：右端綠色輸送帶入料，經加工滾輪與靠右的大輪，帶材斜向左端取料滾輪。方向已確認；部件尺寸與高度仍是照片估算。', a1Entrance:'入料（綠色輸送帶）', a1Collection:'取料（銀色滾輪）', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
   };
   const th = {
+    dieCutPhoto:'Die Cut (ยังไม่มีหมายเลข): ตัวเครื่องและจุดป้อนอยู่ในอาคารต่อเติมด้านล่างทั้งหมด ไม่เข้าอาคารเดิม ส่งงานผ่านช่องผนังไปยังพื้นที่รับงานด้านซ้ายของ L4-1 บริเวณนี้ถมพื้นแล้ว ต่างระดับเพียง 0.50 ม. (ยืนยันแล้ว) ไม่ใช้ระดับต่าง 1.5 ม. ของบริเวณอื่น จำลองจากภาพ 8 ภาพ มีสายพานเขียว เครื่องกดขาว ฝาข้างเทาเข้ม รั้วเหลืองและตู้ควบคุม ตามตำแหน่ง ขนาดฐานและมุมใน 2D ขนาดช่อง โต๊ะ พื้นถมเฉพาะจุดและความสูงเครื่องประมาณ 2.34 ม. เป็นภาพประมาณ รอวัดจริง โต๊ะไม่ใช่ตัวเครื่อง',
+    dieCutDisconnected:'ตำแหน่ง/ทิศใน 2D ไม่ตรงกับผนังหรือพื้นที่ซ้ายของ L4-1 จึงไม่แสดงการเชื่อมผ่านผนัง กรุณาตรวจแปลน 2D',
+    dieCutFeed:'ป้อนเข้าในอาคารต่อเติม',dieCutCollect:'พื้นที่รับงานในอาคารเดิม · ซ้าย L4-1',dieCutOpening:'ช่องส่งงาน (ประมาณ)',dieCutLevel:'พื้นถมเฉพาะจุด · ต่าง 0.50 ม.',
     restroomCutaway:'ตัดผนังดูภายใน',
     restroomNote:'ห้องน้ำ: มีผนังสี่ด้าน ประตูบานเดี่ยวกลางผนังซ้าย (สมมติ 0.90 ม. เปิดเข้า) ด้านบนชิดผนังซ้ายมีโถปัสสาวะ 2 ใบ ด้านขวาเป็นห้องส้วมแยก 3 ห้อง แต่ละห้องมีประตู ด้านล่างเป็นอ่างล้างมือยาว 2.00 ม. ตำแหน่ง ขนาดพื้นที่และมุมตามแปลน 2D โหมดตัดผนังซ่อนเฉพาะส่วนบนเพื่อดูภายใน ปิดโหมดเพื่อดูผนังครบสี่ด้าน ความสูงผนังสมมติ 2.4 ม. และผนังกั้น 1.8 ม.; ทิศเปิดประตูและขนาดส่วนที่ไม่ได้ระบุต้องยืนยัน',
     restroomCompact:'พื้นที่ปัจจุบันเล็กเกินกว่าจะจัดทั้งหมดตามขนาดใช้งานทั่วไป ภาพแสดงตำแหน่งเท่านั้น กรุณาตรวจสอบขนาดห้องน้ำจริง',
@@ -55,7 +63,7 @@
     f1Photo:'F1-1: แกนม้วนอยู่ปลายขวาของแปลน สูงสุดประมาณ 2.8 ม. (ยืนยันแล้ว) แสดงเฉพาะโครงสร้างเครื่อง ไม่รวมวัสดุโฟม ราวสีส้ม ทางเดินด้านบน บันไดและลูกกลิ้งจำลองจากภาพ 6 ภาพ ขนาดส่วนอื่นประมาณจากภาพ',
     title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'ขวา90°', orbitLeft:'ซ้าย90°', tiltUp:'มุมก้ม＋', tiltDown:'มุมก้ม−', resetView:'คืนมุมมอง', cameraAngle:'แนวราบ', cameraPitch:'มุมก้ม', labels:'ป้ายอุปกรณ์',
     select:'เลือกวัตถุ', all:'เลือกอุปกรณ์ / เสา / ผนัง', empty:'คลิกวัตถุเพื่อดูขนาดและตำแหน่ง', edit:'แก้ไขในแปลน',
-    note:'ยึดแปลน 2D · กล้องไม่เปลี่ยนขนาดหรือทิศเครื่อง · พื้นในสูงกว่าภายนอกประมาณ 1.5 ม. · ยังไม่มีสัญญาณเครื่องสด', help:'ลากเลื่อน · ล้อซูม · ⌘/Shift＋เลื่อน: หมุนซ้ายขวา · ⌥＋เลื่อน: ปรับมุมก้ม · ลูกศร: ซ้ายขวาหมุน/ขึ้นลงปรับมุม · 0 คืนมุมมอง · Esc กลับ',
+    note:'ยึดแปลน 2D · กล้องไม่เปลี่ยนขนาดหรือทิศเครื่อง · ต่างระดับทั่วไปประมาณ 1.5 ม. (ข้อยกเว้นดูรายละเอียดเครื่อง) · ยังไม่มีสัญญาณเครื่องสด', help:'ลากเลื่อน · ล้อซูม · ⌘/Shift＋เลื่อน: หมุนซ้ายขวา · ⌥＋เลื่อน: ปรับมุมก้ม · ลูกศร: ซ้ายขวาหมุน/ขึ้นลงปรับมุม · 0 คืนมุมมอง · Esc กลับ',
     equipment:'อุปกรณ์', column:'เสา', wall:'ผนัง', aisle:'ทางเดิน', zone:'พื้นที่ชั้นลอย', size:'ขนาดแปลน', position:'พิกัด', rotation:'มุม', count:'วัตถุ',
     updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', a1Photo:'วาด A1-1 ใหม่จากภาพล่าสุด: ป้อนวัสดุจากสายพานสีเขียวด้านขวา ผ่านลูกกลิ้งและดรัมใหญ่ที่อยู่ค่อนไปทางขวา แล้วแผ่นวัสดุลาดไปยังลูกกลิ้งรับงานด้านซ้าย ทิศทางยืนยันแล้ว แต่ขนาดและความสูงยังเป็นการประมาณจากภาพ', a1Entrance:'ป้อนเข้า (สายพานสีเขียว)', a1Collection:'รับงาน (ลูกกลิ้งสีเงิน)', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นทางเข้าสำนักงานยึดตำแหน่ง DOOR-1800; ความสูงเป็นภาพจำลองจากรูปถ่าย ต้องวัดจริง', dockSite:'ท่าโหลดฝั่งตะวันตกจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
   };
@@ -67,6 +75,8 @@
   const inFactory = p => p[0]>=0 && p[0]<=n(data?.grid?.factory_width,100) && p[1]>=0 && p[1]<=n(data?.grid?.factory_depth,40);
   const elevation = s => {
     if(floor!=='1F' || isRamp(s.item))return 0;
+    if(s.type==='site')return 0;
+    if(dieGround && s.item.id===dieGround.item.id && s.type==='equipment')return dieGround.outsideRise;
     const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
     return (inFactory(center) || isOfficeEntry(s.item) && center[0]>=0 && center[0]<=n(data?.grid?.factory_width,100) && center[1]>=-.5 && center[1]<=n(data?.grid?.factory_depth,40)+.5) ? factoryRise : 0;
   };
@@ -84,6 +94,10 @@
     fitExtent=null;
     dialog.querySelector('#twinFloor').value=floor;
     scene = [];
+    dieSite=floor==='1F'?window.ChinChunModels?.dieCutSite?.(data):null;
+    // Camera/equipment rotation must not change the local ground level. A
+    // disconnected orientation hides the material connection, not the fill.
+    dieGround=dieSite || (floor==='1F'?window.ChinChunModels?.dieCutSite?.({...data,equipment:(data.equipment || []).map(q=>referenceCode(q)==='DIE CUT'?{...q,rotation:0}:q)}):null);
     const add = (item,type,points,z,color) => scene.push({item,type,points,z,color,model:type==='equipment'?window.ChinChunModels?.build(item):null});
     if(floor==='2F') (data.mezzanine_2f?.zones || []).forEach(item=>add(item,'zone',rect(item),.04,'#91afac'));
     (floor==='2F' ? data.equipment_2f || [] : data.equipment || []).forEach(item => {
@@ -119,6 +133,8 @@
             cuts.push([(Math.min(...xs)-n(item.x1))/dx,(Math.max(...xs)-n(item.x1))/dx]);
         });
       }
+      const opening=dieSite?.wall.id===item.id?dieSite.opening:null;
+      if(opening)cuts.push([(opening.x-n(item.x1))/dx,(opening.x+opening.width-n(item.x1))/dx]);
       for(const cut of cuts){
         const lo=Math.min(...cut),hi=Math.max(...cut);
         if(hi<=0 || lo>=1)continue;
@@ -131,6 +147,14 @@
         const p=(t,side)=>[n(item.x1)+dx*t+a*side,n(item.y1)+dy*t+b*side];
         add(index?{...item,id:`${item.id}_part_${index}`}:item,'wall',[p(start,1),p(end,1),p(end,-1),p(start,-1)],item.type==='exterior'?2.8:2.4,'#ddd4b9');
       });
+      if(opening){
+        const lo=(opening.x-n(item.x1))/dx,hi=(opening.x+opening.width-n(item.x1))/dx;
+        const p=(t,side)=>[n(item.x1)+dx*t+a*side,n(item.y1)+dy*t+b*side];
+        for(const [part,base,top] of [['sill',0,opening.sill],['lintel',opening.top,item.type==='exterior'?2.8:2.4]]){
+          add({...item,id:`${item.id}_diecut_${part}`},'wall',[p(lo,1),p(hi,1),p(hi,-1),p(lo,-1)],top,'#ddd4b9');
+          scene.at(-1).zBase=base;
+        }
+      }
     });
     (data.aisles || []).filter(item => (item.floor || '1F')===floor).forEach(item=>add(item,'aisle',rect(item),.02,'#b7bd85'));
     const points=scene.flatMap(s=>s.points);
@@ -211,6 +235,11 @@
   function viewBounds() {
     if(!detail || !selected)return bounds;
     const xs=selected.points.map(p=>p[0]),ys=selected.points.map(p=>p[1]);
+    if(dieSite && selected.item.id===dieSite.item.id){
+      const r=dieSite.collection;xs.push(r.x,r.x+r.width);ys.push(r.y,r.y+r.height);
+      const neighbor=scene.find(q=>referenceCode(q.item)==='L4-1');
+      if(neighbor)for(const p of neighbor.points){xs.push(p[0]);ys.push(p[1]);}
+    }
     if(isOfficeEntry(selected.item)){
       const entry=officeEntrance(selected);
       for(const p of [entry.edge(-entry.half,2.6),entry.edge(entry.half,2.6)]){xs.push(p[0]);ys.push(p[1]);}
@@ -287,6 +316,12 @@
     const z=elevation(s);
     if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,z+.02)):path.moveTo(...project(p,z+.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
     if(labels || s===selected){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,z+2.7);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
+    if(detail && dieSite && s.item.id===dieSite.item.id){
+      const {feed,opening:o,collection:r}=dieSite;
+      for(const [point,high,key] of [[feed,2.15,'dieCutFeed'],[[o.x+o.width/2,o.y],3.2,'dieCutOpening'],[[r.x+r.width/2,r.y],1.65,'dieCutCollect'],[[dieSite.pad.x+dieSite.pad.width/2,dieSite.pad.y+dieSite.pad.height],1.05,'dieCutLevel']]){
+        const p=project(point,high);ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#18332e';ctx.strokeText(t(key),...p);ctx.fillStyle='#fff5d7';ctx.fillText(t(key),...p);
+      }
+    }
     if(detail && referenceCode(s.item)==='A1-2'){
       // Section markers use the same live-CAD transform as the six rigid units.
       for(const marker of window.ChinChunModels?.sectionMarkers?.(s.item) || []){
@@ -340,7 +375,7 @@
       // A tiny overlap prevents antialiased seams from showing as holes.
       const start=Math.max(0,(k-.015)/count),end=Math.min(1,(k+1+.015)/count);
       const footprint=[lerp(a,b,start),lerp(a,b,end),lerp(d,c,end),lerp(d,c,start)];
-      const bottom=footprint.map(p=>[...p,0]),top=footprint.map(p=>[...p,s.z]);
+      const bottom=footprint.map(p=>[...p,s.zBase || 0]),top=footprint.map(p=>[...p,s.z]);
       for(let i=0;i<4;i++){
         if((i===1 && k<count-1)||(i===3 && k>0))continue;
         const j=(i+1)%4;
@@ -551,7 +586,7 @@
   function objectFaces(s) {
     const rise=elevation(s);
     const lift=faces=>rise?faces.map(f=>{const points=f.points.map(p=>[p[0],p[1],p[2]+rise]);return {...f,points,depth:faceDepth(points)};}):faces;
-    if(s.model)return lift(s.model.filter(f=>!(s===selected && restroomCutaway && referenceCode(s.item)==='WC-STALLS' && f.cutaway)).map(f=>({s,points:f.points,color:f.color,model:true,depth:faceDepth(f.points)})));
+    if(s.model)return lift(s.model.filter(f=>!(s===selected && restroomCutaway && referenceCode(s.item)==='WC-STALLS' && f.cutaway)).map(f=>({s:s.type==='site'?scene.find(q=>q.type==='equipment' && q.item.id===s.item.id)||s:s,points:f.points,color:f.color,model:true,depth:faceDepth(f.points)})));
     if(s.type==='wall')return lift(wallFaces(s));
     if(s.type==='column')return lift(columnFaces(s));
     if(s.item.category==='Door')return lift(doorFaces(s));
@@ -563,7 +598,23 @@
     frame=0;if(!dialog?.open || !bounds)return;
     const size=canvas.getBoundingClientRect();width=size.width;height=size.height;
     const dpr=Math.min(devicePixelRatio || 1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
-    const b=viewBounds(),visible=detail&&selected?[selected]:scene;
+    const b=viewBounds(),visible=detail&&selected?[selected]:[...scene];
+    if(dieGround && (!detail || selected?.item.id===dieGround.item.id)){
+      const r=dieGround.pad;
+      visible.push({item:dieGround.item,type:'site',points:[[r.x,r.y],[r.x+r.width,r.y],[r.x+r.width,r.y+r.height],[r.x,r.y+r.height]],model:window.ChinChunModels.dieCutSiteFaces(dieGround).filter(f=>dieSite || f.part==='filled-ground')});
+    }
+    if(dieSite && (!detail || selected?.item.id===dieSite.item.id)){
+      if(detail){
+        const neighbor=scene.find(q=>referenceCode(q.item)==='L4-1');
+        if(neighbor)visible.push(neighbor);
+        // Keep only the local wall in the equipment close-up, including sill/lintel.
+        for(const s of scene.filter(q=>q.type==='wall' && (q.item.id===dieSite.wall.id || q.item.id.startsWith(dieSite.wall.id+'_')))){
+          const lo=Math.max(b.x0,Math.min(...s.points.map(p=>p[0]))),hi=Math.min(b.x1,Math.max(...s.points.map(p=>p[0])));
+          if(hi<=lo)continue;
+          visible.push({...s,points:s.points.map((p,i)=>[i===0||i===3?lo:hi,p[1]])});
+        }
+      }
+    }
     const corners=[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]];
     baseScale=fittedScale(b,width,height);
     hits=[];
@@ -605,6 +656,7 @@
     renderSolids([...solids.flatMap(objectFaces),...siteFaces()],dpr);
     drawOfficeFacade();
     solids.forEach(s=>{
+      if(s.type==='site')return;
       if(s.model){drawModelAnnotations(s);return;}
       if(s.type==='equipment'){
         const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,elevation(s)+(isRamp(s.item)?s.z/2+.12:s.z+.1));
@@ -641,7 +693,8 @@
       dialog.querySelector('#twinDetails').textContent+='\n'+t('restroomNote');
       if(window.ChinChunModels?.restroomLayout?.(item)?.compact)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('restroomCompact');
     }
-    if(s?.model && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo'})[referenceCode(item)] || 'photo');
+    if(s?.model && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo'})[referenceCode(item)] || 'photo');
+    if(item && referenceCode(item)==='DIE CUT' && !dieSite)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('dieCutDisconnected');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
