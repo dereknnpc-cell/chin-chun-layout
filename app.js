@@ -4385,6 +4385,7 @@
 
   // --- Render Full Layout SVG ---
   function renderSvg() {
+    refreshBuildingReview();
     window.ChinChunTwin?.update(layoutData, currentFloor);
     let html = `
       <defs>
@@ -4445,6 +4446,7 @@
     const is2F = currentFloor === "2F";
     const isOverlay = currentFloor === "OVERLAY";
     const is1F = currentFloor === "1F";
+    if (is1F || isOverlay) html += window.ChinChunBuilding?.svg(layoutData, SCALE, {x:OFFSET_X,y:OFFSET_Y}) || '';
 
     // 1. Aisles Layer (1F) - 可點選、移動、微調尺寸與刪除之色塊走道
     if (layerState.aisles && (is1F || isOverlay)) {
@@ -4696,7 +4698,7 @@
           <line x1="${totalX1}" y1="${OFFSET_Y - 30}" x2="${totalX1}" y2="${dimY2 - 5}" stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="2,2"/>
           <line x1="${totalX2}" y1="${OFFSET_Y - 30}" x2="${totalX2}" y2="${dimY2 - 5}" stroke="var(--text-muted)" stroke-width="0.8" stroke-dasharray="2,2"/>
           <line x1="${totalX1 + 4}" y1="${dimY2}" x2="${totalX2 - 4}" y2="${dimY2}" stroke="var(--cad-dim-line)" stroke-width="1.5" marker-start="url(#dimArrowStart)" marker-end="url(#dimArrowEnd)"/>
-          <text x="${(totalX1 + totalX2) / 2}" y="${dimY2 - 8}" font-size="13" font-weight="800" fill="var(--cad-dim-text)" text-anchor="middle">廠房總寬度 100.00 M (20 跨 × 5.00 M)</text>
+          <text x="${(totalX1 + totalX2) / 2}" y="${dimY2 - 8}" font-size="13" font-weight="800" fill="var(--cad-dim-text)" text-anchor="middle">${window.ChinChunBuilding?.get(layoutData) ? 'EPS 參考柱網 100.00 M（非 A3 建築外框）' : '廠房總寬度 100.00 M (20 跨 × 5.00 M)'}</text>
         `;
 
         const dimX1 = OFFSET_X - 80;
@@ -5012,6 +5014,8 @@
       </g>
     `;
 
+    if (is1F || isOverlay) html += window.ChinChunBuilding?.svg(layoutData, SCALE, {x:OFFSET_X,y:OFFSET_Y}, true, document.documentElement.lang.startsWith('th')) || '';
+
     // L1 remains visually below equipment, but its narrow picking surface must
     // not be intercepted by equipment fills, clearance zones or column labels.
     html += renderWallHitTargets();
@@ -5040,6 +5044,44 @@
     scaleDrawingText();
     attachSvgClickListeners();
     refreshAnnotationVisibility();
+  }
+
+  function refreshBuildingReview() {
+    const b=window.ChinChunBuilding?.get(layoutData),thai=document.documentElement.lang.startsWith('th');
+    const button=document.getElementById('btnApplyA3'),panel=document.getElementById('buildingReview');
+    if(button){button.disabled=Boolean(b);button.textContent=b?(thai?'✓ ใช้เกณฑ์อาคาร A3 แล้ว':'✓ 已套用 A3 建築基準'):(thai?'📐 ใช้เกณฑ์อาคาร A3':'📐 套用 A3 建築基準');}
+    if(panel){
+      panel.hidden=!b;
+      if(b){
+        const issues=window.ChinChunBuilding.audit(layoutData);
+        document.getElementById('buildingReviewSummary').textContent=thai?`A3 · ${issues.length} รายการรอตรวจ`:`A3 建築校正 · ${issues.length} 項待覆核`;
+        document.getElementById('buildingReviewNote').textContent=thai?'หมุนแปลน 180°; ต่อเติม 10 ม. อยู่ขวา พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ผนังกั้นประมาณจากสัดส่วน เสา EPS คงเดิมไม่ใช่ผลสำรวจ เครื่องและประตูคงตำแหน่ง ต้องตรวจช่องประตูกับผนังใหม่ ผนังเดิมเก็บใน building_geometry.previousMainWalls ของไฟล์สำรอง':'圖面旋轉180°；10米增建在右端。原廠+1.50／外棚+1.00／路面0米。隔間為比例描繪，EPS柱位未重測；設備及門窗保留原位，門窗與新牆的對應仍待覆核。原牆已封存於備份的 building_geometry.previousMainWalls，可用復原回到套用前。';
+        const list=document.getElementById('buildingReviewIssues');list.replaceChildren();
+        for(const issue of issues){
+          const li=document.createElement('li');li.textContent=`${issue.code || issue.id} · ${thai?(issue.kind==='wall'?'ตัดกับผนัง A3':'ข้ามขอบอาคาร A3'):issue.message}`;list.append(li);
+        }
+      }
+    }
+    if(currentFloor==='1F'){
+      floorIndicatorEl.textContent=b?'1F 原廠 +1.50M / 外棚 +1.00M':'1F 主廠房 (EL.+0.60M)';
+      gridBayInfoEl.textContent=b?'EPS 100×40M 柱網僅參考 · A3隔間待量測':'5.00 m 柱距 · 立柱與牆體自由編輯/移動/刪除';
+      mezzanineStatsEl.textContent=b?'A3 原廠97.80×40.00M · 外棚64.69×19.00M':'廠房總跨度: 100.0 M × 40.0 M';
+      const pill=document.querySelector('#btnFloor_1F .floor-elev'),first=layoutData.floors?.find(q=>q.id==='1F');
+      if(pill && first){pill.textContent=first.elev;pill.closest('.floor-btn').title=first.desc || '';}
+    }
+  }
+
+  function applyA3Building() {
+    if(!window.ChinChunBuilding || window.ChinChunBuilding.get(layoutData))return;
+    if(isLayerLocked('walls'))return showToast('請先解鎖 L1 牆面圖層再套用 A3 建築基準','info',3500);
+    const thai=document.documentElement.lang.startsWith('th');
+    if(!confirm(thai?'ใช้แปลน A3 หมุน 180° ต่อเติม 10 ม. อยู่ขวา? เปลี่ยนผนังเดิม 1F เป็นผนังตามสัดส่วน เก็บผนังเก่าในไฟล์สำรอง ย้อนกลับได้ เครื่อง เสา ประตูและทางเดินไม่ย้าย ข้อขัดแย้งต้องตรวจหน้างาน':'套用已確認的 A3（旋轉180°、10米增建在右端）？\n將以 A3 外框及比例描繪隔間替換原廠1F牆線，舊牆封存於備份，可按復原還原。\n設備、門窗、柱位、動線不搬移、不縮放；衝突及門窗對應需現場覆核。'))return;
+    const calibrated=window.ChinChunBuilding.apply(layoutData);
+    pushHistoryState('套用 A3 建築基準（設備不移動）');
+    layoutData=calibrated;
+    deselectAll();renderFloorSelector();renderSvg();saveToLocalStorage();
+    document.getElementById('buildingReview').open=true;
+    showToast(thai?'ใช้เกณฑ์ A3 แล้ว คงตำแหน่งเครื่อง โปรดตรวจรายการขัดแย้ง':'已套用 A3；設備原位保留，請查看建築待覆核清單','success',5000);
   }
 
   function isWallOnActiveFloor(wall) {
@@ -6619,6 +6661,7 @@
 
     if (btnDrawRoute) btnDrawRoute.addEventListener("click", toggleDrawingRoute);
     if (btnAddWall) btnAddWall.addEventListener("click", addNewWall);
+    document.getElementById('btnApplyA3')?.addEventListener('click',applyA3Building);
 
     // Site View Mode Switcher
     const siteViewSelect = document.getElementById("siteViewSelect");

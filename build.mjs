@@ -5,6 +5,7 @@ const outputDirectory = "dist";
 const staticFiles = [
   "index.html",
   "app.js",
+  "building-geometry.js",
   "digital-twin.js",
   "twin-models.js",
   "digital-twin.css",
