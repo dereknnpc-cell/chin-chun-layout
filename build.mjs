@@ -8,6 +8,7 @@ const staticFiles = [
   "building-geometry.js",
   "digital-twin.js",
   "twin-models.js",
+  "photo-models.js",
   "digital-twin.css",
   "style.css",
   "manifest.json",

@@ -16,6 +16,7 @@
   let dieSite = null;
   let dieGround = null;
   let buildingRoof = false;
+  let photoDirections = false;
   const zh = {
     dieCutPhoto:'Die Cut（未編號）：機身與入料端全部在下方擴建區，不進入原建物；出料經原建物牆洞，送至 L4-1 左方收集區。此段已填高，室內比擴建區高 0.50 m（已確認），不套用其他區域的 1.5 m 高差。模型依八張照片示意，綠色帶面、白色壓床、深灰側罩、黃色護網與側控制櫃隨 2D 位置、占地及旋轉聯動。牆洞、收集桌、局部填高範圍及機高約 2.34 m 為示意，待量測；桌子不算機身。',
     dieCutDisconnected:'目前 2D 位置／方向與原建物牆面或 L4-1 左側不匹配，已停用穿牆連接示意，請回 2D 核對。',
@@ -69,6 +70,24 @@
     updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', a1Photo:'วาด A1-1 ใหม่จากภาพล่าสุด: ป้อนวัสดุจากสายพานสีเขียวด้านขวา ผ่านลูกกลิ้งและดรัมใหญ่ที่อยู่ค่อนไปทางขวา แล้วแผ่นวัสดุลาดไปยังลูกกลิ้งรับงานด้านซ้าย ทิศทางยืนยันแล้ว แต่ขนาดและความสูงยังเป็นการประมาณจากภาพ', a1Entrance:'ป้อนเข้า (สายพานสีเขียว)', a1Collection:'รับงาน (ลูกกลิ้งสีเงิน)', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นทางเข้าสำนักงานยึดตำแหน่ง DOOR-1800; ความสูงเป็นภาพจำลองจากรูปถ่าย ต้องวัดจริง', dockSite:'ท่าโหลดฝั่งตะวันตกจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
   };
   zh.buildingRoof='外棚屋頂';th.buildingRoof='หลังคาอาคารต่อเติม';
+  zh.photoDirections='照片方位';th.photoDirections='ทิศทางจากภาพ';
+  zh.photoFeed='入料端';th.photoFeed='ป้อนเข้า';
+  zh.photoDischarge='出料端';th.photoDischarge='รับงานออก';
+  zh.d11Discharge='出料 · 上升輸送帶';th.d11Discharge='รับงานออก · สายพานยกขึ้น';
+  zh.rackPhoto='PL-1／PL-2：照片紅字確認為黑色鋼製貨架，不再畫成實心棧板塊。保留柱、橫梁、斜撐與固定層板，不含托盤、泡棉、包材、推車或存料。各自位置、占地與角度跟隨2D；約4.8米高度、層距與構件尺寸為照片估算，待量測。';
+  th.rackPhoto='PL-1 / PL-2: ข้อความในภาพยืนยันว่าเป็นชั้นเหล็กสีดำ ไม่ใช่แท่นตัน จำลองเสา คาน ค้ำยันและแผ่นชั้นถาวร ไม่รวมถาด โฟม หีบห่อ รถเข็นหรือวัสดุ ตำแหน่ง ขนาดฐานและมุมตาม 2D ความสูงประมาณ 4.8 ม. ระยะชั้นและขนาดชิ้นส่วนประมาณจากภาพ รอวัดจริง';
+  zh.j13Photo='J1-3：依四張標注照片建立米白開放工作台、棕色固定延伸桌、左側橘色立柱、深色頂梁、導尺及右側獨立操作台；與J1-2分開建模。不含黑色泡棉、紙管、綠色推車或鄰機。沿用目前2D占地與角度，最高約2.4米及細部比例為照片估算，待量測。';
+  th.j13Photo='J1-3: จำลองจากภาพระบุรหัส 4 ภาพ มีโต๊ะเปิดสีครีม ขอบโต๊ะไม้ถาวร เสาส้มซ้าย คานบนสีเข้ม รั้วนำและแผงควบคุมแยกด้านขวา เป็นคนละแบบกับ J1-2 ไม่รวมโฟม แกนกระดาษ รถเข็นเขียวหรือเครื่องข้างเคียง คงขนาดฐานและมุม 2D ปัจจุบัน สูงประมาณ 2.4 ม. และรายละเอียดประมาณจากภาพ รอวัดจริง';
+  zh.d11Photo='D1-1：照片已區分短端入料與長上升輸送帶出料。新增米白機架、紅色側罩與飛輪、銀色滾輪、綠色刀座／帶面、馬達及紅色控制櫃。沿用目前2D占地與角度，輸送方向配合占地長邊，標示隨整機轉動；圖面實際朝向仍待核對，不改原CAD。最高約2.8米、輸送帶斜度與部件比例為照片估算。不含泡棉、料片、推車或鄰機。';
+  th.d11Photo='D1-1: ภาพแยกจุดป้อนด้านสั้นกับสายพานยกขึ้นด้านรับงานออก มีโครงครีม ฝาครอบและล้อแดง ลูกกลิ้งโลหะ แถบมีด/สายพานเขียว มอเตอร์และตู้ควบคุมแดง คงขนาดฐานและมุม 2D ปัจจุบัน แนวลำเลียงตามด้านยาว ป้ายหมุนพร้อมเครื่อง ทิศจริงในแปลนยังรอตรวจ ไม่แก้ CAD สูงประมาณ 2.8 ม. มุมสายพานและรายละเอียดประมาณจากภาพ ไม่รวมโฟม แผ่นวัสดุ รถเข็นหรือเครื่องข้างเคียง';
+  zh.weldingPhoto='Welding：依七張紅字照片及兩張滾輪／紅手輪細節建立另一套機型：固定木質入料桌、鋼製導輪、多氣缸壓合頭、紅側蓋、米黃色出料滾輪、低位控制櫃及燈架。與D1-1分開，不套用其上升輸送帶。沿用目前2D占地與角度，流程配合占地長邊，入出料標示隨整機轉動；圖面實際朝向仍待核對。最高約2.35米及部件尺寸為照片估算，不含泡棉、料卷、紙管或鄰機。';
+  th.weldingPhoto='Welding: ใช้ภาพข้อความแดง 7 ภาพกับภาพรายละเอียดลูกกลิ้ง/มือหมุนแดง 2 ภาพ มีโต๊ะป้อนไม้ถาวร ลูกกลิ้งนำ ชุดกดหลายกระบอกลม ฝาแดง ลูกกลิ้งรับงานสีครีม ตู้ควบคุมต่ำและโครงไฟ แยกจาก D1-1 ไม่มีสายพานยกขึ้น คงขนาดฐานและมุม 2D ปัจจุบัน แนวงานตามด้านยาว ป้ายหมุนพร้อมเครื่อง ทิศจริงในแปลนยังรอตรวจ สูงประมาณ 2.35 ม. และขนาดชิ้นส่วนประมาณจากภาพ ไม่รวมโฟม ม้วน แกนกระดาษหรือเครื่องข้างเคียง';
+  zh.l41Photo='L4-1：使用者已確認未標編號的MANUAL照片就是這台。建立米白有散熱孔底櫃、四支導柱與圓形調整帽、寬壓頭、固定工作台、兩側紅色百葉罩、外露鏈輪／鏈條、側操作箱及燈架；不是擴建區未編號Die Cut，也不是E1自動機。沿用目前2D占地與角度；最高約2.55米及細部尺寸為照片估算。不含泡棉、模具、堆料或推車。';
+  th.l41Photo='L4-1: ผู้ใช้ยืนยันว่าภาพ MANUAL ที่ไม่มีรหัสเป็นเครื่องนี้ มีตู้ฐานครีมพร้อมช่องระบาย เสานำ 4 เสา ฝาปรับทรงกลม หัวกดกว้าง โต๊ะถาวร ฝาข้างบานเกล็ดแดง โซ่/เฟือง ตู้ควบคุมข้างและโครงไฟ ไม่ใช่ Die Cut ไม่มีหมายเลขหรือ E1 อัตโนมัติ คงขนาดฐานและมุม 2D ปัจจุบัน สูงประมาณ 2.55 ม. และรายละเอียดประมาณจากภาพ ไม่รวมโฟม แม่พิมพ์ วัสดุหรือรถเข็น';
+  zh.eva3Deferred='EVA 3：標注寫明「先不用建模，數據不足」，維持原2D占位，不新增照片模型。';
+  th.eva3Deferred='EVA 3: ภาพระบุให้รอสร้างแบบเพราะข้อมูลไม่พอ คงพื้นที่ 2D เดิม ไม่มีแบบจากภาพเพิ่ม';
+  zh.photoSiteNote='照片方位：橘色區往外看＝2D左，由左往內看＝2D右；綠色區由外往內看＝2D左。左右入口照片皆可見斜坡，原區與綠色增建的屋頂高度不同；主管停車區沿原建物一側，PL-1／PL-2為貨架，中間留有空間，綠區旁為CNC Room。這次只加方位參考文字，不推算或新增坡道、停車格、牆洞與隔間尺寸。';
+  th.photoSiteNote='ทิศภาพ: มองออกจากเขตส้มคือซ้าย 2D มองเข้าจากซ้ายคือขวา 2D มองเข้าจากภายนอกเขตเขียวคือซ้าย 2D ภาพเห็นทางลาดสองด้านและหลังคาต่างระดับ ที่จอดผู้บริหารชิดอาคารเดิม PL-1/PL-2 เป็นชั้นเก็บ มีช่องว่างระหว่างกัน ข้างเขตเขียวคือ CNC Room เพิ่มเฉพาะข้อความอ้างอิง ไม่ประมาณหรือเพิ่มขนาดทางลาด ช่องจอด ช่องผนังหรือห้องกั้น';
   zh.buildingNote='以使用者原繪圖為準：廠內隔間、牆線及柱位不採A3比例描繪。外棚邊界依紅線X35–100，最新增建X90–100。2D與2.5D共用資料，設備未搬動。地坪：原廠+1.50／外棚+1.00／路面0米；外棚縱深、棚高沿用示意值，未另行推算。';
   th.buildingNote='ยึดแปลนเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอกตามเส้นแดง X35–100 ส่วนต่อเติม X90–100 ใช้ข้อมูลเดียวกับ 2D ไม่ย้ายเครื่อง พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกและความสูงโครงคงค่าภาพประกอบเดิม ไม่ประมาณใหม่';
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
@@ -324,7 +343,10 @@
   function drawModelAnnotations(s) {
     const z=elevation(s);
     if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,z+.02)):path.moveTo(...project(p,z+.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
-    if(labels || s===selected){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,z+2.7);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
+    if(labels || s===selected){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,z+(window.ChinChunPhotoModels?.height(s.item) || 2.5)+.2);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
+    if(detail)for(const marker of window.ChinChunPhotoModels?.markers(s.item) || []){
+      const p=project(marker.point,z+marker.point[2]);ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#18332e';ctx.strokeText(t(marker.key),...p);ctx.fillStyle='#fff5d7';ctx.fillText(t(marker.key),...p);
+    }
     if(detail && dieSite && s.item.id===dieSite.item.id){
       const {feed,opening:o,collection:r}=dieSite;
       for(const [point,high,key] of [[feed,2.15,'dieCutFeed'],[[o.x+o.width/2,o.y],3.2,'dieCutOpening'],[[r.x+r.width/2,r.y],1.65,'dieCutCollect'],[[dieSite.pad.x+dieSite.pad.width/2,dieSite.pad.y+dieSite.pad.height],1.05,'dieCutLevel']]){
@@ -593,6 +615,20 @@
     const canopy=[entry.edge(-2.2,-.05),entry.edge(2.2,-.05),entry.edge(2.2,.72),entry.edge(-2.2,.72)].map(p=>[...p,z+2.67]);
     polygon(canopy.map(p=>project(p,p[2])),'#cfd7cf','#edf1e7');
   }
+  function drawPhotoDirections() {
+    const b=window.ChinChunBuilding?.get(data);if(!photoDirections || detail || floor!=='1F' || !b)return;
+    const thai=document.documentElement.lang.startsWith('th'),y=b.annex.y+Math.min(7.5,b.annex.height/2);
+    const labels=[
+      [[b.annex.x,y],thai?'เขตส้ม: ออก=ซ้าย 2D / เข้า=ขวา':'橘區：往外＝2D左／往內＝2D右',thai?'เห็นทางลาดในภาพ ขนาดรอวัด':'照片有斜坡；尺寸未量測'],
+      [[b.annex.x+b.annex.width,y],thai?'เขตเขียว: มองเข้า=ซ้าย 2D':'綠區：由外往內＝2D左',thai?'หลังคาต่างระดับ / ทางลาดรอวัด':'屋頂有高差／斜坡尺寸未量測']
+    ];
+    ctx.save();ctx.font='bold 11px system-ui';ctx.textAlign='center';
+    for(const [point,line1,line2] of labels){
+      const p=project(point,b.annex.rise+.2),w=Math.max(ctx.measureText(line1).width,ctx.measureText(line2).width)+14;
+      ctx.fillStyle='#18332eeb';ctx.fillRect(p[0]-w/2,p[1]-27,w,39);ctx.fillStyle='#ffe1a5';ctx.fillText(line1,p[0],p[1]-12);ctx.fillText(line2,p[0],p[1]+3);
+    }
+    ctx.restore();
+  }
   function objectFaces(s) {
     const rise=elevation(s);
     const lift=faces=>rise?faces.map(f=>{const points=f.points.map(p=>[p[0],p[1],p[2]+rise]);return {...f,points,depth:faceDepth(points)};}):faces;
@@ -679,6 +715,7 @@
     // Painter order must be per face: a whole long machine can straddle a column.
     renderSolids([...solids.flatMap(objectFaces),...siteFaces()],dpr);
     drawOfficeFacade();
+    drawPhotoDirections();
     solids.forEach(s=>{
       if(s.type==='site')return;
       if(s.model){drawModelAnnotations(s);return;}
@@ -709,9 +746,10 @@
     dialog.querySelector('#twinDetails').textContent=item ? `${t(s.type)} · ${item.name || item.id}\n${t('position')}: ${n(item.x ?? item.x1).toFixed(2)}, ${n(item.y ?? item.y1).toFixed(2)} m\n${t('size')}: ${s.type==='wall'?Math.hypot(n(item.x2)-n(item.x1),n(item.y2)-n(item.y1)).toFixed(2)+' × '+n(item.thickness,.2).toFixed(2):n(item.width).toFixed(2)+' × '+n(item.height).toFixed(2)} m\n${t('rotation')}: ${displayRotation.toFixed(0)}°` : t('empty');
     const building=window.ChinChunBuilding?.get(data),roofButton=dialog.querySelector('#twinRoof');
     roofButton.hidden=!building || floor!=='1F';roofButton.setAttribute('aria-pressed',String(buildingRoof));
+    const photoButton=dialog.querySelector('#twinPhotoDirections');photoButton.hidden=!building || floor!=='1F';photoButton.setAttribute('aria-pressed',String(photoDirections));
     if(building){
       dialog.querySelector('[data-twin-text="note"]').textContent=t('buildingNote');
-      if(!item)dialog.querySelector('#twinDetails').textContent+='\n'+t('buildingNote');
+      if(!item)dialog.querySelector('#twinDetails').textContent+='\n'+(photoDirections?t('photoSiteNote'):t('buildingNote'));
     }else dialog.querySelector('[data-twin-text="note"]').textContent=t('note');
     dialog.querySelector('#twinEdit').hidden=!s;
     dialog.querySelector('#twinFocus').hidden=!s;
@@ -723,7 +761,8 @@
       dialog.querySelector('#twinDetails').textContent+='\n'+t('restroomNote');
       if(window.ChinChunModels?.restroomLayout?.(item)?.compact)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('restroomCompact');
     }
-    if(s?.model && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo'})[referenceCode(item)] || 'photo');
+    if(s?.model && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo','J1-3':'j13Photo','D1-1':'d11Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
+    if(item && ['EVA 3','EVA3'].includes(referenceCode(item)))dialog.querySelector('#twinDetails').textContent+='\n'+t('eva3Deferred');
     if(item && referenceCode(item)==='DIE CUT' && !dieSite)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('dieCutDisconnected');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
@@ -739,6 +778,8 @@
     document.body.append(dialog);canvas=dialog.querySelector('canvas');ctx=canvas.getContext('2d');
     const roofButton=document.createElement('button');roofButton.id='twinRoof';roofButton.dataset.twinText='buildingRoof';roofButton.hidden=true;
     roofButton.onclick=()=>{buildingRoof=!buildingRoof;updateInfo();requestDraw();};dialog.querySelector('.twin-toolbar').append(roofButton);
+    const photoButton=document.createElement('button');photoButton.id='twinPhotoDirections';photoButton.dataset.twinText='photoDirections';photoButton.hidden=true;
+    photoButton.onclick=()=>{photoDirections=!photoDirections;updateInfo();requestDraw();};dialog.querySelector('.twin-toolbar').append(photoButton);
     const focus=document.createElement('button');focus.id='twinFocus';focus.dataset.twinText='focus';focus.hidden=true;
     dialog.querySelector('.twin-toolbar').append(focus);
     const cutawayButton=document.createElement('button');cutawayButton.id='twinRestroomCutaway';cutawayButton.dataset.twinText='restroomCutaway';cutawayButton.hidden=true;
