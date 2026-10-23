@@ -15,6 +15,10 @@
 .twin-stage { position:relative; flex:1; min-height:100px; overflow:hidden; background:radial-gradient(ellipse at 50% 45%,#648471,#304c44 75%); }
 .twin-stage canvas { width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
 .twin-stage canvas:active { cursor:grabbing; }
+.twin-stage canvas.twin-three-surface { position:absolute; inset:0; z-index:0; pointer-events:none; }
+.twin-stage > canvas:not(.twin-three-surface) { position:relative; z-index:1; }
+.twin-stage .twin-plaque,.twin-stage .twin-info { z-index:2; }
+.twin-engine-status { color:#ead48a; font-size:11px; max-width:300px; }
 .twin-plaque { position:absolute; top:18px; left:20px; pointer-events:none; color:#f5eed7; font-size:11px; letter-spacing:2px; text-shadow:0 2px 4px #142d2b; }
 .twin-info { position:absolute; right:18px; bottom:18px; width:260px; max-width:calc(100% - 36px); max-height:calc(100% - 36px); overflow-y:auto; padding:18px; box-sizing:border-box; background:#18332eee; border:1px solid #91a981; border-radius:10px; box-shadow:5px 5px 0 #10282366; }
 .twin-info h3 { font-size:16px; margin:0 0 10px; color:#ead48a; }

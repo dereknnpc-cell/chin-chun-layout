@@ -9,6 +9,7 @@ const staticFiles = [
   "digital-twin.js",
   "twin-models.js",
   "photo-models.js",
+  "three-twin.js",
   "digital-twin.css",
   "style.css",
   "manifest.json",
@@ -27,6 +28,9 @@ await build({
   format: "iife",
   outfile: "cloud-sync.js"
 });
+
+// Bundle Three.js locally: no runtime CDN dependency and no change to CAD data.
+await build({entryPoints:["three-twin.mjs"],bundle:true,minify:true,format:"iife",target:"es2020",legalComments:"eof",outfile:"three-twin.js"});
 
 // Some bundled dependencies contain whitespace-only template-literal lines.
 // Keep the generated artifact deterministic and friendly to git diff checks.
