@@ -85,6 +85,8 @@
   zh.photoFeed='入料端';th.photoFeed='ป้อนเข้า';
   zh.photoDischarge='出料端';th.photoDischarge='รับงานออก';
   zh.d11Discharge='出料 · 上升輸送帶';th.d11Discharge='รับงานออก · สายพานยกขึ้น';
+  zh.d12Photo='D1-2：使用者確認為最新全景照片左側的兩個獨立部件；右側紅色機組與上升輸送帶屬於 D1-1，不併入 D1-2。以兩座米白滾輪／工作帶機組簡化示意，各有支架、底座，中間留空，不畫共用底座或跨接桌。綠色板車及黑色板材不是設備。兩部件共同跟隨 D1-2 的 2D 位置、占地及旋轉；未新增或移動 CAD 物件。照片解析度有限，部件間距、比例、約2.3米高度皆為暫估，實際相對位置及入出料方向待近照或量測確認。';
+  th.d12Photo='D1-2: ผู้ใช้ยืนยันว่าเป็นอุปกรณ์แยกสองชุดด้านซ้ายในภาพล่าสุด ส่วนเครื่องแดงและสายพานยกด้านขวาคือ D1-1 แสดงแบบเรียบง่ายเป็นชุดลูกกลิ้ง/สายพานสีครีมสองชุด มีขาและฐานแยก เว้นช่องว่าง ไม่มีฐานหรือโต๊ะเชื่อม รถเข็นเขียวและแผ่นดำไม่ใช่เครื่อง ทั้งสองชุดอิงตำแหน่ง ขนาดฐานและมุม D1-2 จาก 2D ไม่เพิ่มหรือย้ายวัตถุ CAD ภาพมีความละเอียดต่ำ ระยะห่าง สัดส่วนและความสูงประมาณ 2.3 ม. ยังเป็นค่าประมาณ รอภาพใกล้หรือการวัดเพื่อยืนยันทิศงานและตำแหน่งสัมพัทธ์';
   zh.rackPhoto='PL-1／PL-2：照片紅字確認為黑色鋼製貨架，不再畫成實心棧板塊。保留柱、橫梁、斜撐與固定層板，不含托盤、泡棉、包材、推車或存料。各自位置、占地與角度跟隨2D；約4.8米高度、層距與構件尺寸為照片估算，待量測。';
   th.rackPhoto='PL-1 / PL-2: ข้อความในภาพยืนยันว่าเป็นชั้นเหล็กสีดำ ไม่ใช่แท่นตัน จำลองเสา คาน ค้ำยันและแผ่นชั้นถาวร ไม่รวมถาด โฟม หีบห่อ รถเข็นหรือวัสดุ ตำแหน่ง ขนาดฐานและมุมตาม 2D ความสูงประมาณ 4.8 ม. ระยะชั้นและขนาดชิ้นส่วนประมาณจากภาพ รอวัดจริง';
   zh.j13Photo='J1-3：依四張標注照片建立米白開放工作台、棕色固定延伸桌、左側橘色立柱、深色頂梁、導尺及右側獨立操作台；與J1-2分開建模。不含黑色泡棉、紙管、綠色推車或鄰機。沿用目前2D占地與角度，最高約2.4米及細部比例為照片估算，待量測。';
@@ -901,7 +903,7 @@
       dialog.querySelector('#twinDetails').textContent+='\n'+t('restroomNote');
       if(window.ChinChunModels?.restroomLayout?.(item)?.compact)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('restroomCompact');
     }
-    if(s?.model && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo','J1-3':'j13Photo','D1-1':'d11Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
+    if(s?.model && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo','J1-3':'j13Photo','D1-1':'d11Photo','D1-2':'d12Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
     if(item && ['EVA 3','EVA3'].includes(referenceCode(item)))dialog.querySelector('#twinDetails').textContent+='\n'+t('eva3Deferred');
     if(item && referenceCode(item)==='DIE CUT' && !dieSite)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('dieCutDisconnected');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');

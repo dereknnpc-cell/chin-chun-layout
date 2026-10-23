@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   const code=item=>String(item.photoModelCode || item.code || '').trim().toUpperCase();
-  const heights={'PL-1':4.8,'PL-2':4.8,'J1-3':2.4,'D1-1':2.8,'WELDING':2.35,'L4-1':2.55};
+  const heights={'PL-1':4.8,'PL-2':4.8,'J1-3':2.4,'D1-1':2.8,'D1-2':2.3,'WELDING':2.35,'L4-1':2.55};
   const matches=item=>Object.hasOwn(heights,code(item));
   function mesh(item,w,d) {
     const faces=[],W=Math.max(.05,Number(item.width)||w),D=Math.max(.05,Number(item.height)||d);
@@ -11,7 +11,7 @@
     // Some existing plans express these inline machines with a vertical long
     // footprint and rotation=0. Fit their process axis to that long side before
     // applying the CAD rotation; do not squash a 12 m conveyor across 4 m.
-    const portrait=['D1-1','WELDING'].includes(code(item)) && W<D;
+    const portrait=['D1-1','D1-2','WELDING'].includes(code(item)) && W<D;
     const point=([x,y,z])=>{const u=(portrait?1-y/d:x/w)*W-W/2,v=(portrait?x/w:y/d)*D-D/2;return[(Number(item.x)||0)+W/2+u*c-v*s,(Number(item.y)||0)+D/2+u*s+v*c,z];};
     const face=(points,color,part)=>faces.push({points:points.map(point),color,part});
     const box=(x,y,z,bw,bd,bh,color,part)=>{
@@ -126,6 +126,54 @@
     }
     return m.faces;
   }
+  // 2026-10-23: user confirms the LEFT equipment is D1-2 (two separate
+  // modules), while the RIGHT red machine + rising conveyor is D1-1.
+  // Conservative photo proxy: two independently supported cream roller units.
+  // The gap stays empty: the green wheeled carts and black sheets are NOT
+  // connecting tables, a shared plinth, or parts of either machine. Relative
+  // module proportions/spacing and height are estimates, not surveyed data.
+  function d12(item) {
+    const m=mesh(item,8,3.6),{box,tube}=m;
+    const module=(id,draw)=>{
+      const first=m.faces.length;draw();
+      for(let i=first;i<m.faces.length;i++)m.faces[i].component=id;
+    };
+    module('d12-module-1',()=>{
+      for(const x of [.28,2.91])for(const y of [.30,3.05]){
+        box(x,y,0,.12,.15,1.02,cream,'d12-one-leg');
+        box(x-.04,y-.03,0,.20,.21,.045,steel,'d12-one-foot');
+      }
+      for(const y of [.30,3.05]){
+        box(.28,y,.32,2.75,.14,.10,cream,'d12-one-base-rail');
+        box(.24,y,.93,2.84,.16,.17,cream,'d12-one-roller-frame');
+      }
+      for(const x of [.47,.90,1.33,1.76,2.19,2.62,2.92])
+        tube([x,.48,1.10],[x,3.02,1.10],.095,steel,'d12-one-roller',20);
+      for(const y of [.28,3.05])box(1.24,y,.99,.32,.20,.98,cream,'d12-one-upright');
+      box(1.20,.28,1.83,.41,2.97,.17,cream,'d12-one-cross-head');
+      tube([1.44,.51,1.54],[1.44,3.02,1.54],.13,'#768c70','d12-one-upper-roller',24);
+      box(1.18,.11,1.13,.52,.15,.50,cream,'d12-one-drive-cover');
+    });
+    module('d12-module-2',()=>{
+      for(const x of [4.37,7.56])for(const y of [.30,3.05]){
+        box(x,y,0,.12,.15,.98,cream,'d12-two-leg');
+        box(x-.04,y-.03,0,.20,.21,.045,steel,'d12-two-foot');
+      }
+      for(const y of [.30,3.05]){
+        box(4.37,y,.32,3.31,.14,.10,cream,'d12-two-base-rail');
+        box(4.30,y,.88,3.45,.16,.18,cream,'d12-two-belt-frame');
+        box(5.55,y,.91,.44,.20,1.18,cream,'d12-two-upright');
+      }
+      box(4.41,.51,1.015,3.20,2.48,.025,green,'d12-two-fixed-belt');
+      for(const x of [4.40,7.60])tube([x,.49,.97],[x,3.01,.97],.09,steel,'d12-two-end-roller',20);
+      box(5.50,.29,1.94,.55,2.96,.20,cream,'d12-two-cross-head');
+      tube([5.78,.52,1.56],[5.78,3.01,1.56],.14,steel,'d12-two-upper-roller',24);
+      box(5.46,.09,1.15,.63,.19,.56,cream,'d12-two-drive-cover');
+      box(6.18,.08,.68,.64,.22,.82,cream,'d12-two-control-box');
+      box(6.24,.065,1.18,.50,.015,.20,dark,'d12-two-control-panel');
+    });
+    return m.faces;
+  }
   function welding(item) {
     const m=mesh(item,5,4),{box,tube,wheel}=m;
     box(.12,.20,0,4.73,3.60,.10,cream,'base-frame');
@@ -193,6 +241,7 @@
       case 'PL-1':case 'PL-2':return rack(item);
       case 'J1-3':return j13(item);
       case 'D1-1':return d11(item);
+      case 'D1-2':return d12(item);
       case 'WELDING':return welding(item);
       case 'L4-1':return l41(item);
       default:return null;

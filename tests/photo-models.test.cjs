@@ -9,7 +9,7 @@ vm.runInNewContext(read('twin-models.js'),{window});
 const previous=JSON.stringify(window.ChinChunModels.build({code:'G2-1',width:2.4,height:4.19,rotation:0}));
 vm.runInNewContext(read('photo-models.js'),{window});
 const models=window.ChinChunModels,photo=window.ChinChunPhotoModels;
-const sizes={'PL-1':[18,4],'PL-2':[17,4],'J1-3':[4,3.4],'D1-1':[12,4],WELDING:[5,4],'L4-1':[3.25,3]};
+const sizes={'PL-1':[18,4],'PL-2':[17,4],'J1-3':[4,3.4],'D1-1':[12,4],'D1-2':[8,3.6],WELDING:[5,4],'L4-1':[3.25,3]};
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} vs ${b}`);
 for(const [code,[width,height]] of Object.entries(sizes)){
   test(`${code}: finite display mesh fits the existing CAD footprint without writing to it`,()=>{
@@ -79,6 +79,35 @@ test('D1-1 rising discharge and Welding roller discharge are not interchangeable
     base.forEach((marker,i)=>{near(turned[i].point[0],width-marker.point[0]);near(turned[i].point[1],height-marker.point[1]);near(turned[i].point[2],marker.point[2]);});
   }
 });
+test('D1-2 has exactly two independently supported modules with a genuinely empty gap',()=>{
+  const faces=models.build({code:'D1-2',width:8,height:3.6});
+  assert.deepEqual([...new Set(Array.from(faces,f=>f.component))],['d12-module-1','d12-module-2']);
+  const bounds=[];
+  for(const id of ['d12-module-1','d12-module-2']){
+    const unit=faces.filter(f=>f.component===id),points=unit.flatMap(f=>f.points);
+    bounds.push([Math.min(...points.map(p=>p[0])),Math.max(...points.map(p=>p[0]))]);
+    near(Math.min(...points.map(p=>p[2])),0);
+    assert.ok(unit.some(f=>f.part.endsWith('-leg')));
+    assert.ok(unit.some(f=>f.part.endsWith('-base-rail')));
+  }
+  assert.ok(bounds[1][0]-bounds[0][1]>.9,'no common bed, cart or table bridges the modules');
+  assert.ok(!faces.some(f=>/rising-discharge|red-flywheel|foam|stock|cart|material/.test(f.part)));
+  assert.deepEqual(Array.from(photo.markers({code:'D1-2'})),[],'do not guess unconfirmed flow direction');
+  const d11=models.build({code:'D1-1',width:12,height:4});
+  assert.ok(!d11.some(f=>f.component?.startsWith('d12-') || f.part.startsWith('d12-')));
+});
+test('portrait D1-2 keeps the gap between its two modules after CAD rotation',()=>{
+  const item={code:'D1-2',x:5,y:7,width:3.6,height:8,rotation:0};
+  const base=models.build(item),turned=models.build({...item,rotation:90});
+  const one=base.filter(f=>f.component==='d12-module-1').flatMap(f=>f.points);
+  const two=base.filter(f=>f.component==='d12-module-2').flatMap(f=>f.points);
+  assert.ok(Math.min(...two.map(p=>p[1]))-Math.max(...one.map(p=>p[1]))>.9);
+  base.forEach((f,i)=>f.points.forEach((p,j)=>{
+    near(turned[i].points[j][0],item.x+item.width/2-(p[1]-item.y-item.height/2));
+    near(turned[i].points[j][1],item.y+item.height/2+(p[0]-item.x-item.width/2));
+    assert.equal(turned[i].component,f.component);
+  }));
+});
 test('vertical D1-1 and Welding footprints fit the process axis to the long side before rigid CAD rotation',()=>{
   for(const [code,width,height] of [['D1-1',4.2,12.09],['WELDING',4.2,9]]){
     const faces=models.build({code,width,height,x:0,y:0}),points=faces.flatMap(f=>f.points),marks=photo.markers({code,width,height});
@@ -99,7 +128,7 @@ test('runtime loads the new module before old model dispatch, and ships it in th
   assert.ok(html.indexOf('src="twin-models.js')<html.indexOf('src="digital-twin.js'));
   assert.match(read('build.mjs'),/"photo-models\.js"/);
   const renderer=read('digital-twin.js');
-  for(const key of ['rackPhoto','j13Photo','d11Photo','weldingPhoto','l41Photo','eva3Deferred','photoSiteNote']){
+  for(const key of ['rackPhoto','j13Photo','d11Photo','d12Photo','weldingPhoto','l41Photo','eva3Deferred','photoSiteNote']){
     assert.ok(renderer.includes(`zh.${key}=`));assert.ok(renderer.includes(`th.${key}=`));
   }
   assert.match(renderer,/ChinChunPhotoModels\?\.height\(s\.item\)/);
