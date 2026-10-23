@@ -91,7 +91,7 @@ test('D1-2 has exactly two independently supported modules with a genuinely empt
     assert.ok(unit.some(f=>f.part.endsWith('-base-rail')));
   }
   assert.ok(bounds[1][0]-bounds[0][1]>.9,'no common bed, cart or table bridges the modules');
-  assert.ok(!faces.some(f=>/rising-discharge|red-flywheel|foam|stock|cart|material/.test(f.part)));
+  assert.ok(!faces.some(f=>/rising-discharge|red-flywheel|foam|stock|cart|material|belt/.test(f.part)),'no green cart deck inferred as a fixed belt');
   assert.deepEqual(Array.from(photo.markers({code:'D1-2'})),[],'do not guess unconfirmed flow direction');
   const d11=models.build({code:'D1-1',width:12,height:4});
   assert.ok(!d11.some(f=>f.component?.startsWith('d12-') || f.part.startsWith('d12-')));

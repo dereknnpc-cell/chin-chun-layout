@@ -161,11 +161,12 @@
       }
       for(const y of [.30,3.05]){
         box(4.37,y,.32,3.31,.14,.10,cream,'d12-two-base-rail');
-        box(4.30,y,.88,3.45,.16,.18,cream,'d12-two-belt-frame');
+        box(4.30,y,.88,3.45,.16,.18,cream,'d12-two-roller-frame');
         box(5.55,y,.91,.44,.20,1.18,cream,'d12-two-upright');
       }
-      box(4.41,.51,1.015,3.20,2.48,.025,green,'d12-two-fixed-belt');
-      for(const x of [4.40,7.60])tube([x,.49,.97],[x,3.01,.97],.09,steel,'d12-two-end-roller',20);
+      // Do not reinterpret the green cart decks as a fixed machine belt.
+      for(const x of [4.40,4.85,5.30,5.75,6.20,6.65,7.10,7.60])
+        tube([x,.49,1.06],[x,3.01,1.06],.09,steel,'d12-two-roller',20);
       box(5.50,.29,1.94,.55,2.96,.20,cream,'d12-two-cross-head');
       tube([5.78,.52,1.56],[5.78,3.01,1.56],.14,steel,'d12-two-upper-roller',24);
       box(5.46,.09,1.15,.63,.19,.56,cream,'d12-two-drive-cover');
