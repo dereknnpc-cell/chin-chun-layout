@@ -7420,12 +7420,38 @@
     updateViewBox();
   }
 
+  function fitDrawingBounds(bounds, width, height, padding = 12) {
+    const scale = Math.min(Math.max(1, width - padding * 2) / bounds.width,
+      Math.max(1, height - padding * 2) / bounds.height);
+    const fittedWidth = width / scale, fittedHeight = height / scale;
+    return { x: bounds.x + (bounds.width - fittedWidth) / 2,
+      y: bounds.y + (bounds.height - fittedHeight) / 2,
+      width: fittedWidth, height: fittedHeight };
+  }
+
   function fitToScreen() {
     const vpW = viewportEl.clientWidth;
     const vpH = viewportEl.clientHeight;
     if (vpW === 0 || vpH === 0) return;
 
     const aspectVp = vpW / vpH;
+
+    // A phone's whole-drawing view fits the actual CAD drawing, not the large
+    // decorative site margins. Geometry and saved layout coordinates stay intact.
+    // Explicit wide-site mode retains its existing surrounding context.
+    if (window.innerWidth <= 900 && currentFloor !== "2F" && siteViewMode !== "max") {
+      const groups = svgEl.querySelectorAll("#layerEquipment, #layerWalls, #layerGrid, #layerAisles, #layerDimensions, #layerTitleBlock, #layer2FMezzanine, #layerHandrails, #layerVerticalCirculation, #layerFlows");
+      const rects = Array.from(groups, group => group.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0);
+      const matrix = svgEl.getScreenCTM();
+      if (rects.length && matrix) {
+        const inverse = matrix.inverse();
+        const first = new DOMPoint(Math.min(...rects.map(r => r.left)), Math.min(...rects.map(r => r.top))).matrixTransform(inverse);
+        const last = new DOMPoint(Math.max(...rects.map(r => r.right)), Math.max(...rects.map(r => r.bottom))).matrixTransform(inverse);
+        Object.assign(viewBox, fitDrawingBounds({ x: first.x, y: first.y, width: last.x - first.x, height: last.y - first.y }, vpW, vpH));
+        updateViewBox();
+        return;
+      }
+    }
 
     if (currentFloor === "2F") {
       const targetW = 40.0 * SCALE + OFFSET_X;
@@ -7472,13 +7498,16 @@
     updateViewBox();
   }
 
-  // --- Mobile Off-canvas Workspace Controller ---
+  // On-demand right dropdowns share the same controls on desktop and mobile.
   function bindMobileWorkspace() {
     const libraryPanel = document.getElementById("mobileLibraryPanel");
     const libraryBtn = document.getElementById("mobileLibraryBtn");
     const canvasBtn = document.getElementById("mobileCanvasBtn");
     const inspectorBtn = document.getElementById("mobileInspectorBtn");
     const scrim = document.getElementById("mobilePanelScrim");
+    const layers = document.getElementById("layerSidebar");
+    const menus = Array.from(document.querySelectorAll(".workspace-menu"));
+    const mobileMedia = window.matchMedia("(max-width: 900px)");
 
     if (!libraryPanel || !libraryBtn || !canvasBtn || !inspectorBtn || !scrim) return;
 
@@ -7488,6 +7517,8 @@
 
       libraryPanel.classList.toggle("is-open", libraryOpen);
       inspectorPanel.classList.toggle("is-open", inspectorOpen);
+      libraryPanel.inert = !libraryOpen;
+      inspectorPanel.inert = !inspectorOpen;
       scrim.classList.toggle("is-open", libraryOpen || inspectorOpen);
       scrim.setAttribute("aria-hidden", String(!(libraryOpen || inspectorOpen)));
       libraryBtn.classList.toggle("active", libraryOpen);
@@ -7495,7 +7526,41 @@
       canvasBtn.classList.toggle("active", !libraryOpen && !inspectorOpen);
       libraryBtn.setAttribute("aria-expanded", String(libraryOpen));
       inspectorBtn.setAttribute("aria-expanded", String(inspectorOpen));
+      if (libraryOpen || inspectorOpen) menus.forEach(menu => { menu.open = false; });
     };
+
+    setMobilePanel(null);
+    if (layers) {
+      layers.open = !mobileMedia.matches;
+      layers.addEventListener("toggle", () => requestAnimationFrame(() => {
+        if (!mobileMedia.matches) fitToScreen();
+      }));
+      mobileMedia.addEventListener("change", () => {
+        layers.open = !mobileMedia.matches;
+        setMobilePanel(null);
+      });
+    }
+    menus.forEach(menu => menu.addEventListener("toggle", () => {
+      if (!menu.open) return;
+      setMobilePanel(null);
+      menus.forEach(other => { if (other !== menu) other.open = false; });
+    }));
+    document.addEventListener("click", event => {
+      menus.forEach(menu => { if (!menu.contains(event.target)) menu.open = false; });
+    });
+    document.querySelectorAll("[data-close-workspace]").forEach(button => {
+      button.addEventListener("click", () => {
+        const wasLibrary = libraryPanel.classList.contains("is-open");
+        setMobilePanel(null);
+        (wasLibrary ? libraryBtn : inspectorBtn).focus();
+      });
+    });
+    libraryPanel.addEventListener("click", event => {
+      if (event.target.closest(".lib-item") && !event.target.closest(".lib-item-custom-delete")) {
+        setMobilePanel(null);
+        libraryBtn.focus();
+      }
+    });
 
     libraryBtn.addEventListener("click", () => {
       setMobilePanel(libraryPanel.classList.contains("is-open") ? null : "library");
@@ -7513,7 +7578,15 @@
     scrim.addEventListener("click", () => setMobilePanel(null));
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") setMobilePanel(null);
+      if (e.key === "Escape") {
+        const trigger = libraryPanel.classList.contains("is-open") ? libraryBtn
+          : inspectorPanel.classList.contains("is-open") ? inspectorBtn : null;
+        setMobilePanel(null);
+        menus.forEach(menu => {
+          if (menu.open) { menu.open = false; menu.querySelector("summary").focus(); }
+        });
+        if (trigger) trigger.focus();
+      }
     });
 
     let resizeTimer = null;

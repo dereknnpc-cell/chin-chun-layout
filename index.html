@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#1E40AF">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=desktop-confirmed-20261023">
+  <link rel="stylesheet" href="style.css?v=compact-workspace-20261023">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -43,13 +43,17 @@
         <div class="floor-selector" id="floorSelector">
           <!-- Dynamically populated from layoutData.floors -->
         </div>
-        <button id="btnAddFloorModalBtn" class="cad-btn primary btn-sm" title="新增自訂樓層或夾層 (如 3F, 屋頂, 戶外)">
-          <span class="btn-icon">＋</span> 新增樓層
-        </button>
+
       </div>
 
       <!-- Header Right: System Actions -->
+      <details class="workspace-menu system-menu" id="systemMenu">
+        <summary>選項 ▾</summary>
+        <div class="menu-content">
       <div class="header-right-actions">
+        <button id="btnAddFloorModalBtn" class="cad-btn primary btn-sm" title="新增自訂樓層或夾層 (如 3F, 屋頂, 戶外)">
+          <span class="btn-icon">＋</span> 新增樓層
+        </button>
         <button id="openCloudBtn" class="cad-btn cloud-account-btn" type="button" data-state="offline" title="登入後可跨裝置同步">
           <span class="btn-icon">☁</span> 雲端帳號
         </button>
@@ -98,11 +102,20 @@
           </button>
         </div>
       </div>
+  <section class="desktop-baseline-notice" aria-label="配置版本">
+    <span id="desktopBaselineStatus" role="status"></span>
+    <button id="loadDesktopBaselineBtn" class="cad-btn secondary" type="button">載入確認電腦版（先備份目前配置）</button>
+  </section>
+        </div>
+      </details>
     </div>
 
     <!-- Row 2: Secondary CAD Tool Ribbon Bar -->
     <div class="cad-ribbon-bar">
       <button id="openDigitalTwin" class="cad-btn highlight-accent" type="button">◇ 2.5D Twin</button>
+      <details class="workspace-menu drawing-menu" id="drawingMenu">
+        <summary>繪圖工具 ▾</summary>
+        <div class="menu-content">
       <!-- Left: Drawing & Editing Tools -->
       <div class="ribbon-section">
         <div class="history-actions" style="display: flex; align-items: center; gap: 4px; margin-right: 6px;">
@@ -148,8 +161,36 @@
         </div>
       </div>
 
-      <div class="tool-separator"></div>
+        </div>
+      </details>
 
+      <!-- Right: Live Hints -->
+      <div class="ribbon-section hints-section">
+        <span class="cad-hint-badge">💡 L4 控制點優先 · 🔒 鎖定防誤移 · 選取按 <kbd>R</kbd> 旋轉</span>
+      </div>
+    <nav class="mobile-workspace-bar" aria-label="工作區選項">
+      <button id="mobileLibraryBtn" class="mobile-workspace-btn" type="button" aria-controls="mobileLibraryPanel" aria-expanded="false">
+        <span aria-hidden="true">⚙</span> 設備庫 ▾
+      </button>
+      <button id="mobileCanvasBtn" class="mobile-workspace-btn active" type="button" aria-label="關閉面板並顯示完整圖面">
+        <span aria-hidden="true">⌗</span> 圖面
+      </button>
+      <button id="mobileInspectorBtn" class="mobile-workspace-btn" type="button" aria-controls="inspectorPanel" aria-expanded="false">
+        <span aria-hidden="true">⌖</span> 屬性 ▾
+      </button>
+    </nav>
+    </div>
+  </header>
+
+
+  <!-- Main Workspace -->
+  <div class="main-workspace">
+    <!-- Mobile workspace controls: side panels become drawers on narrow screens -->
+
+    <button id="mobilePanelScrim" class="mobile-panel-scrim" type="button" aria-label="關閉側邊面板" aria-hidden="true"></button>
+
+    <details class="layer-sidebar" id="layerSidebar" open>
+      <summary>圖層 ▾</summary>
       <!-- Center: Layer Controls -->
       <div class="ribbon-section layer-section">
         <span class="ribbon-label">圖層（眼睛／鎖定）:</span>
@@ -193,35 +234,12 @@
         </div>
       </div>
 
-      <!-- Right: Live Hints -->
-      <div class="ribbon-section hints-section">
-        <span class="cad-hint-badge">💡 L4 控制點優先 · 🔒 鎖定防誤移 · 選取按 <kbd>R</kbd> 旋轉</span>
-      </div>
-    </div>
-  </header>
 
-  <section class="desktop-baseline-notice" aria-label="配置版本">
-    <span id="desktopBaselineStatus" role="status"></span>
-    <button id="loadDesktopBaselineBtn" class="cad-btn secondary" type="button">載入確認電腦版（先備份目前配置）</button>
-  </section>
-  <!-- Main Workspace -->
-  <div class="main-workspace">
-    <!-- Mobile workspace controls: side panels become drawers on narrow screens -->
-    <nav class="mobile-workspace-bar" aria-label="手機版工作區切換">
-      <button id="mobileLibraryBtn" class="mobile-workspace-btn" type="button" aria-controls="mobileLibraryPanel" aria-expanded="false">
-        <span aria-hidden="true">⚙️</span> 設備庫
-      </button>
-      <button id="mobileCanvasBtn" class="mobile-workspace-btn active" type="button" aria-label="關閉面板並顯示完整圖面">
-        <span aria-hidden="true">⌗</span> 圖面
-      </button>
-      <button id="mobileInspectorBtn" class="mobile-workspace-btn" type="button" aria-controls="inspectorPanel" aria-expanded="false">
-        <span aria-hidden="true">📐</span> 屬性
-      </button>
-    </nav>
-    <button id="mobilePanelScrim" class="mobile-panel-scrim" type="button" aria-label="關閉側邊面板" aria-hidden="true"></button>
+    </details>
 
-    <!-- Left Sidebar: Modular Equipment Library -->
-    <aside class="sidebar-left" id="mobileLibraryPanel">
+    <!-- Right dropdown: Modular Equipment Library -->
+    <aside class="sidebar-left" id="mobileLibraryPanel" aria-label="設備庫" inert>
+      <button class="workspace-panel-close cad-btn" type="button" data-close-workspace aria-label="關閉設備庫">✕ 關閉</button>
       <!-- Big Prominent Custom Add Equipment Card -->
       <div class="custom-eq-banner" id="btnSidebarAddCustomBig" title="點擊自訂機台名稱、代號、尺寸、樓層與顏色並放置於廠房">
         <div class="banner-icon">⚙️</div>
@@ -317,7 +335,8 @@
     </main>
 
     <!-- Right Sidebar: Inspector & Dimension Panel -->
-    <aside class="sidebar-right" id="inspectorPanel">
+    <aside class="sidebar-right" id="inspectorPanel" aria-label="屬性" inert>
+      <button class="workspace-panel-close cad-btn" type="button" data-close-workspace aria-label="關閉屬性">✕ 關閉</button>
       <details id="buildingReview" hidden style="margin:12px;padding:10px;border:1px solid #d5a346;border-radius:6px;font-size:12px;line-height:1.6">
         <summary id="buildingReviewSummary"></summary>
         <p id="buildingReviewNote"></p>
@@ -644,7 +663,7 @@
         </div>
         <div class="cad-modal-footer">
           <label class="save-template-check">
-            <input type="checkbox" id="saveToCustomLibCheck" checked> 同步儲存至左側「⭐ 自訂設備庫」供重複點選新增
+            <input type="checkbox" id="saveToCustomLibCheck" checked> 同步儲存至「⭐ 自訂設備庫」供重複點選新增
           </label>
           <div class="footer-buttons">
             <button type="button" id="cancelAddModalBtn" class="cad-btn secondary">取消</button>
@@ -785,12 +804,12 @@
   <link rel="stylesheet" href="digital-twin.css?v=three-20261023">
   <script src="photo-models.js?v=welding-correction-20261023"></script>
   <script src="twin-models.js?v=annotated-photos-20261022"></script>
-  <script src="building-geometry.js?v=desktop-confirmed-20261023"></script>
-  <script src="desktop-baseline.js?v=desktop-confirmed-20261023"></script>
+  <script src="building-geometry.js?v=compact-workspace-20261023"></script>
+  <script src="desktop-baseline.js?v=compact-workspace-20261023"></script>
   <script src="three-twin.js?v=three-20261023"></script>
-  <script src="digital-twin.js?v=desktop-confirmed-20261023"></script>
-  <script src="i18n.js?v=desktop-confirmed-20261023"></script>
+  <script src="digital-twin.js?v=compact-workspace-20261023"></script>
+  <script src="i18n.js?v=compact-workspace-20261023"></script>
   <script src="cloud-sync.js?v=3.0.1_password_login"></script>
-  <script src="app.js?v=desktop-confirmed-20261023"></script>
+  <script src="app.js?v=compact-workspace-20261023"></script>
 </body>
 </html>
