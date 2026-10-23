@@ -5,6 +5,8 @@ const outputDirectory = "dist";
 const staticFiles = [
   "index.html",
   "app.js",
+  "desktop-baseline.js",
+  "factory_layout_data.json",
   "building-geometry.js",
   "digital-twin.js",
   "twin-models.js",

@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#1E40AF">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=wall-picking-20261022">
+  <link rel="stylesheet" href="style.css?v=desktop-confirmed-20261023">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -72,7 +72,7 @@
         <div class="tool-separator"></div>
 
         <div class="action-buttons">
-          <button id="forceReloadBtn" class="cad-btn secondary" title="若瀏覽器有舊快取或未看到新功能，點此一鍵清除快取並載入最新版">
+          <button id="forceReloadBtn" class="cad-btn secondary" title="重新載入程式，保留本機配置與設備庫">
             <span class="btn-icon">🔄</span> 強制重整
           </button>
           <span id="autoSaveIndicator" class="autosave-tag" title="配置變更已自動保存在本地瀏覽器">✓ 已自動儲存</span>
@@ -93,7 +93,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
             匯出 DXF
           </button>
-          <button id="resetLayoutBtn" class="cad-btn danger" title="重設為 Derek Yeh V1.2 基準配置">
+          <button id="resetLayoutBtn" class="cad-btn danger" title="載入確認電腦版，先備份目前配置">
             重設原廠
           </button>
         </div>
@@ -200,6 +200,10 @@
     </div>
   </header>
 
+  <section class="desktop-baseline-notice" aria-label="配置版本">
+    <span id="desktopBaselineStatus" role="status"></span>
+    <button id="loadDesktopBaselineBtn" class="cad-btn secondary" type="button">載入確認電腦版（先備份目前配置）</button>
+  </section>
   <!-- Main Workspace -->
   <div class="main-workspace">
     <!-- Mobile workspace controls: side panels become drawers on narrow screens -->
@@ -781,11 +785,12 @@
   <link rel="stylesheet" href="digital-twin.css?v=three-20261023">
   <script src="photo-models.js?v=welding-correction-20261023"></script>
   <script src="twin-models.js?v=annotated-photos-20261022"></script>
-  <script src="building-geometry.js?v=connecting-ramp-20261023"></script>
+  <script src="building-geometry.js?v=desktop-confirmed-20261023"></script>
+  <script src="desktop-baseline.js?v=desktop-confirmed-20261023"></script>
   <script src="three-twin.js?v=three-20261023"></script>
-  <script src="digital-twin.js?v=connecting-ramp-20261023"></script>
-  <script src="i18n.js?v=3.0.1_a1_1_model"></script>
+  <script src="digital-twin.js?v=desktop-confirmed-20261023"></script>
+  <script src="i18n.js?v=desktop-confirmed-20261023"></script>
   <script src="cloud-sync.js?v=3.0.1_password_login"></script>
-  <script src="app.js?v=user-boundary-20261022-r2"></script>
+  <script src="app.js?v=desktop-confirmed-20261023"></script>
 </body>
 </html>

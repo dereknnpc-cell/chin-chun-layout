@@ -34,16 +34,18 @@
   }
   // Read-only site presentation, NOT a CAD equipment record or a migration.
   // User's 2026-10-23 annotation: red/north edge high, yellow/south edge low.
-  // The thumbnail locates it at about X86.5–90, Y40–45 on the 5 m grid.
-  // Width/run are illustrative; do not infer a surveyed slope from the video.
+  // Plan position must be supplied by the confirmed desktop drawing, not the
+  // obsolete mobile/default thumbnail. Never silently reuse the old X86.5 box.
   function connectingRamp(layout) {
     const b=get(layout);if(!b || b.main.rise<=b.annex.rise)return null;
-    const x=b.main.x+b.main.width-13.5,y=b.main.y+b.main.height;
-    if(!inside(b.annex,[x,y]) || !inside(b.annex,[x+3.5,y+5]))return null;
+    const r=b.connectingRamp;
+    if(!r || !['x','y','width','height'].every(k=>Number.isFinite(r[k])) || r.width<=0 || r.height<=0)return null;
+    const {x,y,width,height}=r;
+    if(Math.abs(y-b.main.y-b.main.height)>1e-6 || !inside(b.main,[x,y]) || !inside(b.main,[x+width,y]) || !inside(b.annex,[x,y]) || !inside(b.annex,[x+width,y+height]))return null;
     return {id:'site_annex_connecting_ramp',code:'RAMP-CONNECTOR',
-      name:'原廠／擴建棚連接坡道',x,y,width:3.5,height:5,rotation:0,
+      name:'原廠／擴建棚連接坡道',x,y,width,height,rotation:0,
       ramp:{low:b.annex.rise,high:b.main.rise,highEdge:'first'},
-      geometryAccuracy:'annotation-approximate',source:'使用者黃低／紅高標示 2026-10-23'};
+      geometryAccuracy:r.geometryAccuracy || 'annotation-approximate',source:r.source};
   }
   const generatedWall=w=>(w.floor || '1F')==='1F' && w.source==='A3 L-02' && /^a3_wall_\d+$/.test(w.id);
   function recoveryProblem(layout) {

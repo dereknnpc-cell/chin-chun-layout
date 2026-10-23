@@ -30,9 +30,9 @@ test('the high edge remains on the factory side when ramp is reversed',()=>{
 });
 
 test('annotated connecting ramp joins +1.00 and +1.50 without touching CAD or silently migrating old layouts',()=>{
-  const layout={building_geometry:window.ChinChunBuilding.reference(),equipment:[{id:'D1-1',x:90.31,y:41.99}],walls:[{id:'user',x1:4,y1:8,x2:10,y2:8}]};
+  const layout={building_geometry:{...window.ChinChunBuilding.reference(),connectingRamp:{x:86,y:40,width:3,height:5}},equipment:[{id:'D1-1',x:80,y:51}],walls:[{id:'user',x1:4,y1:8,x2:10,y2:8}]};
   const before=JSON.stringify(layout),item=window.ChinChunBuilding.connectingRamp(layout);
-  assert.equal(item.x,86.5);assert.equal(item.y,40);assert.equal(item.width,3.5);assert.equal(item.height,5);
+  assert.equal(item.x,86);assert.equal(item.y,40);assert.equal(item.width,3);assert.equal(item.height,5);
   assert.equal(item.geometryAccuracy,'annotation-approximate');
   const s={item,points:window.__rect(item),z:1.5},top=window.__rampTopPoints(s);
   assert.deepEqual(Array.from(top,p=>p[2]),[1.5,1.5,1,1]);
@@ -47,6 +47,7 @@ test('annotated connecting ramp joins +1.00 and +1.50 without touching CAD or si
   assert.deepEqual(Array.from(window.__rampEndLabels(s),v=>v.text),['紅線高端 +1.50 m','黃線低端 +1.00 m']);
   assert.equal(JSON.stringify(layout),before);
   assert.equal(window.ChinChunBuilding.connectingRamp({}),null,'no connector on unverified default geometry');
+  assert.equal(window.ChinChunBuilding.connectingRamp({building_geometry:window.ChinChunBuilding.reference()}),null,'no guessed position on another saved drawing');
   const invalid=JSON.parse(before);invalid.building_geometry.annex.rise=2;assert.equal(window.ChinChunBuilding.connectingRamp(invalid),null);
 });
 

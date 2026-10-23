@@ -16,7 +16,7 @@
   const TOTAL_W_M = (COLS_X - 1) * BAY_SIZE_M; // 100.0m
   const TOTAL_H_M = 70.0; // 70.0m total height including south CNC area
 
-  // Expanded Site Master Plan Bounds (140M x 90M default)
+  // Expanded drawing viewport; these dimensions are not surveyed site boundaries.
   const SITE_EXP_W_M = 140.0;
   const SITE_EXP_H_M = 90.0;
   const SITE_MARGIN_X_M = 20.0; // 20m West & East outdoor space
@@ -39,41 +39,29 @@
     if (!candidate || (!candidate.equipment && !candidate.dimensions)) {
       return { layout: candidate, migrated: false };
     }
+    // The user's original drawing wins over both the rejected A3 trace and
+    // baseline migrations. Recover only from this document's own archive.
+    const buildingRepair=window.ChinChunBuilding?.repair(candidate);
+    if(buildingRepair?.changed || buildingRepair?.blocked)return {
+      layout:buildingRepair.layout,migrated:buildingRepair.changed,
+      buildingRepaired:buildingRepair.changed,buildingBlocked:buildingRepair.blocked,
+      leftBoundaryCorrected:Boolean(buildingRepair.leftBoundaryOnly)
+    };
+    if(window.ChinChunBuilding?.get(candidate))return {layout:candidate,migrated:false};
     if (candidate.source_geometry_revision === SOURCE_GEOMETRY_REVISION) {
       return { layout: candidate, migrated: false };
     }
 
-    const migratedLayout = JSON.parse(JSON.stringify(candidate));
-    const customEquipment = (migratedLayout.equipment || []).filter(
-      item => !BASELINE_EQUIPMENT_IDS.has(item.id)
-    );
-    migratedLayout.equipment = [
-      ...JSON.parse(JSON.stringify(INITIAL_LAYOUT.equipment)),
-      ...customEquipment
-    ];
-    migratedLayout.grid = JSON.parse(JSON.stringify(INITIAL_LAYOUT.grid));
-    migratedLayout.walls = JSON.parse(JSON.stringify(INITIAL_LAYOUT.walls));
-    migratedLayout.columns = JSON.parse(JSON.stringify(INITIAL_LAYOUT.columns));
-    migratedLayout.version = INITIAL_LAYOUT.version;
-    migratedLayout.source_geometry_revision = SOURCE_GEOMETRY_REVISION;
-    migratedLayout.source_geometry_file = INITIAL_LAYOUT.source_geometry_file;
-
-    if (migratedLayout.title_block) {
-      migratedLayout.title_block.rev = "REV V2.6";
-      migratedLayout.title_block.date = "2026/09/14";
-      migratedLayout.title_block.spec = "EPS V1.2 校正 · 100M×40M 柱網";
-    }
-
-    if (Array.isArray(migratedLayout.floors)) {
-      const firstFloor = migratedLayout.floors.find(floor => floor.id === "1F");
-      if (firstFloor) firstFloor.desc = "100M×40M EPS 精準柱網";
-    }
-    return { layout: migratedLayout, migrated: true };
+    // A default revision is not permission to erase another document's edits.
+    // Desktop loading is explicit, backed up and undoable in every entry path.
+    return {layout:candidate,migrated:false,desktopReview:true};
   }
 
   // --- State Variables ---
   let layoutData = JSON.parse(JSON.stringify(INITIAL_LAYOUT));
   let sourceGeometryMigrated = false;
+  let buildingRepairedOnLoad = false;
+  let leftBoundaryCorrectedOnLoad = false;
   try {
     const savedLayout = localStorage.getItem(STORAGE_KEY_LAYOUT);
     if (savedLayout) {
@@ -82,6 +70,8 @@
         const result = applySourceGeometryRevision(parsed);
         layoutData = result.layout;
         sourceGeometryMigrated = result.migrated;
+        buildingRepairedOnLoad = Boolean(result.buildingRepaired);
+        leftBoundaryCorrectedOnLoad = Boolean(result.leftBoundaryCorrected);
       }
     }
   } catch (err) {
@@ -106,7 +96,7 @@
     console.warn("Could not load custom lib from localStorage:", err);
   }
 
-  let siteViewMode = "expanded"; // 'expanded' (140x90m) | 'indoor' (100x40m) | 'max' (160x100m)
+  let siteViewMode = "expanded"; // expanded site context | indoor floor plan | maximum overview
   let currentFloor = "1F";
   let selectedId = null;
   let selectedItemType = null; // 'equipment' | 'column' | 'wall' | 'aisle' | 'zone' | 'flow' | 'title_block'
@@ -443,6 +433,12 @@
     stairs: true
   };
 
+  const LAYER_LOCK_BEHAVIOR_REVISION = "columns-editable-v1";
+
+  function needsLayerLockMigration(targetLayout) {
+    return targetLayout?.layer_settings?.lock_behavior_revision !== LAYER_LOCK_BEHAVIOR_REVISION;
+  }
+
   function ensureLayerSettings(targetLayout) {
     if (!targetLayout.layer_settings || typeof targetLayout.layer_settings !== "object") {
       targetLayout.layer_settings = {};
@@ -451,13 +447,29 @@
       targetLayout.layer_settings.locks = {};
     }
     const locks = targetLayout.layer_settings.locks;
-    if (typeof locks.columns !== "boolean") locks.columns = true;
+    // V2.9.2: the original layer-lock rollout made every existing column
+    // non-editable by default. Unlock once for old/local/cloud documents, then
+    // preserve any lock choice the user makes from this version onward.
+    if (needsLayerLockMigration(targetLayout)) {
+      locks.columns = false;
+      targetLayout.layer_settings.lock_behavior_revision = LAYER_LOCK_BEHAVIOR_REVISION;
+    } else if (typeof locks.columns !== "boolean") {
+      locks.columns = false;
+    }
     if (typeof locks.walls !== "boolean") locks.walls = false;
     if (typeof locks.equipment !== "boolean") locks.equipment = false;
     return targetLayout.layer_settings;
   }
 
+  const layerLockSettingsMigrated = needsLayerLockMigration(layoutData);
   ensureLayerSettings(layoutData);
+  if (layerLockSettingsMigrated) {
+    try {
+      localStorage.setItem(STORAGE_KEY_LAYOUT, JSON.stringify(layoutData));
+    } catch (error) {
+      console.warn("Could not preserve the column lock migration locally:", error);
+    }
+  }
 
   function getRecordLayerKey(rec) {
     if (!rec) return null;
@@ -479,8 +491,15 @@
     document.querySelectorAll(".layer-lock-btn[data-lock-layer]").forEach(button => {
       const layerKey = button.getAttribute("data-lock-layer");
       const locked = isLayerLocked(layerKey);
-      button.textContent = locked ? "🔒" : "🔓";
-      button.setAttribute("title", `${locked ? "解鎖" : "鎖定"}${layerKey === "columns" ? "柱子" : layerKey === "walls" ? "牆面" : "設備"}圖層`);
+      const layerLabel = layerKey === "columns" ? "柱子" : layerKey === "walls" ? "牆面" : "設備";
+      const actionLabel = `${locked ? "解鎖" : "鎖定"}${layerLabel}圖層`;
+      // The visible icon is rendered from data-locked in CSS so it cannot be
+      // removed by DOM translation or a subsequent SVG re-render.
+      button.textContent = "";
+      button.dataset.locked = String(locked);
+      button.setAttribute("title", actionLabel);
+      button.setAttribute("aria-label", actionLabel);
+      button.setAttribute("aria-pressed", String(locked));
       button.closest(".toggle-btn")?.classList.toggle("layer-locked", locked);
     });
   }
@@ -644,6 +663,7 @@
           JSON.parse(JSON.stringify(remoteLayout))
         );
         layoutData = geometryResult.layout;
+        const layerLockMigrated = needsLayerLockMigration(layoutData);
         ensureLayerSettings(layoutData);
         customEquipmentLib = Array.isArray(remoteLibrary) ? JSON.parse(JSON.stringify(remoteLibrary)) : [];
         try {
@@ -661,10 +681,18 @@
         populateLibrary();
         renderSvg();
         updateUndoRedoButtons();
-        if (geometryResult.migrated) {
+        if (geometryResult.migrated || layerLockMigrated) {
           window.setTimeout(() => {
             window.ChinChunCloud?.scheduleSave(layoutData, customEquipmentLib);
-            showToast("已套用 2026 EPS 精準尺寸、牆面與 152 支柱位", "success");
+            if (geometryResult.leftBoundaryCorrected) {
+              showToast('外棚左界已依紅線右移一個柱距；隔間、設備及右界未改動','success');
+            } else if (geometryResult.buildingRepaired) {
+              showToast('已從本檔封存還原原繪隔間，外棚邊界依紅線更正；設備未搬動','success');
+            } else if (geometryResult.migrated) {
+              showToast("已套用 2026 EPS 精準尺寸、牆面與 152 支柱位", "success");
+            } else {
+              showToast("柱子圖層已恢復為可編輯；需要時仍可按鎖頭鎖定", "success");
+            }
           }, 0);
         }
       },
@@ -688,7 +716,9 @@
     initializeCloudSync();
 
     setTimeout(() => {
-      showToast("📐 V2.6：已依 2026 Layout for AI.eps 校正設備尺寸、牆面與柱位", "info", 5000);
+      if(leftBoundaryCorrectedOnLoad)showToast('外棚左界已依紅線右移一個柱距，其他配置未改動','success');
+      else if(buildingRepairedOnLoad)showToast('已還原你原本的牆線與隔間，外棚邊界依紅線更正','success');
+      else if(!window.ChinChunBuilding?.get(layoutData))showToast("📐 V2.6：已依 2026 Layout for AI.eps 校正設備尺寸、牆面與柱位", "info", 5000);
     }, 600);
   }
 
@@ -818,84 +848,35 @@
         <!-- Site Boundary Property Ground -->
         <rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="#F8FAFC" rx="8"/>
 
-        <!-- Outer Landscape Green Buffer (2.5M) -->
-        <rect x="${siteX + 4}" y="${siteY + 4}" width="${siteW - 8}" height="${siteH - 8}" fill="none" stroke="#86EFAC" stroke-width="16" stroke-opacity="0.35" rx="6"/>
+        <!-- Remaining satellite-reference context, outside the factory. -->
+        <path d="M ${OFFSET_X - 19 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 10) * SCALE} L ${OFFSET_X - 4 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 10) * SCALE} L ${OFFSET_X - 4 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 18) * SCALE} L ${OFFSET_X - 19 * SCALE} ${OFFSET_Y + (TOTAL_H_M + 18) * SCALE} Z" fill="#E7E2D8" stroke="#A39C8F" stroke-width="1.5"/>
+        <text x="${OFFSET_X - 11.5 * SCALE}" y="${OFFSET_Y + (TOTAL_H_M + 14) * SCALE}" font-size="9" font-weight="700" fill="#6B6256" text-anchor="middle">南側鄰棟示意</text>
 
-        <!-- Property Line (CAD Dash-dot Boundary) -->
-        <rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-dasharray="14,4,3,4" rx="8"/>
-        <text x="${siteX + 20}" y="${siteY + 22}" font-size="11" font-weight="800" fill="#B91C1C">金讚廠區總地籍境界線 · 全區 140.0M × 90.0M (地坪約 12,600 m²)</text>
-        <text x="${siteX + siteW - 20}" y="${siteY + 22}" font-size="10" font-weight="700" fill="#B91C1C" text-anchor="end">建築覆蓋率: 45.2% · 容積率: 86.5%</text>
+        <!-- Schematic extent only: satellite screenshots do not establish cadastral boundaries. -->
+        <rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="none" stroke="#94A3B8" stroke-width="2" stroke-dasharray="8,6" rx="8"/>
+        <text x="${siteX + 20}" y="${siteY + 22}" font-size="11" font-weight="800" fill="#475569">廠區周邊示意 · 非地籍測量圖</text>
 
-        <!-- Perimeter Truck Ring Road Band (8.0M Dual Carriage Way) -->
-        <!-- West Truck Road -->
-        <rect x="${OFFSET_X - 18 * SCALE}" y="${OFFSET_Y - 14 * SCALE}" width="${16 * SCALE}" height="${(TOTAL_H_M + 28) * SCALE}" class="outdoor-road-band" rx="4"/>
-        <line x1="${OFFSET_X - 10 * SCALE}" y1="${OFFSET_Y - 12 * SCALE}" x2="${OFFSET_X - 10 * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 12) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
-        <text x="${OFFSET_X - 10 * SCALE}" y="${OFFSET_Y + 25 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" transform="rotate(-90 ${OFFSET_X - 10 * SCALE} ${OFFSET_Y + 25 * SCALE})">環廠西側重車物流專用道 8.0M (雙向通車)</text>
+        <!-- Six-metre perimeter roads, with the previously confirmed floor plan unchanged. -->
+        <!-- West Road -->
+        <rect x="${OFFSET_X - 8 * SCALE}" y="${OFFSET_Y - 8 * SCALE}" width="${6 * SCALE}" height="${(TOTAL_H_M + 16) * SCALE}" class="outdoor-road-band" rx="4"/>
+        <line x1="${OFFSET_X - 5 * SCALE}" y1="${OFFSET_Y - 8 * SCALE}" x2="${OFFSET_X - 5 * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 8) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
+        <text x="${OFFSET_X - 5 * SCALE}" y="${OFFSET_Y + 25 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" transform="rotate(-90 ${OFFSET_X - 5 * SCALE} ${OFFSET_Y + 25 * SCALE})">環廠西側車道 6.0M</text>
 
-        <!-- North Truck Road -->
-        <rect x="${OFFSET_X - 18 * SCALE}" y="${OFFSET_Y - 16 * SCALE}" width="${(TOTAL_W_M + 34) * SCALE}" height="${14 * SCALE}" class="outdoor-road-band" rx="4"/>
-        <line x1="${OFFSET_X - 12 * SCALE}" y1="${OFFSET_Y - 9 * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 12) * SCALE}" y2="${OFFSET_Y - 9 * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
-        <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y - 9 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠北側貨櫃物流道 8.0M · 保持淨空禁停</text>
+        <!-- North Road -->
+        <rect x="${OFFSET_X - 8 * SCALE}" y="${OFFSET_Y - 8 * SCALE}" width="${(TOTAL_W_M + 16) * SCALE}" height="${6 * SCALE}" class="outdoor-road-band" rx="4"/>
+        <line x1="${OFFSET_X - 8 * SCALE}" y1="${OFFSET_Y - 5 * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 8) * SCALE}" y2="${OFFSET_Y - 5 * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
+        <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y - 5 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠北側車道 6.0M</text>
 
-        <!-- East Truck Road -->
-        <rect x="${OFFSET_X + TOTAL_W_M * SCALE + 2 * SCALE}" y="${OFFSET_Y - 14 * SCALE}" width="${16 * SCALE}" height="${(TOTAL_H_M + 28) * SCALE}" class="outdoor-road-band" rx="4"/>
-        <line x1="${OFFSET_X + TOTAL_W_M * SCALE + 10 * SCALE}" y1="${OFFSET_Y - 12 * SCALE}" x2="${OFFSET_X + TOTAL_W_M * SCALE + 10 * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 12) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
-        <text x="${OFFSET_X + TOTAL_W_M * SCALE + 10 * SCALE}" y="${OFFSET_Y + 25 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" transform="rotate(90 ${OFFSET_X + TOTAL_W_M * SCALE + 10 * SCALE} ${OFFSET_Y + 25 * SCALE})">環廠東側物流車道 8.0M (重車道)</text>
+        <!-- East Road -->
+        <rect x="${OFFSET_X + (TOTAL_W_M + 2) * SCALE}" y="${OFFSET_Y - 8 * SCALE}" width="${6 * SCALE}" height="${(TOTAL_H_M + 16) * SCALE}" class="outdoor-road-band" rx="4"/>
+        <line x1="${OFFSET_X + (TOTAL_W_M + 5) * SCALE}" y1="${OFFSET_Y - 8 * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 5) * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 8) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
+        <text x="${OFFSET_X + (TOTAL_W_M + 5) * SCALE}" y="${OFFSET_Y + 25 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" transform="rotate(90 ${OFFSET_X + (TOTAL_W_M + 5) * SCALE} ${OFFSET_Y + 25 * SCALE})">環廠東側車道 6.0M</text>
 
-        <!-- South Truck Road -->
-        <rect x="${OFFSET_X - 18 * SCALE}" y="${OFFSET_Y + TOTAL_H_M * SCALE + 2 * SCALE}" width="${(TOTAL_W_M + 34) * SCALE}" height="${14 * SCALE}" class="outdoor-road-band" rx="4"/>
-        <line x1="${OFFSET_X - 12 * SCALE}" y1="${OFFSET_Y + TOTAL_H_M * SCALE + 9 * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 12) * SCALE}" y2="${OFFSET_Y + TOTAL_H_M * SCALE + 9 * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
-        <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y + TOTAL_H_M * SCALE + 9 * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠南側車道 8.0M · 消防緊急通道</text>
+        <!-- South Road -->
+        <rect x="${OFFSET_X - 8 * SCALE}" y="${OFFSET_Y + (TOTAL_H_M + 2) * SCALE}" width="${(TOTAL_W_M + 16) * SCALE}" height="${6 * SCALE}" class="outdoor-road-band" rx="4"/>
+        <line x1="${OFFSET_X - 8 * SCALE}" y1="${OFFSET_Y + (TOTAL_H_M + 5) * SCALE}" x2="${OFFSET_X + (TOTAL_W_M + 8) * SCALE}" y2="${OFFSET_Y + (TOTAL_H_M + 5) * SCALE}" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="8,6"/>
+        <text x="${OFFSET_X + 50 * SCALE}" y="${OFFSET_Y + (TOTAL_H_M + 5) * SCALE}" font-size="11" font-weight="800" fill="#64748B" text-anchor="middle" dominant-baseline="central">環廠南側車道 6.0M</text>
 
-        <!-- 40FT Container Loading Docks along West Wall -->
-        <g id="outdoorLoadingDocks">
-    `;
-
-    // 4 Container Loading Docks (West Wall, Y = 10m, 20m, 30m, 40m)
-    for (let d = 0; d < 4; d++) {
-      const dy = OFFSET_Y + (8 + d * 10) * SCALE;
-      const dx = OFFSET_X - 14 * SCALE;
-      const dw = 13 * SCALE;
-      const dh = 6.5 * SCALE;
-
-      outHtml += `
-        <rect x="${dx}" y="${dy}" width="${dw}" height="${dh}" class="outdoor-dock-bay" rx="3"/>
-        <line x1="${dx + dw}" y1="${dy}" x2="${dx + dw}" y2="${dy + dh}" stroke="#B45309" stroke-width="4"/>
-        <text x="${dx + dw / 2}" y="${dy + dh / 2 - 4}" font-size="10" font-weight="800" fill="#B45309" text-anchor="middle">40FT 貨櫃泊位 D0${d + 1}</text>
-        <text x="${dx + dw / 2}" y="${dy + dh / 2 + 10}" font-size="8.5" font-family="'JetBrains Mono', monospace" fill="#78350F" text-anchor="middle">12.5M × 3.5M 裝卸月台</text>
-      `;
-    }
-
-    // Main Security Gate, Guardhouse & Truck Scale (North-West Entrance)
-    const gateX = OFFSET_X - 18 * SCALE;
-    const gateY = OFFSET_Y - 18 * SCALE;
-    outHtml += `
-      <!-- Main Entrance Gate & Guardhouse -->
-      <rect x="${gateX + 2 * SCALE}" y="${gateY + 2 * SCALE}" width="${5 * SCALE}" height="${4 * SCALE}" fill="#1E293B" stroke="#0F172A" stroke-width="2" rx="3"/>
-      <text x="${gateX + 4.5 * SCALE}" y="${gateY + 4.5 * SCALE}" font-size="9" font-weight="800" fill="#FFFFFF" text-anchor="middle">警衛崗亭</text>
-
-      <!-- Truck Weighbridge (地磅站 18M x 3.5M) -->
-      <rect x="${gateX + 8 * SCALE}" y="${gateY + 2 * SCALE}" width="${18 * SCALE}" height="${3.5 * SCALE}" fill="#334155" stroke="#E2E8F0" stroke-width="1.5" stroke-dasharray="4,2" rx="2"/>
-      <text x="${gateX + 17 * SCALE}" y="${gateY + 4 * SCALE}" font-size="9.5" font-weight="800" fill="#F8FAFC" text-anchor="middle" dominant-baseline="central">進出廠重車地磅站 (100T / 18.0M)</text>
-
-      <!-- Main Sliding Gate -->
-      <line x1="${gateX}" y1="${gateY + 7 * SCALE}" x2="${gateX + 16 * SCALE}" y2="${gateY + 7 * SCALE}" stroke="#2563EB" stroke-width="4"/>
-      <text x="${gateX + 8 * SCALE}" y="${gateY + 9 * SCALE}" font-size="10" font-weight="800" fill="#1D4ED8" text-anchor="middle">廠區正門出入口 (16M 主大門)</text>
-    `;
-
-    // Parking Bays along North Road
-    const parkX = OFFSET_X + 15 * SCALE;
-    const parkY = OFFSET_Y - 14 * SCALE;
-    for (let p = 0; p < 8; p++) {
-      const px = parkX + p * 3.0 * SCALE;
-      outHtml += `
-        <rect x="${px}" y="${parkY}" width="${2.8 * SCALE}" height="${5.5 * SCALE}" class="outdoor-parking-bay" rx="2"/>
-        <text x="${px + 1.4 * SCALE}" y="${parkY + 2.8 * SCALE}" font-size="8" font-weight="700" fill="#64748B" text-anchor="middle">P${p + 1}</text>
-      `;
-    }
-
-    outHtml += `
-        </g>
       </g>
     `;
     return outHtml;
@@ -903,6 +884,9 @@
 
   // --- Render Full Layout SVG ---
   function renderSvg() {
+    refreshDesktopBaselineReview();
+    refreshBuildingReview();
+    window.ChinChunTwin?.update(layoutData, currentFloor);
     let html = `
       <defs>
         <!-- Fine Grid Pattern -->
@@ -962,6 +946,7 @@
     const is2F = currentFloor === "2F";
     const isOverlay = currentFloor === "OVERLAY";
     const is1F = currentFloor === "1F";
+    if (is1F || isOverlay) html += window.ChinChunBuilding?.svg(layoutData, SCALE, {x:OFFSET_X,y:OFFSET_Y}) || '';
 
     // 1. Aisles Layer (1F) - 可點選、移動、微調尺寸與刪除之色塊走道
     if (layerState.aisles && (is1F || isOverlay)) {
@@ -1005,9 +990,10 @@
         const poly = getWallPolygon(w);
         if (!poly) return;
         const isSelected = w.id === selectedId;
+        const ghostWall = !isWallOnActiveFloor(w);
 
         html += `
-          <g id="${w.id}" class="svg-wall-group svg-interactive-item ${isSelected ? 'selected' : ''}" data-id="${w.id}">
+          <g id="${w.id}" class="svg-wall-group svg-interactive-item ${isSelected ? 'selected' : ''} ${ghostWall ? 'svg-layer-locked' : ''}" data-id="${w.id}">
             <polygon points="${poly.points}" class="wall-double-poly" stroke-linejoin="round"/>
             <line x1="${poly.c1.x}" y1="${poly.c1.y}" x2="${poly.c2.x}" y2="${poly.c2.y}" class="wall-centerline"/>
         `;
@@ -1420,8 +1406,10 @@
           const displayName = f.name || "動線";
           const labelW = Math.max(70, displayName.length * 12 + 16);
           html += `
-            <rect x="${pMid.x - labelW / 2}" y="${pMid.y - 11}" width="${labelW}" height="22" rx="4" fill="var(--bg-panel)" stroke="${strokeCol}" stroke-width="1.2" fill-opacity="0.95"/>
-            <text x="${pMid.x}" y="${pMid.y}" font-size="9" font-weight="700" fill="${strokeCol}" text-anchor="middle" dominant-baseline="central">${displayName}</text>
+            <g class="cad-flow-label">
+              <rect x="${pMid.x - labelW / 2}" y="${pMid.y - 11}" width="${labelW}" height="22" rx="4" fill="var(--bg-panel)" stroke="${strokeCol}" stroke-width="1.2" fill-opacity="0.95"/>
+              <text x="${pMid.x}" y="${pMid.y}" font-size="9" font-weight="700" fill="${strokeCol}" text-anchor="middle" dominant-baseline="central">${displayName}</text>
+            </g>
           `;
         }
 
@@ -1470,6 +1458,7 @@
       eq1List.forEach(eq => {
         html += renderSingleItemSvg(eq, "1F", isOverlay ? "0.38" : "1.0");
       });
+      html += renderDieCutSiteSvg(layoutData);
     }
 
     // 2F Equipment & Components
@@ -1496,41 +1485,44 @@
       <g id="layerTitleBlock" class="svg-interactive-item svg-title-block-group ${isTbSelected ? 'selected' : ''}"
          data-id="title_block" transform="translate(${curTbX}, ${curTbY})">
         <rect width="${tbW}" height="${tbH}" fill="var(--bg-panel)" stroke="${isTbSelected ? 'var(--cad-selection)' : 'var(--cad-wall)'}" stroke-width="${isTbSelected ? '3' : '2'}" rx="4"/>
-        <rect width="${tbW}" height="45" fill="#1E3A8A" rx="4"/>
-        <rect y="40" width="${tbW}" height="5" fill="#1E3A8A"/>
-        <text x="20" y="28" font-size="15" font-weight="800" fill="#FFFFFF">${tb.company || '金讚科技 · 廠房平面配置工程圖'}</text>
-        <line x1="0" y1="45" x2="${tbW}" y2="45" stroke="var(--border-cad)" stroke-width="1.2"/>
-        <line x1="0" y1="88" x2="${tbW}" y2="88" stroke="var(--border-cad)" stroke-width="1.2"/>
-        <line x1="0" y1="130" x2="${tbW}" y2="130" stroke="var(--border-cad)" stroke-width="1.2"/>
-        <line x1="150" y1="45" x2="150" y2="${tbH}" stroke="var(--border-cad)" stroke-width="1.2"/>
-        <line x1="310" y1="45" x2="310" y2="${tbH}" stroke="var(--border-cad)" stroke-width="1.2"/>
+        <g transform="scale(${tbW / 460}, ${tbH / 175})">
+          <rect width="460" height="32" fill="#1E3A8A" rx="4"/>
+          <text x="12" y="22" font-size="15" font-weight="800" fill="#FFFFFF" data-fit-width="436">${tb.company || '金讚科技 · 廠房平面配置工程圖'}</text>
+          <path d="M0 32H460 M0 62H460 M0 99H460 M0 136H460 M150 62V136 M310 62V175" fill="none" stroke="var(--border-cad)" stroke-width="1.2"/>
 
-        <text x="15" y="62" font-size="9" fill="var(--text-muted)" font-weight="600">圖名 / TITLE</text>
-        <text x="15" y="78" font-size="11" fill="var(--text-main)" font-weight="800">${tb.title || '1F生產動線、建築元件與全廠區配置'}</text>
-        <text x="165" y="62" font-size="9" fill="var(--text-muted)" font-weight="600">圖號 / DWG NO.</text>
-        <text x="165" y="78" font-size="11" fill="var(--text-main)" font-weight="800">${tb.dwg_no || 'CC-ENG-2026-004'}</text>
-        <text x="325" y="62" font-size="9" fill="var(--text-muted)" font-weight="600">版次 / REV</text>
-        <text x="325" y="78" font-size="11" fill="var(--text-main)" font-weight="800">${tb.rev || 'REV V2.2'}</text>
+          <text x="12" y="41" font-size="8" fill="var(--text-muted)" font-weight="600">圖名 / TITLE</text>
+          <text x="12" y="59" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="436">${tb.title || '1F生產動線、建築元件與全廠區配置'}</text>
+          <text x="12" y="75" font-size="8" fill="var(--text-muted)" font-weight="600">圖號 / DWG NO.</text>
+          <text x="12" y="91" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="126">${tb.dwg_no || 'CC-ENG-2026-004'}</text>
+          <text x="162" y="75" font-size="8" fill="var(--text-muted)" font-weight="600">版次 / REV</text>
+          <text x="162" y="91" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="136">${tb.rev || 'REV V2.2'}</text>
+          <text x="322" y="75" font-size="8" fill="var(--text-muted)" font-weight="600">日期 / DATE</text>
+          <text x="322" y="91" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="126">${tb.date || '2026/09/09'}</text>
 
-        <text x="15" y="104" font-size="9" fill="var(--text-muted)" font-weight="600">繪製 / DESIGNER</text>
-        <text x="15" y="120" font-size="11" fill="var(--text-main)" font-weight="800">${tb.designer || 'Derek Yeh'}</text>
-        <text x="165" y="104" font-size="9" fill="var(--text-muted)" font-weight="600">標高 / ELEVATION</text>
-        <text x="165" y="120" font-size="11" fill="#DC2626" font-weight="800">${tb.elevation || '1F +0.6M / 2F +4.4M'}</text>
-        <text x="325" y="104" font-size="9" fill="var(--text-muted)" font-weight="600">日期 / DATE</text>
-        <text x="325" y="120" font-size="11" fill="var(--text-main)" font-weight="800">${tb.date || '2026/09/09'}</text>
+          <text x="12" y="112" font-size="8" fill="var(--text-muted)" font-weight="600">繪製 / DESIGNER</text>
+          <text x="12" y="128" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="126">${tb.designer || 'Derek Yeh'}</text>
+          <text x="162" y="112" font-size="8" fill="var(--text-muted)" font-weight="600">標高 / ELEVATION</text>
+          <text x="162" y="128" font-size="11" fill="#DC2626" font-weight="800" data-fit-width="136">${tb.elevation || '1F +0.6M / 2F +4.4M'}</text>
+          <text x="322" y="112" font-size="8" fill="var(--text-muted)" font-weight="600">比例 / SCALE</text>
+          <text x="322" y="128" font-size="11" fill="var(--text-main)" font-weight="800" data-fit-width="126">${tb.scale || '1:150 (Metric)'}</text>
 
-        <text x="15" y="146" font-size="9" fill="var(--text-muted)" font-weight="600">規格 / SPEC</text>
-        <text x="15" y="162" font-size="11" fill="#16A34A" font-weight="800">${tb.spec || '140M×90M · 廠區/車道/設備'}</text>
-        <text x="165" y="146" font-size="9" fill="var(--text-muted)" font-weight="600">比例 / SCALE</text>
-        <text x="165" y="162" font-size="11" fill="var(--text-main)" font-weight="800">${tb.scale || '1:150 (Metric)'}</text>
-        <text x="325" y="146" font-size="9" fill="var(--text-muted)" font-weight="600">狀態 / STATUS</text>
-        <text x="325" y="162" font-size="11" fill="#16A34A" font-weight="800">${tb.status || 'APPROVED 正式版'}</text>
+          <text x="12" y="150" font-size="8" fill="var(--text-muted)" font-weight="600">規格 / SPEC</text>
+          <text x="12" y="166" font-size="11" fill="#16A34A" font-weight="800" data-fit-width="286">${tb.spec || '廠區/6M車道/設備 · 周邊示意'}</text>
+          <text x="322" y="150" font-size="8" fill="var(--text-muted)" font-weight="600">狀態 / STATUS</text>
+          <text x="322" y="166" font-size="11" fill="#16A34A" font-weight="800" data-fit-width="126">${tb.status || 'APPROVED 正式版'}</text>
+        </g>
       </g>
     `;
 
-    // L4 edit controls stay above equipment/columns while the wall body remains in L1.
+    if (is1F || isOverlay) html += window.ChinChunBuilding?.svg(layoutData, SCALE, {x:OFFSET_X,y:OFFSET_Y}, true, document.documentElement.lang.startsWith('th')) || '';
+
+    // L1 remains visually below equipment, but its narrow picking surface must
+    // not be intercepted by equipment fills, clearance zones or column labels.
+    html += renderWallHitTargets();
+
+    // L4 edit controls stay above equipment/columns and wall picking surfaces.
     const selectedWallRecord = selectedId ? findItemRecord(selectedId) : null;
-    if (selectedWallRecord?.type === "wall" && !isLayerLocked("walls")) {
+    if (selectedWallRecord?.type === "wall" && layerState.walls && !isLayerLocked("walls") && isWallOnActiveFloor(selectedWallRecord.item)) {
       const selectedWall = selectedWallRecord.item;
       const poly = getWallPolygon(selectedWall);
       if (poly) {
@@ -1549,11 +1541,259 @@
     }
 
     svgEl.innerHTML = html;
+    scaleDrawingText();
     attachSvgClickListeners();
+    refreshAnnotationVisibility();
+  }
+
+  function refreshDesktopBaselineReview() {
+    const thai=document.documentElement.lang.startsWith('th'),current=window.ChinChunDesktop?.isConfirmed(layoutData);
+    const status=document.getElementById('desktopBaselineStatus'),button=document.getElementById('loadDesktopBaselineBtn');
+    if(status){
+      status.textContent=current
+        ? (thai?'ยึดไฟล์คอมพิวเตอร์ที่ยืนยันแล้ว':'依確認電腦版繪圖')+` · ${layoutData.equipment?.length || 0} ${thai?'อุปกรณ์':'設備'} / ${layoutData.walls?.length || 0} ${thai?'ผนัง':'牆面'}`
+        : (thai?'ไฟล์ปัจจุบันยังไม่ใช่ฐานคอมพิวเตอร์ที่ยืนยัน เก็บไฟล์นี้ไว้ก่อน ไม่มีการเขียนทับอัตโนมัติ':'目前開啟的不是確認電腦版；已保留此檔，不會自動覆蓋。');
+      status.parentElement.dataset.current=String(Boolean(current));
+    }
+    if(button)button.textContent=thai?'โหลดฐานคอมพิวเตอร์ (สำรองไฟล์ปัจจุบันก่อน)':'載入確認電腦版（先備份目前配置）';
+  }
+  function loadConfirmedDesktopBaseline() {
+    const thai=document.documentElement.lang.startsWith('th');
+    const prompt=thai
+      ? 'แทนที่ไฟล์ปัจจุบันด้วยไฟล์คอมพิวเตอร์ที่ยืนยันแล้ว (108 อุปกรณ์ / 35 ผนัง) ระบบจะสำรองและดาวน์โหลดไฟล์เดิมก่อน และย้อนกลับได้ คลังอุปกรณ์ส่วนตัวคงเดิม หากมีสิทธิ์แก้ไขคลาวด์จะซิงค์ไปยังไฟล์คลาวด์ที่เลือก ยืนยันหรือไม่?'
+      : '要以已確認電腦版（108 設備／35 面牆）取代目前配置嗎？會先保存並下載目前配置備份，也可按復原；自訂設備庫不變。若已登入且有雲端編輯權限，會同步到目前選取的雲端檔案。';
+    if(!confirm(prompt))return;
+    let prepared;
+    try{
+      prepared=window.ChinChunDesktop.prepare(layoutData,INITIAL_LAYOUT,localStorage);
+      const blob=new Blob([JSON.stringify(layoutData,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+      link.href=url;link.download=prepared.backupKey+'.json';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }catch(error){
+      showToast(thai?'สำรองไฟล์ไม่สำเร็จ จึงยังไม่เปลี่ยนแบบ':'備份未完成，未更動目前配置','error');return;
+    }
+    pushHistoryState('載入已確認電腦版（已備份）');
+    layoutData=prepared.layout;currentFloor='1F';ensureLayerSettings(layoutData);updateLayerLockControls();
+    deselectAll();renderFloorSelector();renderSvg();fitToScreen();updateViewBox();saveToLocalStorage();
+    showToast(thai?'โหลดไฟล์คอมพิวเตอร์แล้ว และเก็บสำเนาแบบเดิมไว้':'已載入確認電腦版；原配置已備份，可復原','success');
+  }
+  function refreshBuildingReview() {
+    const b=window.ChinChunBuilding?.get(layoutData),thai=document.documentElement.lang.startsWith('th');
+    const blocked=window.ChinChunBuilding?.recoveryProblem(layoutData);
+    const button=document.getElementById('btnApplyA3'),panel=document.getElementById('buildingReview');
+    if(button){button.disabled=Boolean(b || blocked);button.textContent=b?(thai?'✓ ยึดแปลนเดิมและเส้นแดง':'✓ 原繪隔間／紅線邊界'):(thai?'📐 ใช้ขอบเส้นแดง ไม่เปลี่ยนผนัง':'📐 套用紅線邊界（不動隔間）');}
+    if(panel){
+      panel.hidden=!b && !blocked;
+      const list=document.getElementById('buildingReviewIssues');list.replaceChildren();
+      if(blocked){
+        document.getElementById('buildingReviewSummary').textContent=thai?'⚠ ต้องใช้ไฟล์สำรองเดิมเพื่อกู้ผนัง':'⚠ 原繪隔間待還原';
+        document.getElementById('buildingReviewNote').textContent=thai?'ไม่มีข้อมูลผนังเดิมครบถ้วน ไม่ได้ใช้แปลนตั้งต้นแทน กรุณานำเข้าไฟล์สำรองเดิม':blocked;
+      }
+      if(b){
+        document.getElementById('buildingReviewSummary').textContent=thai?'ยึดแปลนเดิม · ขอบตามเส้นแดง':'以你的原繪圖為準 · 紅線邊界';
+        document.getElementById('buildingReviewNote').textContent=thai?'ผนังกั้นใช้แบบเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอก X35–100 ส่วนต่อเติม X90–100 เครื่อง เสา ประตูและทางเดินไม่ย้าย พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกเดิมคงอยู่ ไม่ได้ประมาณใหม่':'廠內牆線與隔間沿用你的原繪圖，不採A3比例描繪。外棚左界X35、右界X100；最新增建X90–100。設備、柱位、門窗與動線未搬動。原廠+1.50／外棚+1.00／路面0米；外棚縱深沿用現值，不另行推算。';
+        if(b.restoration){const li=document.createElement('li');li.textContent=thai?`กู้ผนังเดิม ${b.restoration.restoredWalls} ชิ้น คงผนังอื่น ${b.restoration.retainedWalls} ชิ้น`:`從本檔封存還原 ${b.restoration.restoredWalls} 段原牆；保留其他 ${b.restoration.retainedWalls} 段牆。被撤回的推算牆另行封存，未永久刪除。`;list.append(li);}
+      }
+    }
+    if(currentFloor==='1F'){
+      floorIndicatorEl.textContent=b?'1F 原廠 +1.50M / 外棚 +1.00M':'1F 主廠房 (EL.+0.60M)';
+      gridBayInfoEl.textContent=b?'以你的原繪牆線、隔間及柱網為準':'5.00 m 柱距 · 立柱與牆體自由編輯/移動/刪除';
+      mezzanineStatsEl.textContent=b?'原廠100×40M · 外棚X35–100／增建X90–100':'廠房總跨度: 100.0 M × 40.0 M';
+      const pill=document.querySelector('#btnFloor_1F .floor-elev'),first=layoutData.floors?.find(q=>q.id==='1F');
+      if(pill && first){pill.textContent=first.elev;pill.closest('.floor-btn').title=first.desc || '';}
+    }
+  }
+
+  function applyA3Building() {
+    if(!window.ChinChunBuilding || window.ChinChunBuilding.get(layoutData))return;
+    const problem=window.ChinChunBuilding.recoveryProblem(layoutData);
+    if(problem)return showToast(problem,'error');
+    const thai=document.documentElement.lang.startsWith('th');
+    if(!confirm(thai?'ใช้ขอบเส้นแดง X35–100 ต่อเติม X90–100 โดยไม่เปลี่ยนผนังกั้นเดิมหรือย้ายเครื่อง?':'套用紅線邊界：外棚X35–100、增建X90–100？\n廠內隔間以你的原繪圖為準，不重新描繪、不搬動設備。'))return;
+    const calibrated=window.ChinChunBuilding.apply(layoutData);
+    pushHistoryState('套用紅線邊界（保留原繪隔間）');
+    layoutData=calibrated;
+    deselectAll();renderFloorSelector();renderSvg();saveToLocalStorage();
+    document.getElementById('buildingReview').open=true;
+    showToast(thai?'ใช้ขอบเส้นแดงแล้ว คงผนังกั้นเดิมและตำแหน่งเครื่อง':'已依紅線修正外棚邊界；廠內隔間沿用原繪，設備未搬動','success',5000);
+  }
+
+  function isWallOnActiveFloor(wall) {
+    return currentFloor === "OVERLAY" || (wall.floor || "1F") === currentFloor;
+  }
+
+  function renderWallHitTargets() {
+    if (!layerState.walls || isLayerLocked("walls")) return "";
+    const walls=(layoutData.walls || []).filter(isWallOnActiveFloor);
+    // The selected wall wins at wall/wall junctions. L4 endpoint/center handles
+    // are rendered afterwards and still have the highest interaction priority.
+    walls.sort((a,b)=>Number(a.id===selectedId)-Number(b.id===selectedId));
+    let html='<g id="layerWallHitTargets" data-layer-rank="wall-picking">';
+    for (const wall of walls) {
+      const poly=getWallPolygon(wall);
+      if (!poly) continue;
+      const id=escapeEquipmentText(wall.id);
+      html+=`<g class="svg-wall-hit-target svg-interactive-item ${wall.id===selectedId?'selected':''}" data-id="${id}">
+        <title>點選牆線可選取，拖曳可平移整面牆 / Select and drag wall</title>
+        <polygon points="${poly.points}" class="wall-hit-body"/>
+        <line x1="${poly.c1.x}" y1="${poly.c1.y}" x2="${poly.c2.x}" y2="${poly.c2.y}" class="wall-hit-line"/>
+      </g>`;
+    }
+    return html+'</g>';
+  }
+
+  function refreshAnnotationVisibility() {
+    if (!svgEl || !viewportEl || !viewBox.width) return;
+    const matrix = svgEl.getScreenCTM();
+    const scale = matrix ? Math.hypot(matrix.a,matrix.b) : svgEl.getBoundingClientRect().width / viewBox.width;
+    const accepted = [];
+    const overlaps = (rect, group) => accepted.some(entry => entry.group !== group &&
+      rect.left < entry.rect.right + 2 && rect.right + 2 > entry.rect.left &&
+      rect.top < entry.rect.bottom + 2 && rect.bottom + 2 > entry.rect.top);
+    const place = (element, group, force=false) => {
+      element.style.visibility = '';
+      const rect = element.getBoundingClientRect();
+      if (!force && overlaps(rect, group)) {
+        element.style.visibility = 'hidden';
+        return;
+      }
+      accepted.push({rect,group});
+    };
+    const groups = Array.from(svgEl.querySelectorAll('.svg-equipment-group.svg-interactive-item')).filter(group => !group.classList.contains('svg-column-group'));
+    groups.sort((a,b) => Number(b.classList.contains('selected'))-Number(a.classList.contains('selected')) ||
+      (b.querySelector('.main-box')?.getBoundingClientRect().width || 0)-(a.querySelector('.main-box')?.getBoundingClientRect().width || 0));
+    for (const group of groups) {
+      const labels = Array.from(group.querySelectorAll('text')).filter(el => el.parentElement === group);
+      if (!labels.length) continue;
+      const selected = group.classList.contains('selected');
+      const footprint = (group.querySelector('.main-box') || group.querySelector('rect'))?.getBoundingClientRect();
+      // Equipment identifiers are essential drawing information, not optional
+      // detail. Fit them to their own footprint rather than dropping small ones.
+      const item = findItemRecord(group.dataset.id)?.item;
+      if (item && !['Door', 'Window', 'Stairs', 'Elevator', 'Furniture', 'Sanitary'].includes(item.category)) {
+        const primary = labels[0];
+        const baseSize = Number(primary.dataset.cadFontSize) || 11;
+        const size = Math.min(Math.max(baseSize, 10 / Math.max(scale, .01)), item.height * SCALE * .72);
+        const center = metersToSvg(item.x + item.width / 2, item.y + item.height / 2);
+        applyDrawingTextScale(primary, size, center.x, scale < .95 ? center.y : Number(primary.dataset.cadY));
+      }
+      place(labels[0],group,true);
+      for (const label of labels.slice(1)) {
+        label.style.visibility = '';
+        const rect = label.getBoundingClientRect();
+        if (scale >= .95 && footprint && rect.width <= footprint.width * 1.05 && !overlaps(rect,group)) place(label,group,selected);
+        else label.style.visibility = 'hidden';
+      }
+    }
+    for (const group of svgEl.querySelectorAll('.svg-aisle-group, .svg-flow-group')) {
+      const selected = group.classList.contains('selected');
+      const label = group.querySelector('.cad-flow-label') || Array.from(group.children).find(el => el.tagName.toLowerCase() === 'text');
+      if (!label) continue;
+      if (selected || scale >= .95) place(label,group,selected);
+      else label.style.visibility = 'hidden';
+    }
+    for (const group of svgEl.querySelectorAll('.svg-column-group')) {
+      const label = group.querySelector('.col-tag');
+      if (!label) continue;
+      const selected = group.classList.contains('selected');
+      if (selected || scale >= 1.2) place(label,group,selected);
+      else label.style.visibility = 'hidden';
+    }
+    // Engineering metadata remains present even in a zoomed-out drawing.
+    svgEl.querySelectorAll('#layerTitleBlock text').forEach(label => label.style.visibility = '');
+  }
+
+  function scaleDrawingText() {
+    svgEl.querySelectorAll('.svg-equipment-group:not(.svg-column-group)').forEach(group => {
+      const record = findItemRecord(group.dataset.id);
+      if (!record?.item?.width) return;
+      Array.from(group.children).filter(child => child.tagName.toLowerCase() === 'text').forEach(label => {
+        label.dataset.fitWidth = Math.max(8, record.item.width * SCALE - 8);
+      });
+    });
+    // Render large glyphs and scale them in SVG coordinates. Browser minimum-font
+    // preferences otherwise enlarge small CAD labels independently of the drawing.
+    svgEl.querySelectorAll('text').forEach(label => {
+      // Safari reports a minimum-font-adjusted computed size. Preserve the CAD
+      // size declared by the drawing instead of baking that adjustment back in.
+      const size = parseFloat(label.getAttribute('font-size')) || parseFloat(getComputedStyle(label).fontSize) || 10;
+      const x = Number(label.getAttribute('x')) || 0;
+      const y = Number(label.getAttribute('y')) || 0;
+      const transform = label.getAttribute('transform') || '';
+      label.dataset.cadFontSize = size;
+      label.dataset.cadX = x;
+      label.dataset.cadY = y;
+      label.dataset.cadTransform = transform;
+      label.setAttribute('x', '0');
+      label.setAttribute('y', '0');
+      label.style.fontSize = '100px';
+      label.style.textRendering = 'geometricPrecision';
+      label.style.webkitTextSizeAdjust = 'none';
+      label.setAttribute('font-size', '100');
+      applyDrawingTextScale(label, size, x, y);
+    });
+  }
+
+  function applyDrawingTextScale(label, size, x, y) {
+    let ratio = size / 100;
+    const fitWidth = Number(label.dataset.fitWidth);
+    if (fitWidth > 0) {
+      const textWidth = label.getComputedTextLength() * ratio;
+      if (textWidth > fitWidth) ratio *= fitWidth / textWidth;
+    }
+    label.setAttribute('transform', `${label.dataset.cadTransform || ''} translate(${x} ${y}) scale(${ratio})`);
   }
 
   // --- Specialized Architectural Component SVG Renderer ---
-  function renderSingleItemSvg(eq, floor, opacity) {
+  function escapeEquipmentText(value) {
+    return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"})[c]);
+  }
+
+  function renderDieCutSiteSvg(layout) {
+    const site=window.ChinChunModels?.dieCutSite?.(layout);
+    if(!site)return '';
+    const {opening:o,collection:r,out,feed}=site;
+    const a=metersToSvg(r.x,r.y),b=metersToSvg(o.x,o.y),p=metersToSvg(...out),q=metersToSvg(...feed);
+    const thai=document.documentElement.lang.startsWith('th');
+    return `<g id="dieCutSiteOverlay" pointer-events="none" data-height-difference="0.5">
+      <rect x="${a.x}" y="${a.y}" width="${r.width*SCALE}" height="${r.height*SCALE}" fill="#10b981" fill-opacity="0.10" stroke="#059669" stroke-width="1.4" stroke-dasharray="4,3"/>
+      <text x="${a.x+r.width*SCALE/2}" y="${a.y+14}" font-size="8" font-weight="700" fill="#047857" text-anchor="middle">${thai?'พื้นที่รับงาน Die Cut':'Die Cut 出料收集區'}</text>
+      <line data-site-part="wall-opening" x1="${b.x}" y1="${b.y}" x2="${b.x+o.width*SCALE}" y2="${b.y}" stroke="#f59e0b" stroke-width="6"/>
+      <text x="${b.x+o.width*SCALE/2}" y="${b.y-6}" font-size="7" fill="#a16207" text-anchor="middle">${thai?'ช่องส่งงาน (ประมาณ)':'出料牆洞（示意）'}</text>
+      <path d="M ${q.x} ${q.y-5} L ${p.x} ${p.y} L ${b.x+o.width*SCALE/2} ${b.y-12}" fill="none" stroke="#059669" stroke-width="1.6" stroke-dasharray="4,3"/>
+      <path d="M ${b.x+o.width*SCALE/2-4} ${b.y-6} L ${b.x+o.width*SCALE/2} ${b.y-12} L ${b.x+o.width*SCALE/2+4} ${b.y-6}" fill="none" stroke="#059669" stroke-width="1.6"/>
+      <text x="${q.x}" y="${q.y+10}" font-size="7" fill="#047857" text-anchor="middle">${thai?'ป้อนเข้า · พื้นต่าง 0.5 ม.':'擴建區入料 · 高差 0.5 m'}</text>
+    </g>`;
+  }
+
+  function renderRestroomSvg(eq, pos) {
+    const l=window.ChinChunModels.restroomLayout(eq),s=SCALE,t=l.wall;
+    const rect=(x,y,w,h,attrs='')=>`<rect x="${pos.x+x*s}" y="${pos.y+y*s}" width="${w*s}" height="${h*s}" ${attrs}/>`;
+    let html=rect(0,0,l.width,l.height,'class="main-box" fill="#edf5f4" stroke="none"');
+    html+='<g fill="#779195" stroke="#405e63" stroke-width="0.6">';
+    html+=rect(0,0,l.width,t)+rect(0,l.height-t,l.width,t)+rect(l.width-t,t,t,l.height-2*t);
+    html+=rect(0,t,t,l.doorStart-t)+rect(0,l.doorEnd,t,l.height-t-l.doorEnd)+'</g>';
+    const hx=pos.x+t*s,hy=pos.y+l.doorEnd*s,d=l.doorWidth*s;
+    html+=`<g data-fixture="entrance" data-width="${l.doorWidth}"><line x1="${hx}" y1="${hy}" x2="${hx+d}" y2="${hy}" stroke="#98683e" stroke-width="1.5"/><path d="M ${hx} ${hy-d} A ${d} ${d} 0 0 1 ${hx+d} ${hy}" fill="none" stroke="#98683e" stroke-width="0.7" stroke-dasharray="2,1"/></g>`;
+    for(const u of l.urinals){
+      html+='<g data-fixture="urinal">'+rect(u.x,u.y,u.width,u.height,'rx="2" fill="white" stroke="#407d91" stroke-width="0.7"');
+      html+=rect(u.x+u.width*.3,u.y+u.height*.2,u.width*.5,u.height*.6,'rx="1" fill="#b7dce4"')+'</g>';
+    }
+    for(const st of l.stalls){
+      const front=pos.y+(st.y+st.height)*s,gap=(st.width-st.doorWidth)/2;
+      html+=`<g data-fixture="stall" fill="none" stroke="#56757a" stroke-width="1"><path d="M ${pos.x+st.x*s} ${pos.y+st.y*s} V ${front} H ${pos.x+(st.x+gap)*s} M ${pos.x+(st.x+gap+st.doorWidth)*s} ${front} H ${pos.x+(st.x+st.width)*s}"/>`;
+      html+=`<line data-fixture="stall-door" x1="${pos.x+(st.x+gap)*s}" y1="${front}" x2="${pos.x+(st.x+gap+st.doorWidth)*s}" y2="${front}" stroke="#98683e" stroke-width="1.3"/>`;
+      const cx=pos.x+(st.x+st.width/2)*s,cy=pos.y+(st.y+st.height*.48)*s;
+      html+=`<ellipse data-fixture="toilet" cx="${cx}" cy="${cy}" rx="${Math.min(.18,st.width*.24)*s}" ry="${Math.min(.25,st.height*.25)*s}" fill="white" stroke="#407d91" stroke-width="0.7"/></g>`;
+    }
+    const sk=l.sink;
+    html+=`<g data-fixture="sink" data-length="${sk.width}">`+rect(sk.x,sk.y,sk.width,sk.height,'fill="white" stroke="#407d91" stroke-width="1"');
+    for(const r of [.27,.73])html+=`<ellipse cx="${pos.x+(sk.x+sk.width*r)*s}" cy="${pos.y+(sk.y+sk.height/2)*s}" rx="${Math.min(.23,sk.width*.16)*s}" ry="${sk.height*.34*s}" fill="#b7dce4"/>`;
+    html+=`</g><text x="${pos.x+l.width*.6*s}" y="${pos.y+l.height*.65*s}" font-size="8.5" font-weight="800" fill="#0369a1" text-anchor="middle" dominant-baseline="central">${eq.code}</text>`;
+    return html;
+  }
+
+  function renderSingleItemSvg(item, floor, opacity) {
+    const eq = {...item, name: escapeEquipmentText(item.name), code: escapeEquipmentText(item.code)};
     const pos = metersToSvg(eq.x, eq.y);
     const ew = eq.width * SCALE;
     const eh = eq.height * SCALE;
@@ -1569,6 +1809,7 @@
       <g id="${eq.id}" class="svg-equipment-group svg-interactive-item ${isSelected ? 'selected' : ''}" 
          transform="rotate(${rot} ${centerX} ${centerY})"
          data-id="${eq.id}" data-floor="${floor}" opacity="${opacity}">
+        <title>雙擊可編輯設備名稱與編號 / Double-click to edit text</title>
     `;
 
     // Clearance buffer
@@ -1576,7 +1817,9 @@
       itemHtml += `<rect x="${pos.x - clrPx}" y="${pos.y - clrPx}" width="${ew + clrPx * 2}" height="${eh + clrPx * 2}" fill="${color}" fill-opacity="0.08" stroke="${color}" stroke-width="0.8" stroke-dasharray="3,3" rx="4"/>`;
     }
 
-    if (cat === "Door") {
+    if (window.ChinChunModels?.referenceCode(item) === "WC-STALLS" && window.ChinChunModels.restroomLayout) {
+      itemHtml += renderRestroomSvg(eq, pos);
+    } else if (cat === "Door") {
       // Architectural Door (門片與 90° 開啟擺動弧線)
       itemHtml += `
         <rect x="${pos.x}" y="${pos.y}" width="${ew}" height="${eh}" fill="none" stroke="#2563EB" stroke-width="1.2"/>
@@ -1744,7 +1987,7 @@
           <text x="${centerX}" y="${centerY + 6}" font-size="8" font-weight="600" fill="var(--text-muted)" text-anchor="middle" dominant-baseline="central">${eq.name}</text>
         `;
       } else {
-        itemHtml += `<text x="${centerX}" y="${centerY}" font-size="9" font-weight="800" fill="var(--text-main)" text-anchor="middle" dominant-baseline="central">${eq.code} · ${eq.name}</text>`;
+        itemHtml += `<text x="${centerX}" y="${centerY}" font-size="9" font-weight="800" fill="var(--text-main)" text-anchor="middle" dominant-baseline="central">${eq.code}</text>`;
       }
     }
 
@@ -1781,6 +2024,8 @@
         e.stopPropagation();
         e.preventDefault();
         const id = el.getAttribute("data-id");
+        // Equipment double-clicks are tracked by ID across SVG re-renders.
+        if (findItemRecord(id)?.type === "equipment") return;
         selectItem(id);
         openQuickRenameBox(id, e.clientX, e.clientY);
       });
@@ -1934,7 +2179,7 @@
 
       propName.value = item.description || "建築隔間實體牆";
       propCode.value = item.type === "exterior" ? "外牆 (Exterior)" : "隔間牆 (Interior)";
-      propZone.value = "1F · 建築隔間雙線牆 (可調整/刪除)";
+      propZone.value = `${item.floor || '1F'} · 建築隔間雙線牆 (可調整/刪除)`;
 
       cardStandardDims.style.display = "none";
       cardStandardCoords.style.display = "none";
@@ -2233,7 +2478,7 @@
         { code: "M2-1", name: "ADH 2 (貼合機主機 M2-1)", w: 25.0, h: 4.3, cat: "ADH", col: "#2B6CB0" },
         { code: "N1-1", name: "DC (集塵設備/DC)", w: 1.35, h: 3.74, cat: "ADH", col: "#4A90E2" },
         { code: "F1-1", name: "Foam (發泡原料存放區)", w: 15.0, h: 3.8, cat: "Material", col: "#319795" },
-        { code: "A1-1", name: "EVA 1 (EVA 原料暫存 1)", w: 13.6, h: 3.7, cat: "Material", col: "#319795" }
+        { code: "A1-1", name: "EVA 1 (EVA 生產線 A1-1)", w: 13.6, h: 3.7, cat: "EVA", col: "#2C7A7B" }
       ],
       "✂️ 裁切與成型精加工 (Cutting)": [
         { code: "T Cut 1", name: "T Cut 1 (裁切機 1)", w: 4.5, h: 2.7, cat: "Cutting", col: "#F5A623" },
@@ -2475,10 +2720,44 @@
 
   // --- Quick Rename Box Controller (Double-click on Canvas) ---
   let activeRenameId = null;
+  let equipmentPress = null;
+  let lastEquipmentClick = null;
+  const equipmentClickSlop = 5;
+
+  function beginEquipmentTextGesture(id, e) {
+    const previous = lastEquipmentClick;
+    lastEquipmentClick = null;
+    if (previous && previous.id === id && previous.floor === currentFloor &&
+        Date.now() - previous.time <= 450 &&
+        Math.hypot(e.clientX - previous.x, e.clientY - previous.y) <= equipmentClickSlop) {
+      equipmentPress = null;
+      selectItem(id);
+      openQuickRenameBox(id, e.clientX, e.clientY);
+      return true;
+    }
+    equipmentPress = {id, floor: currentFloor, x: e.clientX, y: e.clientY};
+    return false;
+  }
+
+  function finishEquipmentTextGesture(e) {
+    if (!equipmentPress) return;
+    const press = equipmentPress;
+    lastEquipmentClick = !dragHasMoved && e.button === 0 && press.floor === currentFloor &&
+      Math.hypot(e.clientX - press.x, e.clientY - press.y) <= equipmentClickSlop
+      ? {...press, time: Date.now()} : null;
+    equipmentPress = null;
+  }
+
+  function preservePhotoModelReference(item) {
+    const models = window.ChinChunModels;
+    if (!item.photoModelCode && models?.matches(item)) {
+      item.photoModelCode = models.referenceCode(item);
+    }
+  }
 
   function openQuickRenameBox(id, clientX, clientY) {
     const rec = findItemRecord(id);
-    if (!rec) return;
+    if (!rec || isRecordLayerLocked(rec)) return;
     activeRenameId = id;
 
     const box = document.getElementById("quickRenameBox");
@@ -2498,12 +2777,14 @@
       codeGroup.style.display = "none";
     }
 
-    // Position box near mouse cursor
+    // Measure the actual popover, keeping both fields and buttons in view.
+    box.style.display = "flex";
+    const boxRect = box.getBoundingClientRect();
     const vpRect = viewportEl.getBoundingClientRect();
     let left = clientX - vpRect.left + 15;
     let top = clientY - vpRect.top + 15;
-    if (left + 300 > vpRect.width) left = vpRect.width - 310;
-    if (top + 180 > vpRect.height) top = vpRect.height - 190;
+    if (left + boxRect.width > vpRect.width) left = vpRect.width - boxRect.width - 10;
+    if (top + boxRect.height > vpRect.height) top = vpRect.height - boxRect.height - 10;
     left = Math.max(10, left);
     top = Math.max(10, top);
 
@@ -2511,8 +2792,9 @@
     box.style.top = `${top}px`;
     box.style.display = "flex";
 
-    nameInp.focus();
-    nameInp.select();
+    const focusInput = item.code !== undefined ? codeInp : nameInp;
+    focusInput.focus();
+    focusInput.select();
   }
 
   function closeQuickRenameBox() {
@@ -2524,13 +2806,19 @@
   function saveQuickRename() {
     if (!activeRenameId) return;
     const rec = findItemRecord(activeRenameId);
-    if (!rec) { closeQuickRenameBox(); return; }
+    if (!rec || isRecordLayerLocked(rec)) { closeQuickRenameBox(); return; }
 
     const nameInp = document.getElementById("quickRenameName");
     const codeInp = document.getElementById("quickRenameCode");
     const newName = nameInp.value.trim();
     const newCode = codeInp.value.trim();
 
+    const nameField = rec.type === "wall" ? "description" : "name";
+    const nameChanged = Boolean(newName && newName !== rec.item[nameField]);
+    const codeChanged = Boolean(newCode && rec.item.code !== undefined && newCode !== rec.item.code);
+    if (!nameChanged && !codeChanged) { closeQuickRenameBox(); return; }
+    pushHistoryState("編輯設備文字");
+    if (codeChanged) preservePhotoModelReference(rec.item);
     if (rec.type === "wall") {
       rec.item.description = newName || rec.item.description;
     } else {
@@ -2576,6 +2864,10 @@
   }
   // --- Add New Wall Function ---
   function addNewWall() {
+    if (isLayerLocked("walls")) {
+      showToast("牆面圖層已鎖定，請先解鎖牆面圖層再新增", "info", 2400);
+      return;
+    }
     const centerSvg = {
       x: viewBox.x + viewBox.width / 2,
       y: viewBox.y + viewBox.height / 2
@@ -2592,11 +2884,21 @@
       y2: snapY,
       thickness: 0.3,
       type: "interior",
+      floor: currentFloor === "OVERLAY" ? "1F" : currentFloor,
       name: "單面實體隔間牆",
       description: "新建單面實體雙線牆 (可端點拉伸與自動磁吸)"
     };
 
     if (!layoutData.walls) layoutData.walls = [];
+    // A newly created wall must not disappear into a hidden wall layer.
+    if (!layerState.walls) {
+      layerState.walls = true;
+      const toggle=document.getElementById("toggleWalls");
+      if (toggle) {
+        toggle.checked=true;
+        toggle.closest("label")?.classList.add("active");
+      }
+    }
     pushHistoryState("新增單面牆體");
     layoutData.walls.push(newWall);
     saveToLocalStorage();
@@ -2614,6 +2916,7 @@
       zoomResetBtn.textContent = `${zoomPct}%`;
       zoomResetBtn.title = `當前縮放 ${zoomPct}% · 點擊或單按 Control 鍵恢復 100% 置中`;
     }
+    refreshAnnotationVisibility();
   }
 
   function resetToCenter100() {
@@ -2847,9 +3150,43 @@
     renderSvg();
   }
 
+  // Windows mouse wheels usually report vertical movement only. When the CAD
+  // ribbon overflows, translate that movement into horizontal scrolling while
+  // preserving native Magic Mouse and trackpad horizontal gestures.
+  function bindHorizontalWheelScroll(element) {
+    if (!element || element.dataset.horizontalWheelBound === "true") return;
+    element.dataset.horizontalWheelBound = "true";
+
+    element.addEventListener("wheel", (event) => {
+      if (element.scrollWidth <= element.clientWidth + 1) return;
+      if (event.ctrlKey || event.metaKey) return;
+      if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+
+      const atStart = element.scrollLeft <= 0;
+      const atEnd = element.scrollLeft + element.clientWidth >= element.scrollWidth - 1;
+      if ((event.deltaY < 0 && atStart) || (event.deltaY > 0 && atEnd)) return;
+
+      const unit = event.deltaMode === 1
+        ? 24
+        : event.deltaMode === 2
+          ? element.clientWidth
+          : 1;
+      event.preventDefault();
+      element.scrollLeft += event.deltaY * unit;
+    }, { passive: false });
+  }
+
   // --- Event Bindings ---
   function bindEvents() {
+    window.ChinChunTwin?.connect({
+      edit(id, floor) {
+        if (floor !== currentFloor) switchFloor(floor);
+        selectItem(id);
+        renderSvg();
+      }
+    });
     bindMobileWorkspace();
+    bindHorizontalWheelScroll(document.querySelector(".cad-ribbon-bar"));
 
     if (btnFloor1F) btnFloor1F.addEventListener("click", () => switchFloor("1F"));
     if (btnFloor2F) btnFloor2F.addEventListener("click", () => switchFloor("2F"));
@@ -2857,6 +3194,7 @@
 
     if (btnDrawRoute) btnDrawRoute.addEventListener("click", toggleDrawingRoute);
     if (btnAddWall) btnAddWall.addEventListener("click", addNewWall);
+    document.getElementById('btnApplyA3')?.addEventListener('click',applyA3Building);
 
     // Site View Mode Switcher
     const siteViewSelect = document.getElementById("siteViewSelect");
@@ -3063,6 +3401,9 @@
       }
 
       if (isDragging && selectedId) {
+        // A click or double-click must not snap the machine to a new position.
+        if (equipmentPress && !dragHasMoved &&
+            Math.hypot(e.clientX - equipmentPress.x, e.clientY - equipmentPress.y) <= equipmentClickSlop) return;
         const rec = findItemRecord(selectedId);
         if (!rec) return;
 
@@ -3225,6 +3566,10 @@
     });
 
     viewportEl.addEventListener("mousedown", (e) => {
+      if (e.target.closest("#quickRenameBox")) return;
+      equipmentPress = null;
+      const pressedId = e.target.closest(".svg-interactive-item")?.getAttribute("data-id");
+      if (e.button !== 0 || findItemRecord(pressedId)?.type !== "equipment" || isDrawingRoute) lastEquipmentClick = null;
       if (isDrawingRoute) return;
 
       const svgPt = clientToSvgCoords(e.clientX, e.clientY);
@@ -3311,7 +3656,13 @@
         const id = itemGroup.getAttribute("data-id");
         const rec = findItemRecord(id);
         if (isRecordLayerLocked(rec)) {
+          lastEquipmentClick = null;
           showToast("此圖層已鎖定，物件不會移動", "info", 1600);
+          return;
+        }
+        if (rec?.type === "equipment" && beginEquipmentTextGesture(id, e)) {
+          e.preventDefault();
+          dragInitialLayoutSnapshot = null;
           return;
         }
         selectItem(id);
@@ -3335,7 +3686,9 @@
       }
     });
 
-    window.addEventListener("mouseup", () => {
+    window.addEventListener("mouseup", (e) => {
+      const equipmentClickOnly = equipmentPress && !dragHasMoved;
+      finishEquipmentTextGesture(e);
       if (isDragging) {
         if (dragHasMoved && dragInitialLayoutSnapshot) {
           undoStack.push({ name: "移動或拉伸物件", data: dragInitialLayoutSnapshot, floor: currentFloor });
@@ -3346,8 +3699,10 @@
         dragInitialLayoutSnapshot = null;
         dragHasMoved = false;
         currentWallSnapInfo = null;
-        saveToLocalStorage();
-        renderSvg();
+        if (!equipmentClickOnly) {
+          saveToLocalStorage();
+          renderSvg();
+        }
       }
       isDragging = false;
       isPanning = false;
@@ -3406,6 +3761,7 @@
       const rec = findItemRecord(selectedId);
       if (!rec || !rec.item) return;
       if (rec.item.code !== undefined) {
+        preservePhotoModelReference(rec.item);
         rec.item.code = e.target.value;
         saveToLocalStorage();
         renderSvg();
@@ -3669,13 +4025,14 @@
     const btnQuickClose = document.getElementById("quickRenameClose");
     if (btnQuickClose) btnQuickClose.addEventListener("click", closeQuickRenameBox);
 
-    const quickRenameNameInp = document.getElementById("quickRenameName");
-    if (quickRenameNameInp) {
-      quickRenameNameInp.addEventListener("keydown", (e) => {
+    ["quickRenameName", "quickRenameCode"].forEach(id => {
+      document.getElementById(id)?.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Enter" || e.key === "Escape") e.preventDefault();
         if (e.key === "Enter") saveQuickRename();
         else if (e.key === "Escape") closeQuickRenameBox();
       });
-    }
+    });
 
     // --- Add Equipment Modal Handlers ---
     const btnOpenAddModal = document.getElementById("btnOpenAddModal");
@@ -3812,7 +4169,10 @@
     // Export & Persistence Actions
     document.getElementById("exportDxfBtn").addEventListener("click", generateAndDownloadDxf);
     document.getElementById("exportSvgBtn").addEventListener("click", () => {
-      const blob = new Blob([svgEl.outerHTML], { type: "image/svg+xml" });
+      // Screen decluttering is temporary; the vector drawing retains every annotation.
+      const exportSvg = svgEl.cloneNode(true);
+      exportSvg.querySelectorAll('[style*="visibility"]').forEach(el => el.style.removeProperty('visibility'));
+      const blob = new Blob([exportSvg.outerHTML], { type: "image/svg+xml" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -3839,32 +4199,15 @@
     const forceReloadBtn = document.getElementById("forceReloadBtn");
     if (forceReloadBtn) {
       forceReloadBtn.addEventListener("click", () => {
-        try {
-          localStorage.removeItem(STORAGE_KEY_LAYOUT);
-          localStorage.removeItem(STORAGE_KEY_CUSTOM_LIB);
-        } catch (e) {}
-        showToast("已清除快取與本地配置，正在載入最新系統...", "info", 1200);
+        showToast("正在重新載入程式，保留本機配置與設備庫...", "info", 1200);
         setTimeout(() => {
           window.location.reload(true);
         }, 300);
       });
     }
 
-    document.getElementById("resetLayoutBtn").addEventListener("click", () => {
-      if (confirm("確定要重設為工廠初始基準配置嗎？所有新增的自訂設備、牆體與動線將被重設。")) {
-        try {
-          localStorage.removeItem(STORAGE_KEY_LAYOUT);
-        } catch (e) {}
-        layoutData = JSON.parse(JSON.stringify(INITIAL_LAYOUT));
-        ensureLayerSettings(layoutData);
-        updateLayerLockControls();
-        deselectAll();
-        renderSvg();
-        saveToLocalStorage();
-        const ind = document.getElementById("autoSaveIndicator");
-        if (ind) ind.textContent = "已重設為原廠基準";
-      }
-    });
+    document.getElementById('loadDesktopBaselineBtn').addEventListener('click',loadConfirmedDesktopBaseline);
+    document.getElementById('resetLayoutBtn').addEventListener('click',loadConfirmedDesktopBaseline);
   }
 
   // --- Dynamic Professional AutoCAD DXF Generator ---

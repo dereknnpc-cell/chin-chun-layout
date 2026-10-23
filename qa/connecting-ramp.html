@@ -2,10 +2,10 @@
 <html lang="zh-Hant">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>連接坡道 QA — 本機測試配置，非雲端圖面</title>
+<title>連接坡道 QA — 已確認電腦備份（非雲端即時資料）</title>
 <link rel="stylesheet" href="/digital-twin.css">
-<style>body{font:16px system-ui;background:#142d2b;color:#eee;padding:20px}button{padding:12px} .twin-eyebrow::after{content:' · 本機測試配置／非雲端圖面';color:#ffd17a}</style>
-<p>本頁僅使用公開預設配置搭配已確認的建築地坪作視覺測試，非使用者最新雲端配置，不寫入任何儲存空間。</p>
+<style>body{font:16px system-ui;background:#142d2b;color:#eee;padding:20px}button{padding:12px} .twin-eyebrow::after{content:' · 已確認電腦備份／非雲端即時資料';color:#ffd17a}</style>
+<p>本頁使用已確認的電腦備份作視覺測試，不寫入任何儲存空間或雲端。</p>
 <button id="openDigitalTwin">檢查連接坡道</button>
 <script src="/photo-models.js"></script>
 <script src="/twin-models.js"></script>
@@ -14,7 +14,6 @@
 <script src="/digital-twin.js"></script>
 <script>
 fetch('/factory_layout_data.json').then(r=>r.json()).then(layout=>{
-  layout.building_geometry=ChinChunBuilding.reference();
   ChinChunTwin.update(layout,'1F');ChinChunTwin.connect({edit(){throw new Error('QA is read-only');}});
   document.querySelector('#openDigitalTwin').click();
 });
