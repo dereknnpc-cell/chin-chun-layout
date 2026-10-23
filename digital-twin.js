@@ -19,6 +19,7 @@
   let photoDirections = false;
   // Rendering preferences live only in this view, never in layoutData.
   let engineMode='three',threeView=null,threeSceneCache=null,threeNeedsFit=true,allFaces=false,engineError=false;
+  let closeTwinMenus=()=>{};
   const usingThree=()=>engineMode==='three' && Boolean(threeView);
   const zh = {
     dieCutPhoto:'Die Cut（未編號）：機身與入料端全部在下方擴建區，不進入原建物；出料經原建物牆洞，送至 L4-1 左方收集區。此段已填高，室內比擴建區高 0.50 m（已確認），不套用其他區域的 1.5 m 高差。模型依八張照片示意，綠色帶面、白色壓床、深灰側罩、黃色護網與側控制櫃隨 2D 位置、占地及旋轉聯動。牆洞、收集桌、局部填高範圍及機高約 2.34 m 為示意，待量測；桌子不算機身。',
@@ -77,6 +78,8 @@
   zh.threeEngine='Three.js · 正交';th.threeEngine='Three.js · ออร์โธกราฟิก';
   zh.legacyEngine='舊版對照';th.legacyEngine='รุ่นเดิมสำหรับเทียบ';
   zh.topView='正上方俯視';th.topView='มองจากด้านบน';
+  Object.assign(zh,{viewMenu:'視角',displayMenu:'顯示',infoMenu:'資訊',menuClose:'收合',closeControls:'收合選項'});
+  Object.assign(th,{viewMenu:'มุมมอง',displayMenu:'แสดง',infoMenu:'ข้อมูล',menuClose:'ย่อ',closeControls:'ย่อเมนู'});
   zh.threeHelp='左鍵拖曳平移 · 右鍵拖曳旋轉 · 滾動縮放 · ⌘／Shift＋滾動：只左右旋轉 · ⌥＋滾動：只上下俯仰 · 方向鍵分軸旋轉 · 0 重設';
   th.threeHelp='ลากซ้ายเลื่อน · ลากขวาหมุน · ล้อซูม · ⌘/Shift＋ล้อหมุนแนวราบ · ⌥＋ล้อปรับมุมก้ม · ปุ่มลูกศรแยกแกน · 0 คืนมุม';
   zh.threeReady='Three.js 正交相機 · 2D 資料唯讀';th.threeReady='กล้องออร์โธกราฟิก Three.js · อ่านข้อมูล 2D เท่านั้น';
@@ -932,6 +935,59 @@
   }
   function fit(){fitExtent=null;zoom=detail?1.5:1;pan={x:0,y:0};threeNeedsFit=true;requestDraw();}
   function zoomAt(factor,x=width/2,y=height/2){if(usingThree()){threeView.zoomBy(factor);return;}const next=Math.max(.4,Math.min(8,zoom*factor)),ratio=next/zoom;pan={x:x-width/2-(x-width/2-pan.x)*ratio,y:y-height/2-(y-height/2-pan.y)*ratio};zoom=next;requestDraw();}
+  // Reuse the controls and their listeners; only presentation containers move.
+  // This controller never reads or writes CAD, mesh, camera or cloud state.
+  function bindCompactTwinControls(root) {
+    const mobile=window.matchMedia('(max-width:900px)'),toolbar=root.querySelector('.twin-toolbar');
+    const shell=root.querySelector('.twin-shell'),menus=new Map();
+    const backdrop=document.createElement('button');backdrop.type='button';backdrop.className='twin-menu-backdrop';backdrop.hidden=true;
+    backdrop.setAttribute('aria-label',t('closeControls'));shell.append(backdrop);
+    for(const [name,key,selectors] of [
+      ['view','viewMenu',['#twinRotate','#twinOrbitLeft','#twinTiltUp','#twinTiltDown','#twinResetView','#twinTopView','#twinMinus','#twinPlus','#twinCameraStatus','#twinFocus']],
+      ['display','displayMenu',['#twinEngine','#twinLabels','#twinRoof','#twinPhotoDirections','#twinRestroomCutaway','#twinEngineStatus']],
+      ['info','infoMenu',['#twinObjects']]
+    ]){
+      const trigger=document.createElement('button');trigger.type='button';trigger.className='twin-menu-toggle';trigger.dataset.twinText=key;
+      trigger.id=`twin${name}Menu`;trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls',`twin${name}Panel`);
+      const panel=document.createElement('section');panel.id=`twin${name}Panel`;panel.className=`twin-control-panel twin-${name}-panel`;
+      panel.setAttribute('aria-labelledby',trigger.id);
+      const heading=document.createElement('div');heading.className='twin-panel-heading';
+      const title=document.createElement('strong');title.dataset.twinText=key;
+      const close=document.createElement('button');close.type='button';close.dataset.twinText='menuClose';
+      heading.append(title,close);panel.append(heading);
+      selectors.forEach(selector=>{const control=root.querySelector(selector);if(control)panel.append(control.closest('label') || control);});
+      toolbar.append(trigger,panel);menus.set(name,{trigger,panel,close});
+    }
+    // Restore these exact nodes to their desktop slots when leaving mobile.
+    const information=Array.from(root.querySelectorAll('.twin-info,.twin-footer'),element=>{
+      const anchor=document.createComment('twin desktop information slot');element.before(anchor);return {element,anchor};
+    });
+    const collapse=(restoreFocus=false)=>{
+      for(const {trigger,panel} of menus.values()){
+        if(restoreFocus && trigger.getAttribute('aria-expanded')==='true')trigger.focus();
+        trigger.setAttribute('aria-expanded','false');panel.hidden=mobile.matches;
+      }
+      backdrop.hidden=true;
+    };
+    for(const {trigger,panel,close} of menus.values()){
+      trigger.addEventListener('click',()=>{
+        const opening=trigger.getAttribute('aria-expanded')!=='true';collapse();
+        if(opening && mobile.matches){trigger.setAttribute('aria-expanded','true');panel.hidden=false;backdrop.hidden=false;}
+      });
+      close.addEventListener('click',()=>collapse(true));
+    }
+    backdrop.addEventListener('click',()=>collapse(true));
+    root.addEventListener('keydown',event=>{
+      if(event.key==='Escape' && !backdrop.hidden){event.preventDefault();event.stopImmediatePropagation();collapse(true);}
+    },true);
+    const adapt=()=>{
+      information.forEach(({element,anchor})=>mobile.matches?menus.get('info').panel.append(element):anchor.after(element));
+      collapse();
+    };
+    mobile.addEventListener('change',adapt);adapt();
+    root.addEventListener('close',()=>collapse());
+    return collapse;
+  }
   function mount() {
     if(dialog)return;
     dialog=document.createElement('dialog');dialog.className='twin-dialog';dialog.setAttribute('aria-labelledby','twinHeading');
@@ -952,13 +1008,13 @@
     const cutawayButton=document.createElement('button');cutawayButton.id='twinRestroomCutaway';cutawayButton.dataset.twinText='restroomCutaway';cutawayButton.hidden=true;
     cutawayButton.onclick=()=>{restroomCutaway=!restroomCutaway;updateInfo();requestDraw();};
     dialog.querySelector('.twin-toolbar').append(cutawayButton);
-    focus.onclick=()=>{if(selected){detail=true;fit();}};
+    focus.onclick=()=>{if(selected){detail=true;fit();closeTwinMenus();}};
     // Keep CAD delete/rotate/undo shortcuts from changing the model behind the modal.
     dialog.addEventListener('keydown',e=>{cameraKey(e);e.stopPropagation();});
     dialog.addEventListener('keyup',e=>e.stopPropagation());
     dialog.querySelector('#twinClose').onclick=()=>dialog.close();
-    dialog.querySelector('#twinFloor').onchange=e=>{floor=e.target.value;selected=null;rebuild();fit();};
-    dialog.querySelector('#twinFit').onclick=()=>{detail=false;fit();};
+    dialog.querySelector('#twinFloor').onchange=e=>{floor=e.target.value;selected=null;rebuild();fit();closeTwinMenus();};
+    dialog.querySelector('#twinFit').onclick=()=>{detail=false;fit();closeTwinMenus();};
     dialog.querySelector('#twinRotate').onclick=()=>orbit(1);
     for(const [id,key,action] of [['twinOrbitLeft','orbitLeft',()=>orbit(-1)],['twinTiltUp','tiltUp',()=>tilt(5*Math.PI/180)],['twinTiltDown','tiltDown',()=>tilt(-5*Math.PI/180)],['twinResetView','resetView',resetView]]){
       const button=document.createElement('button');button.id=id;button.dataset.twinText=key;button.onclick=action;
@@ -971,6 +1027,7 @@
     dialog.querySelector('#twinLabels').onchange=e=>{labels=e.target.checked;requestDraw();};
     dialog.querySelector('#twinObjects').onchange=e=>{selected=scene.find(s=>s.item.id===e.target.value)||null;if(!selected)detail=false;updateInfo();if(detail)fit();else requestDraw();};
     dialog.querySelector('#twinEdit').onclick=()=>{if(selected && selected.type!=='site'){const id=selected.type==='wall'?(data.walls || []).find(w=>selected.item.id===w.id || selected.item.id.startsWith(w.id+'_part_') || selected.item.id.startsWith(w.id+'_diecut_'))?.id || selected.item.id:selected.item.id;dialog.close();bridge?.edit(id,floor);}};
+    closeTwinMenus=bindCompactTwinControls(dialog);
     canvas.addEventListener('wheel',e=>{if(usingThree())e.stopImmediatePropagation();cameraWheel(e);},{capture:true,passive:false});
     canvas.onpointerdown=e=>{if(usingThree())return;canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});gesture={x:e.clientX,y:e.clientY,moved:false};};
     canvas.onpointermove=e=>{
@@ -987,10 +1044,20 @@
     };
     canvas.onpointercancel=e=>{pointers.delete(e.pointerId);gesture=null;};
     dialog.addEventListener('close',()=>{pointers.clear();gesture=null;threeView?.setEnabled(false);document.getElementById('openDigitalTwin')?.focus();});
-    new ResizeObserver(requestDraw).observe(canvas);
+    let previousCanvasWidth=0;
+    new ResizeObserver(entries=>{
+      const size=entries[0].contentRect;
+      if(size.width>0 && size.height>0){
+        // Refit after phone orientation changes, retaining camera angles. A
+        // browser address-bar height change alone must not reset user zoom.
+        if(window.innerWidth<=900 && previousCanvasWidth>0 && Math.abs(size.width-previousCanvasWidth)>1){threeNeedsFit=true;fitExtent=null;}
+        previousCanvasWidth=size.width;
+      }
+      requestDraw();
+    }).observe(canvas);
   }
   window.ChinChunTwin={
-    connect(api){bridge=api;document.getElementById('openDigitalTwin')?.addEventListener('click',()=>{mount();localize();detail=false;dialog.showModal();threeView?.setEnabled(engineMode==='three');rebuild();fit();});},
+    connect(api){bridge=api;document.getElementById('openDigitalTwin')?.addEventListener('click',()=>{mount();localize();closeTwinMenus();detail=false;dialog.showModal();threeView?.setEnabled(engineMode==='three');rebuild();fit();});},
     update(layout,activeFloor){data=layout;if(!dialog?.open){floor=activeFloor==='2F'?'2F':'1F';return;}rebuild();}
   };
 })();

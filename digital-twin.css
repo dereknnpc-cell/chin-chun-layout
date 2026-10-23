@@ -34,3 +34,42 @@
   .twin-info { position:static; flex-shrink:0; width:auto; max-width:none; max-height:150px; overflow:auto; margin:0 8px 8px; }
   .twin-info h3 { margin-bottom:4px; }
 }
+
+/* Mobile controls are three on-demand groups, never stacked above/below the scene. */
+.twin-shell { position:relative; }
+.twin-control-panel { display:contents; }
+.twin-menu-toggle,.twin-panel-heading,.twin-menu-backdrop { display:none; }
+@media(max-width:900px) {
+  .twin-dialog { box-sizing:border-box; margin:0; width:100vw; height:100dvh; max-height:100dvh; border:0; border-radius:0; }
+  .twin-shell { overflow:hidden; }
+  .twin-header { position:relative; z-index:5; flex-shrink:0; min-height:42px; box-sizing:border-box; padding:6px 10px; gap:8px; background:#142d2b; }
+  .twin-header > div { min-width:0; }
+  .twin-eyebrow { display:none; }
+  .twin-header h2 { font-size:13px; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .twin-dialog #twinClose { font-size:11px; padding:6px 9px; min-height:32px; white-space:nowrap; flex-shrink:0; }
+  .twin-toolbar { position:relative; z-index:5; display:grid; grid-template-columns:minmax(0,1fr) auto auto auto auto; gap:4px; padding:4px 8px; flex-shrink:0; min-height:40px; box-sizing:border-box; }
+  .twin-toolbar > label { min-width:0; }
+  .twin-toolbar > label > span { display:none; }
+  .twin-dialog #twinFloor { width:100%; min-width:0; max-width:100%; padding:5px; font-size:11px; min-height:32px; }
+  .twin-toolbar > button { min-width:0; min-height:32px; padding:5px 9px; font-size:12px; white-space:nowrap; }
+  .twin-menu-toggle { display:block; }
+  .twin-menu-toggle[aria-expanded="true"] { background:#46624b; border-color:#ead48a; }
+  .twin-control-panel { position:absolute; top:calc(100% + 6px); right:8px; z-index:10; display:flex; flex-wrap:wrap; gap:8px; align-items:center; box-sizing:border-box; width:min(360px,calc(100vw - 16px)); max-height:calc(100dvh - 106px - env(safe-area-inset-bottom,0px)); overflow-y:auto; overscroll-behavior:contain; padding:12px; background:#18332ef5; border:1px solid #91a981; border-radius:10px; box-shadow:0 12px 36px #0006; }
+  .twin-panel-heading { display:flex; align-items:center; justify-content:space-between; width:100%; padding-bottom:8px; border-bottom:1px solid #78987c44; font-size:13px; }
+  .twin-panel-heading button { padding:5px 10px; font-size:12px; min-height:32px; }
+  .twin-control-panel > button { min-height:36px; font-size:12px; flex:1 0 calc(50% - 8px); }
+  .twin-control-panel > label { width:100%; min-height:36px; flex-wrap:wrap; }
+  .twin-control-panel > label > select { flex:1; min-width:0; max-width:100%!important; font-size:12px; }
+  .twin-control-panel > label > input { width:18px; height:18px; }
+  .twin-control-panel .twin-engine-status,.twin-control-panel output { width:100%; font-size:11px; }
+  .twin-menu-backdrop { display:block; position:absolute; inset:0; z-index:3; width:100%; height:100%; border:0!important; border-radius:0!important; padding:0!important; background:#071a1b45!important; }
+  .twin-stage { display:block; min-height:0; }
+  .twin-stage canvas { height:100%; min-height:0; }
+  .twin-plaque { display:none; }
+  .twin-control-panel .twin-info { position:static; width:100%; max-width:none; max-height:none; padding:0; margin:0; border:0; background:transparent; box-shadow:none; }
+  .twin-control-panel .twin-info h3 { font-size:14px; margin:4px 0 8px; }
+  .twin-control-panel .twin-info p { font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
+  .twin-control-panel .twin-footer { display:block; width:100%; padding:8px 0 0; font-size:11px; line-height:1.7; overflow-wrap:anywhere; }
+  .twin-control-panel .twin-footer span { display:block; }
+  .twin-control-panel .twin-footer span + span { margin-top:8px; }
+}
