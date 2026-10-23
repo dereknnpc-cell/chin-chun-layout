@@ -32,6 +32,19 @@
     const b=get(layout);if(!b)return null;
     return inside(b.main,p)?b.main.rise:inside(b.annex,p)?b.annex.rise:b.roadRise;
   }
+  // Read-only site presentation, NOT a CAD equipment record or a migration.
+  // User's 2026-10-23 annotation: red/north edge high, yellow/south edge low.
+  // The thumbnail locates it at about X86.5–90, Y40–45 on the 5 m grid.
+  // Width/run are illustrative; do not infer a surveyed slope from the video.
+  function connectingRamp(layout) {
+    const b=get(layout);if(!b || b.main.rise<=b.annex.rise)return null;
+    const x=b.main.x+b.main.width-13.5,y=b.main.y+b.main.height;
+    if(!inside(b.annex,[x,y]) || !inside(b.annex,[x+3.5,y+5]))return null;
+    return {id:'site_annex_connecting_ramp',code:'RAMP-CONNECTOR',
+      name:'原廠／擴建棚連接坡道',x,y,width:3.5,height:5,rotation:0,
+      ramp:{low:b.annex.rise,high:b.main.rise,highEdge:'first'},
+      geometryAccuracy:'annotation-approximate',source:'使用者黃低／紅高標示 2026-10-23'};
+  }
   const generatedWall=w=>(w.floor || '1F')==='1F' && w.source==='A3 L-02' && /^a3_wall_\d+$/.test(w.id);
   function recoveryProblem(layout) {
     if(layout?.building_geometry?.revision===previousBoundaryRevision){
@@ -139,5 +152,5 @@
     }
     return faces;
   }
-  window.ChinChunBuilding={revision,rejectedRevision,reference,get,inside,apply,repair,needsRepair,recoveryProblem,audit,svg,floorLevel,frameFaces};
+  window.ChinChunBuilding={revision,rejectedRevision,reference,get,inside,apply,repair,needsRepair,recoveryProblem,audit,svg,floorLevel,connectingRamp,frameFaces};
 })();

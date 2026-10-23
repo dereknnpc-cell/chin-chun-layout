@@ -133,6 +133,20 @@ test('Three geometry includes every wall side, preserves aperture and the confir
   assert.ok(faces.some(f=>f.s?.type==='wall' && f.points.every(p=>p[1]===f.points[0][1])));
   assert.equal(JSON.stringify(layout),before);
 });
+test('connecting ramp is selectable read-only site geometry in both engines and never a duplicate CAD machine',()=>{
+  const test=setup(),layout=test.window.ChinChunBuilding.apply(fixture()),before=JSON.stringify(layout);
+  test.prepare(freeze(layout));
+  const ramp=test.api.scene().find(s=>s.item.id==='site_annex_connecting_ramp');assert.ok(ramp);assert.equal(ramp.type,'site');
+  assert.equal(test.api.scene().filter(s=>s.type==='equipment').length,layout.equipment.length);
+  const faces=test.api.faces().filter(f=>f.s===ramp);assert.ok(faces.length>6);
+  const surface=faces.find(f=>f.part==='ramp-surface');assert.deepEqual(Array.from(surface.points,p=>p[2]),[1.5,1.5,1,1]);
+  const {geometry}=adapter.geometryFromFaces(faces);near(geometry.boundingBox.min.y,1,1e-4);near(geometry.boundingBox.max.y,1.508,1e-4);geometry.dispose();
+  test.api.select(ramp.item.id,true);test.api.layout(layout);
+  assert.equal(test.elements.get('#twinEdit').hidden,true);assert.match(test.elements.get('#twinDetails').textContent,/0\.50 m/);
+  test.api.three({resize(){},setScene(){},render(){},fit(){},project:p=>[p[0]*4,p[1]*4,.5],state:()=>({yaw:0,pitch:.6})});test.api.draw();
+  test.api.floor('2F');assert.ok(!test.api.scene().some(s=>s.item.id===ramp.item.id));
+  assert.equal(JSON.stringify(layout),before);
+});
 test('GPU scene cache is reused during camera movement; selection, roof and live layout invalidate it',()=>{
   const test=setup(),layout=fixture();test.prepare(freeze(layout));let builds=0,rendered=0,fit=0;
   test.api.three({resize(){},setScene(){builds++;},render(){rendered++;},fit(){fit++;},project:p=>[p[0]*4,p[1]*4,.5],state:()=>({yaw:0,pitch:35}),orbit(){},tilt(){},zoomBy(){}});

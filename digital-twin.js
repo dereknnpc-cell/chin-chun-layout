@@ -102,6 +102,12 @@
   zh.buildingNote='以使用者原繪圖為準：廠內隔間、牆線及柱位不採A3比例描繪。外棚邊界依紅線X35–100，最新增建X90–100。2D與2.5D共用資料，設備未搬動。地坪：原廠+1.50／外棚+1.00／路面0米；外棚縱深、棚高沿用示意值，未另行推算。';
   th.buildingNote='ยึดแปลนเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอกตามเส้นแดง X35–100 ส่วนต่อเติม X90–100 ใช้ข้อมูลเดียวกับ 2D ไม่ย้ายเครื่อง พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกและความสูงโครงคงค่าภาพประกอบเดิม ไม่ประมาณใหม่';
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
+  Object.assign(zh,{site:'場地構造',connector:'原廠／外棚連接坡道',
+    connectorNote:'依使用者黃線低端、紅線高端定位：由擴建棚 +1.00 m 往原廠 +1.50 m 上坡，高差 0.50 m。位置約為原廠右側交界 X86.5–90、Y40–45；寬 3.50 m、坡長 5.00 m 為截圖估算示意，非實測，不據此認定坡度。這是唯讀場地示意，不新增 2D 機台、不移動設備或隔間。',
+    rampHigh:'紅線高端',rampLow:'黃線低端'});
+  Object.assign(th,{site:'โครงสร้างพื้นที่',connector:'ทางลาดเชื่อมอาคารเดิม/ต่อเติม',
+    connectorNote:'ตามเส้นเหลืองต่ำ/เส้นแดงสูงที่ผู้ใช้ระบุ: ขึ้นจากอาคารต่อเติม +1.00 ม. สู่อาคารเดิม +1.50 ม. ต่าง 0.50 ม. ตำแหน่งประมาณ X86.5–90, Y40–45; กว้าง 3.50 ม. และระยะลาด 5.00 ม. ประมาณจากภาพ ไม่ใช่ค่ารังวัดหรือความชันยืนยัน เป็นภาพพื้นที่แบบอ่านอย่างเดียว ไม่เพิ่มเครื่องใน 2D ไม่ย้ายเครื่องหรือผนัง',
+    rampHigh:'เส้นแดง ด้านสูง',rampLow:'เส้นเหลือง ด้านต่ำ'});
   const n = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
   const isRamp = item => /^RAMP(?:-|$)/i.test(String(item?.code || ''));
   // The reference photo marks the office entrance at the south wall between X6 and X7.
@@ -194,6 +200,8 @@
       }
     });
     (data.aisles || []).filter(item => (item.floor || '1F')===floor).forEach(item=>add(item,'aisle',rect(item),.02,'#b7bd85'));
+    const connector=floor==='1F' && window.ChinChunBuilding?.connectingRamp?.(data);
+    if(connector)add(connector,'site',rect(connector),connector.ramp.high,'#c9b576');
     const points=scene.flatMap(s=>s.points);
     const building=floor==='1F' && window.ChinChunBuilding?.get(data);
     if(building)for(const r of [building.main,building.annex])points.push([r.x,r.y],[r.x+r.width,r.y+r.height]);
@@ -501,25 +509,40 @@
     const center=[n(data?.grid?.factory_width,100)/2,n(data?.grid?.factory_depth,40)/2];
     const distance=p=>Math.hypot(p[0]-center[0],p[1]-center[1]);
     // Preserve the original RAMP-5M orientation: its rise follows the short side.
-    const firstInside=distance([(a[0]+b[0])/2,(a[1]+b[1])/2])<=distance([(c[0]+d[0])/2,(c[1]+d[1])/2]);
-    return s.points.map((p,i)=>[...p,(firstInside ? i<2 : i>=2) ? s.z : 0]);
+    const spec=s.item.ramp,explicit=spec && Number.isFinite(spec.low) && Number.isFinite(spec.high) && spec.high>spec.low && ['first','last'].includes(spec.highEdge);
+    const firstInside=explicit?spec.highEdge==='first':distance([(a[0]+b[0])/2,(a[1]+b[1])/2])<=distance([(c[0]+d[0])/2,(c[1]+d[1])/2]);
+    return s.points.map((p,i)=>[...p,(firstInside ? i<2 : i>=2) ? (explicit?spec.high:s.z) : (explicit?spec.low:0)]);
+  }
+  function rampEdges(s,top=rampTopPoints(s)) {
+    const low=Math.min(...top.map(p=>p[2])),high=Math.max(...top.map(p=>p[2]));
+    return {high:top.filter(p=>p[2]===high),low:top.filter(p=>p[2]===low)};
+  }
+  function rampEndLabels(s,top=rampTopPoints(s)) {
+    const edges=rampEdges(s,top),connector=s.item.code==='RAMP-CONNECTOR';
+    return [['high',connector?'rampHigh':'rampInside','#ff6258'],['low',connector?'rampLow':'rampOutside','#ffdb48']].map(([end,key,color])=>({edge:edges[end],color:connector?color:'#fff5d7',text:connector?`${t(key)} +${edges[end][0][2].toFixed(2)} m`:t(key)}));
   }
   function rampFaces(s) {
-    const top=rampTopPoints(s),bottom=s.points.map(p=>[...p,0]),faces=[];
+    const top=rampTopPoints(s),base=Math.min(...top.map(p=>p[2])),bottom=s.points.map(p=>[...p,base]),faces=[];
     for(let i=0;i<4;i++){
       const j=(i+1)%4;
-      if(top[i][2]===0 && top[j][2]===0)continue;
+      if(top[i][2]===base && top[j][2]===base)continue;
       if(!allFaces && project(s.points[j],top[j][2])[0]>=project(s.points[i],top[i][2])[0])continue;
       const points=[bottom[i],bottom[j],top[j],top[i]];
       faces.push({s,points,color:shade(s.color,i%2?-55:-30),depth:faceDepth(points)});
     }
     const topDepth=faceDepth(top);
-    faces.push({s,points:top,color:'#dca84f',depth:topDepth});
-    const highFirst=top[0][2]>0,[highLeft,highRight,lowLeft,lowRight]=highFirst?[top[0],top[1],top[3],top[2]]:[top[3],top[2],top[0],top[1]];
+    faces.push({s,points:top,color:'#dca84f',part:'ramp-surface',depth:topDepth});
+    const highFirst=top[0][2]>base,[highLeft,highRight,lowLeft,lowRight]=highFirst?[top[0],top[1],top[3],top[2]]:[top[3],top[2],top[0],top[1]];
     const lerp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
     for(const t of [.2,.4,.6,.8]){
-      const stripe=[lerp(highLeft,lowLeft,t),lerp(highRight,lowRight,t),lerp(highRight,lowRight,t+.018),lerp(highLeft,lowLeft,t+.018)];
-      faces.push({s,points:stripe,color:'#f8ddb1',stroke:'#f8ddb1',depth:topDepth+.03+t*.001});
+      const stripe=[lerp(highLeft,lowLeft,t),lerp(highRight,lowRight,t),lerp(highRight,lowRight,t+.018),lerp(highLeft,lowLeft,t+.018)].map(p=>[p[0],p[1],p[2]+.004]);
+      const color=s.item.code==='RAMP-CONNECTOR'?'#39433c':'#f8ddb1';
+      faces.push({s,points:stripe,color,stroke:color,part:'ramp-stripe',depth:topDepth+.03+t*.001});
+    }
+    if(s.item.code==='RAMP-CONNECTOR')for(const {edge,color} of rampEndLabels(s,top)){
+      const other=edge.map(p=>top[3-top.indexOf(p)]);
+      const points=[edge[0],edge[1],lerp(edge[1],other[1],.018),lerp(edge[0],other[0],.018)].map(p=>[p[0],p[1],p[2]+.008]);
+      faces.push({s,points,color,part:'ramp-end-marker',depth:faceDepth(points)+.04});
     }
     return faces;
   }
@@ -734,7 +757,7 @@
     const occupied=[],overlap=(a,b)=>a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
     const canvasRect=canvas.getBoundingClientRect(),card=dialog.querySelector('.twin-info').getBoundingClientRect();
     occupied.push({x:card.left-canvasRect.left,y:card.top-canvasRect.top,w:card.width,h:card.height});
-    const candidates=visible.filter(s=>s.type==='equipment' || s===selected).sort((a,b)=>(b===selected?100:b.model?10:0)-(a===selected?100:a.model?10:0));
+    const candidates=visible.filter(s=>s.type==='equipment' || isRamp(s.item) || s===selected).sort((a,b)=>(b===selected?100:b.model?10:0)-(a===selected?100:a.model?10:0));
     for(const s of candidates){
       if(!labels && s!==selected)continue;
       const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
@@ -764,12 +787,11 @@
     threeView.render();drawThreeLabels(visible);
     for(const s of visible)if(s.model && (detail || s===selected))drawModelAnnotations(s,false);
     if(selected && !selected.model){
-      const p=new Path2D();selected.points.forEach((q,i)=>i?p.lineTo(...project(q,elevation(selected)+.03)):p.moveTo(...project(q,elevation(selected)+.03)));p.closePath();ctx.strokeStyle='#ffe5a1';ctx.lineWidth=2;ctx.stroke(p);
+      const p=new Path2D(),points=isRamp(selected.item)?rampTopPoints(selected):selected.points.map(q=>[...q,elevation(selected)]);points.forEach((q,i)=>i?p.lineTo(...project(q,q[2]+.03)):p.moveTo(...project(q,q[2]+.03)));p.closePath();ctx.strokeStyle='#ffe5a1';ctx.lineWidth=2;ctx.stroke(p);
     }
     if(selected && isRamp(selected.item) && detail){
-      const top=rampTopPoints(selected);
-      for(const [points,key] of [[top.filter(p=>p[2]>0),'rampInside'],[top.filter(p=>p[2]===0),'rampOutside']]){
-        const p=project([(points[0][0]+points[1][0])/2,(points[0][1]+points[1][1])/2],points[0][2]+.2);ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.strokeStyle='#18332e';ctx.lineWidth=4;ctx.strokeText(t(key),...p);ctx.fillStyle='#fff5d7';ctx.fillText(t(key),...p);
+      for(const {edge:points,text,color} of rampEndLabels(selected)){
+        const p=project([(points[0][0]+points[1][0])/2,(points[0][1]+points[1][1])/2],points[0][2]+.2);ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.strokeStyle='#18332e';ctx.lineWidth=4;ctx.strokeText(text,...p);ctx.fillStyle=color;ctx.fillText(text,...p);
       }
     }
     drawPhotoDirections();
@@ -857,17 +879,16 @@
     drawOfficeFacade();
     drawPhotoDirections();
     solids.forEach(s=>{
-      if(s.type==='site')return;
+      if(s.type==='site' && !isRamp(s.item))return;
       if(s.model){drawModelAnnotations(s);return;}
-      if(s.type==='equipment'){
-        const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,elevation(s)+(isRamp(s.item)?s.z/2+.12:s.z+.1));
+      if(s.type==='equipment' || isRamp(s.item)){
+        const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,elevation(s)+(isRamp(s.item)?rampTopPoints(s).reduce((sum,q)=>sum+q[2]/4,0)+.12:s.z+.1));
         ctx.fillStyle='#e4e5b3';ctx.fillRect(p[0]-2,p[1]-2,4,4);
         if((labels && baseScale*zoom>6)||s===selected){ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#243f36';ctx.strokeText(s.item.code || s.item.name || '',p[0],p[1]-10);ctx.fillStyle='#fff8df';ctx.fillText(s.item.code || s.item.name || '',p[0],p[1]-10);}
         if(isRamp(s.item) && detail){
-          const top=rampTopPoints(s),high=top.filter(q=>q[2]>0),low=top.filter(q=>q[2]===0);
-          [[high,'rampInside'],[low,'rampOutside']].forEach(([edge,key])=>{
+          rampEndLabels(s).forEach(({edge,text,color})=>{
             const q=project([(edge[0][0]+edge[1][0])/2,(edge[0][1]+edge[1][1])/2],edge[0][2]+.2);
-            ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#3e392b';ctx.strokeText(t(key),q[0],q[1]);ctx.fillStyle='#fff1c8';ctx.fillText(t(key),q[0],q[1]);
+            ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#3e392b';ctx.strokeText(text,q[0],q[1]);ctx.fillStyle=color;ctx.fillText(text,q[0],q[1]);
           });
         }
       }
@@ -891,7 +912,7 @@
       dialog.querySelector('[data-twin-text="note"]').textContent=t('buildingNote');
       if(!item)dialog.querySelector('#twinDetails').textContent+='\n'+(photoDirections?t('photoSiteNote'):t('buildingNote'));
     }else dialog.querySelector('[data-twin-text="note"]').textContent=t('note');
-    dialog.querySelector('#twinEdit').hidden=!s;
+    dialog.querySelector('#twinEdit').hidden=!s || s.type==='site';
     dialog.querySelector('#twinFocus').hidden=!s;
     const restroom=referenceCode(item || {})==='WC-STALLS';
     const cutawayButton=dialog.querySelector('#twinRestroomCutaway');
@@ -904,7 +925,7 @@
     if(s?.model && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo','J1-3':'j13Photo','D1-1':'d11Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
     if(item && ['EVA 3','EVA3'].includes(referenceCode(item)))dialog.querySelector('#twinDetails').textContent+='\n'+t('eva3Deferred');
     if(item && referenceCode(item)==='DIE CUT' && !dieSite)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('dieCutDisconnected');
-    if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('ramp');
+    if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t(item.code==='RAMP-CONNECTOR'?'connectorNote':'ramp');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
     dialog.querySelector('#twinObjects').value=item?.id || '';
@@ -949,7 +970,7 @@
     dialog.querySelector('#twinMinus').onclick=()=>zoomAt(.8);
     dialog.querySelector('#twinLabels').onchange=e=>{labels=e.target.checked;requestDraw();};
     dialog.querySelector('#twinObjects').onchange=e=>{selected=scene.find(s=>s.item.id===e.target.value)||null;if(!selected)detail=false;updateInfo();if(detail)fit();else requestDraw();};
-    dialog.querySelector('#twinEdit').onclick=()=>{if(selected){const id=selected.type==='wall'?(data.walls || []).find(w=>selected.item.id===w.id || selected.item.id.startsWith(w.id+'_part_') || selected.item.id.startsWith(w.id+'_diecut_'))?.id || selected.item.id:selected.item.id;dialog.close();bridge?.edit(id,floor);}};
+    dialog.querySelector('#twinEdit').onclick=()=>{if(selected && selected.type!=='site'){const id=selected.type==='wall'?(data.walls || []).find(w=>selected.item.id===w.id || selected.item.id.startsWith(w.id+'_part_') || selected.item.id.startsWith(w.id+'_diecut_'))?.id || selected.item.id:selected.item.id;dialog.close();bridge?.edit(id,floor);}};
     canvas.addEventListener('wheel',e=>{if(usingThree())e.stopImmediatePropagation();cameraWheel(e);},{capture:true,passive:false});
     canvas.onpointerdown=e=>{if(usingThree())return;canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});gesture={x:e.clientX,y:e.clientY,moved:false};};
     canvas.onpointermove=e=>{
