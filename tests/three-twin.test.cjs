@@ -95,7 +95,7 @@ test('concave portal polygons are triangulated without filling their opening',()
   assert.deepEqual(adapter.triangulateFace([[0,0,0],[1,0,0],[2,0,0]]),[]);
 });
 
-const codes=['DIE CUT','WC-STALLS','H1-1','A1-1','A1-2','F1-1','G2-1','G2-2','B1-1','B1-2','B1-3','B1-4','E1-1','E1-2','Q2-1','Q2-2','Q2-3','J1-2','J1-3','D1-1','D1-2','Welding','L4-1','PL-1','PL-2'];
+const codes=['DIE CUT','WC-STALLS','H1-1','A1-1','A1-2','F1-1','G2-1','G2-2','B1-1','B1-2','B1-3','B1-4','E1-1','E1-2','Q2-1','Q2-2','Q2-3','J1-2','J1-3','D1-1','Welding','L4-1','PL-1','PL-2'];
 for(const code of codes)test(`${code}: all existing model geometry survives the Three.js adapter without a second rotation`,()=>{
   const window=loadModels(),item=freeze({id:code,code,x:13.2,y:41.4,width:6,height:4,rotation:37}),before=JSON.stringify(item);
   const faces=window.ChinChunModels.build(item);assert.ok(faces?.length>0);
