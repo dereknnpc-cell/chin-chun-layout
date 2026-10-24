@@ -4529,7 +4529,6 @@
 };
 
   const SOURCE_GEOMETRY_REVISION = INITIAL_LAYOUT.source_geometry_revision;
-  const BASELINE_EQUIPMENT_IDS = new Set(INITIAL_LAYOUT.equipment.map(item => item.id));
 
   function applySourceGeometryRevision(candidate) {
     if (!candidate || (!candidate.equipment && !candidate.dimensions)) {
@@ -4595,7 +4594,6 @@
   let siteViewMode = "expanded"; // expanded site context | indoor floor plan | maximum overview
   let currentFloor = "1F";
   let selectedId = null;
-  let selectedItemType = null; // 'equipment' | 'column' | 'wall' | 'aisle' | 'zone' | 'flow' | 'title_block'
   let selectedWaypointIndex = -1;
 
   // Initialize Dynamic Floors if not present
@@ -5044,8 +5042,6 @@
   const propName = document.getElementById("propName");
   const propCode = document.getElementById("propCode");
   const propZone = document.getElementById("propZone");
-  const lblPropName = document.getElementById("lblPropName");
-  const lblPropCode = document.getElementById("lblPropCode");
 
   // Standard Dimension & Coordinate Cards
   const cardStandardDims = document.getElementById("cardStandardDims");
@@ -6606,7 +6602,6 @@
   // --- Deselect All ---
   function deselectAll() {
     selectedId = null;
-    selectedItemType = null;
     inspectorEmptyState.style.display = "block";
     inspectorContent.style.display = "none";
     selectionBadge.textContent = "未選取";
@@ -6624,7 +6619,6 @@
       return;
     }
 
-    selectedItemType = rec.type;
     const item = rec.item;
 
     inspectorEmptyState.style.display = "none";
@@ -7469,7 +7463,7 @@
       viewBox.y = 20;
 
     } else {
-      let targetW, targetH, targetOffsetX = 0, targetOffsetY = 0;
+      let targetW, targetH;
       if (siteViewMode === "indoor") {
         targetW = TOTAL_W_M * SCALE + OFFSET_X + 160;
         targetH = TOTAL_H_M * SCALE + OFFSET_Y + 120;
@@ -7478,8 +7472,6 @@
         const marginY = siteViewMode === "max" ? 25.0 : SITE_MARGIN_Y_M;
         targetW = (TOTAL_W_M + marginX * 2) * SCALE + OFFSET_X + 200;
         targetH = (TOTAL_H_M + marginY * 2) * SCALE + OFFSET_Y + 160;
-        targetOffsetX = -(marginX * SCALE) / 2;
-        targetOffsetY = -(marginY * SCALE) / 2;
       }
       const aspectTarget = targetW / targetH;
 
