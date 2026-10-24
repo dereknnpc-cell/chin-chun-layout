@@ -57,11 +57,14 @@ ChinChunLive.calibrate([
 const live = ChinChunLive;
 live.use(live.providers.websocket('wss://gateway/twin', { map: raw => raw }));   // 推播
 live.use(live.providers.poll('/api/mes/status', { intervalMs: 5000 }));           // MES 只有快照 API
+live.use(live.providers.supabase(client, { workspaceId }));                        // Supabase 資料表 + Realtime
 live.use(live.providers.simulation());                                              // 示範模擬
 live.stop();
 ```
 
-Twin 工具列「即時層」按鈕：網址帶 `?live=wss://gateway/twin` 時連該 gateway，否則啟動模擬。模擬：人員／堆高機沿 CAD `flows` 與 `aisles` 中線移動，機台狀態隨機，非現場數據。
+Twin 工具列「即時層」選單：關／模擬／雲端資料庫（需登入的工作區成員）／Gateway（網址帶 `?live=wss://gateway/twin` 時出現）。
+
+雲端資料庫模式：先套用啟用中的 `rtls_calibrations` 與 `equipment_bindings`，再載入 `equipment_status_current`、`rtls_tags_current`，之後以 Realtime 接收變更；校正或對照表變更時整批重新載入，原始 RTLS 座標以新校正重新換算。登出時自動停止。模擬：人員／堆高機沿 CAD `flows` 與 `aisles` 中線移動，機台狀態隨機，非現場數據。
 
 自訂 provider：`{ name, start({ ingest, getLayout }), stop() }`。
 
@@ -75,7 +78,7 @@ Twin 工具列「即時層」按鈕：網址帶 `?live=wss://gateway/twin` 時�
 | `equipment_status_current` | 每台最新狀態，由 trigger 維護，Realtime 推播 | 僅 trigger | 成員 |
 | `rtls_positions` | 定位歷史（軌跡回放、人流熱圖、模擬比對） | gateway（service role） | 成員 |
 | `rtls_tags_current` | 每個 tag 最新位置，由 trigger 維護，Realtime 推播 | 僅 trigger | 成員 |
-| `equipment_bindings` | MES／IoT 代號 → CAD id（`source`, `source_id` → `cad_id`） | owner／editor | 成員 |
+| `equipment_bindings` | MES／IoT 代號 → CAD id（`source`, `source_id` → `cad_id`）；gateway 寫入前以此換成 CAD id，Twin 另以 `source_id` 作備援比對 | owner／editor | 成員 |
 | `rtls_calibrations` | 校正點 `pairs`（同 `calibrate()` 格式），每個 workspace 僅一筆 `is_active` | owner／editor | 成員 |
 
 - 欄位與事件格式一致：`status` 限 run／idle／setup／down／offline；`kind` 限 person／forklift／cart／asset；`frame` 為 rtls 或 cad；座標拒收 NaN／Infinity。

@@ -5,7 +5,7 @@
 ## 即時資料層：IoT／MES／RTLS（2026-10-24）
 
 - 新增 `live-twin.js`（`window.ChinChunLive`）：機台狀態（運轉／待機／換線／停機／離線、工單、產量）與 RTLS 人員／堆高機定位疊加在 2.5D（Three.js 與舊版皆可），唯讀、不寫入配置或雲端。
-- Twin 工具列「即時層」：預設啟動模擬（人員／堆高機沿 CAD 動線與走道移動，機台狀態隨機）；網址加 `?live=wss://…` 改接 gateway。
+- Twin 工具列「即時層」選單：模擬（人員／堆高機沿 CAD 動線與走道移動，機台狀態隨機）、雲端資料庫（登入成員，讀 Supabase 最新狀態並以 Realtime 更新）；網址加 `?live=wss://…` 另可直連 gateway。
 - 事件格式、MES 代號對應、RTLS 座標校正（2 點相似／3 點以上仿射）與資料表 migration 見 [LIVE-DATA.md](LIVE-DATA.md)。
 - 清除已失效的一次性 Python 改寫腳本、`app_template.js` 與 `scratch_layout_data.js`；`embed_layout_data.py` 只更新 `app.js`。
 

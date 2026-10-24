@@ -55,6 +55,7 @@
     const hit = all.find(e => e.id === key) || all.find(e => String(e.code || '').trim().toUpperCase() === key.toUpperCase());
     return hit?.id || key;
   }
+  function bind(map) { bindings = new Map(Object.entries(map || {}).map(([k, v]) => [String(k).trim(), String(v)])); notify(); }
   function ingestOne(e) {
     if (!e || typeof e !== 'object') return false;
     if (e.type === 'equipment') {
@@ -92,7 +93,7 @@
   function use(next) {
     stop(); if (!next) return;
     provider = next; mode = next.name || 'live';
-    try { next.start({ ingest, getLayout: () => getLayout() }); }
+    try { next.start({ ingest, getLayout: () => getLayout(), calibrate, bind }); }
     catch (error) { console.warn('Live provider failed to start', error); provider = null; mode = 'off'; }
     notify();
   }
@@ -171,14 +172,50 @@
     }, stop() { stopped = true; clearTimeout(timer); } };
   }
 
+  // Supabase tables from the live-twin migration: the *_current tables seed the view and
+  // Realtime pushes changes; the active calibration and MES bindings are applied first.
+  const opt = v => v ?? undefined;
+  const statusEvent = r => ({ type: 'equipment', id: r.cad_id, status: r.status, workOrder: opt(r.work_order), product: opt(r.product),
+    count: opt(r.count), target: opt(r.target), oee: r.oee == null ? undefined : Number(r.oee), alarm: opt(r.alarm), source: r.source, ts: r.ts });
+  const tagEvent = r => ({ type: 'position', tag: r.tag, kind: r.kind, label: opt(r.label), x: r.x, y: r.y, floor: r.floor, frame: r.frame, source: r.source, ts: r.ts });
+  function supabaseFeed(client, { workspaceId }) {
+    let channel = null, stopped = false, loading = null;
+    return { name: 'cloud', start({ ingest: push, calibrate: setCalibration, bind: setBindings }) {
+      const rows = async query => { const { data, error } = await query; if (error) throw error; return data || []; };
+      const scoped = table => client.from(table).select('*').eq('workspace_id', workspaceId);
+      const loadConfig = async () => {
+        const [bound, active] = await Promise.all([rows(scoped('equipment_bindings')), rows(scoped('rtls_calibrations').eq('is_active', true).limit(1))]);
+        if (stopped) return;
+        setBindings(Object.fromEntries(bound.map(b => [b.source_id, b.cad_id])));
+        try { setCalibration(active[0] ? active[0].pairs : {}); }
+        catch (error) { console.warn('RTLS calibration ignored', error); setCalibration({}); }
+      };
+      const load = () => loading ||= (async () => {
+        try {
+          await loadConfig();
+          const [status, tagRows] = await Promise.all([rows(scoped('equipment_status_current')), rows(scoped('rtls_tags_current'))]);
+          if (!stopped) push([...status.map(statusEvent), ...tagRows.map(tagEvent)]);
+        } catch (error) { console.warn('Live cloud load failed', error); }
+        finally { loading = null; }
+      })();
+      const filter = `workspace_id=eq.${workspaceId}`, on = (table, handler) => channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, handler);
+      channel = client.channel(`live-twin:${workspaceId}`);
+      on('equipment_status_current', ({ new: r }) => { if (r?.cad_id) push([statusEvent(r)]); });
+      on('rtls_tags_current', ({ new: r }) => { if (r?.tag) push([tagEvent(r)]); });
+      // Raw RTLS positions were converted with the old calibration: reload everything.
+      on('rtls_calibrations', () => load());
+      on('equipment_bindings', () => load());
+      channel.subscribe(status => { if (status === 'SUBSCRIBED') load(); else if (['CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) console.warn('Live cloud channel', status); });
+    }, stop() { stopped = true; if (channel) client.removeChannel(channel); channel = null; } };
+  }
+
   window.ChinChunLive = {
     STATUS, KINDS, options,
     attach({ layout } = {}) { if (typeof layout === 'function') getLayout = layout; },
-    bind(map) { bindings = new Map(Object.entries(map || {}).map(([k, v]) => [String(k).trim(), String(v)])); notify(); },
-    calibrate, toCad, ingest, use, stop, equipmentState, positions,
+    bind, calibrate, toCad, ingest, use, stop, equipmentState, positions,
     mode: () => mode,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     snapshot: () => ({ mode, equipment: [...equipment.keys()].map(equipmentState), tags: [...tags.values()].map(t => ({ ...t, trail: undefined })) }),
-    providers: { simulation, websocket, poll }
+    providers: { simulation, websocket, poll, supabase: supabaseFeed }
   };
 })();
