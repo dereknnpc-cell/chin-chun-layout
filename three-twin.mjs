@@ -86,6 +86,53 @@ export function projectPoint(camera,point,width,height) {
   return [(p.x+1)*width/2,(1-p.y)*height/2,p.z];
 }
 
+// Screen-space gestures affect the camera only. Use a gesture-start baseline
+// rather than accumulating individual pointer events (which arrive separately).
+export function twoTouchDelta(before,after,width,height) {
+  const pair=points=>Array.isArray(points) && points.length===2 && points.every(p=>Array.isArray(p) && p.length===2 && p.every(Number.isFinite));
+  const unchanged={yaw:0,pitch:0,zoom:1};
+  if(!pair(before) || !pair(after))return unchanged;
+  const vector=points=>[points[1][0]-points[0][0],points[1][1]-points[0][1]];
+  const a=vector(before),b=vector(after),distanceA=Math.hypot(...a),distanceB=Math.hypot(...b);
+  if(distanceA<20 || distanceB<20)return unchanged; // Coincident/crossed fingers have no stable angle.
+  const twist=Math.atan2(Math.sin(Math.atan2(b[1],b[0])-Math.atan2(a[1],a[0])),Math.cos(Math.atan2(b[1],b[0])-Math.atan2(a[1],a[0])));
+  const dx=(after[0][0]+after[1][0]-before[0][0]-before[1][0])/2;
+  const dy=(after[0][1]+after[1][1]-before[0][1]-before[1][1])/2;
+  return {yaw:-twist-dx/Math.max(240,width || 0)*Math.PI,
+    pitch:-dy/Math.max(240,height || 0)*Math.PI/2,zoom:distanceB/distanceA};
+}
+
+export function bindTwoFingerCamera({canvas,camera,controls,onChange=()=>{},onMultiTouch=()=>{},isEnabled=()=>true}) {
+  const pointers=new Map();let baseline=null;
+  const points=()=>[...pointers.values()].map(p=>[...p]);
+  const rebase=()=>{
+    baseline=pointers.size===2?{points:points(),...cameraAngles(camera,controls.target),zoom:camera.zoom,distance:camera.position.distanceTo(controls.target)}:null;
+    if(pointers.size>=2)onMultiTouch();
+  };
+  const down=event=>{
+    if(event.pointerType!=='touch' || !isEnabled())return;
+    pointers.set(event.pointerId,[event.clientX,event.clientY]);
+    canvas.setPointerCapture?.(event.pointerId);rebase();
+  };
+  const move=event=>{
+    if(!isEnabled() || !pointers.has(event.pointerId))return;
+    pointers.set(event.pointerId,[event.clientX,event.clientY]);
+    if(pointers.size!==2 || !baseline)return;
+    event.preventDefault();onMultiTouch();
+    const size=canvas.getBoundingClientRect(),delta=twoTouchDelta(baseline.points,points(),size.width,size.height);
+    const pitch=THREE.MathUtils.clamp(baseline.pitch+delta.pitch,25*Math.PI/180,Math.max(baseline.pitch,85*Math.PI/180));
+    setOrientation(camera,controls.target,baseline.yaw+delta.yaw,pitch,baseline.distance);
+    camera.zoom=THREE.MathUtils.clamp(baseline.zoom*delta.zoom,.25,12);
+    camera.updateProjectionMatrix();controls.update();onChange();
+  };
+  const end=event=>{if(pointers.delete(event.pointerId))rebase();};
+  const reset=()=>{pointers.clear();baseline=null;};
+  canvas.addEventListener('pointerdown',down);
+  canvas.addEventListener('pointermove',move,{passive:false});
+  for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,end);
+  return {reset,dispose(){reset();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.removeEventListener(name,end);}};
+}
+
 export function createThreeTwin({canvas,onChange=()=>{},onPick=()=>{},onError=()=>{}}) {
   const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance'});
   renderer.domElement.className='twin-three-surface';renderer.domElement.setAttribute('aria-hidden','true');
@@ -100,7 +147,8 @@ export function createThreeTwin({canvas,onChange=()=>{},onPick=()=>{},onError=()
   controls.enableDamping=false;controls.screenSpacePanning=true;controls.enableZoom=false;
   controls.minPolarAngle=.000001;controls.maxPolarAngle=65*Math.PI/180;
   controls.mouseButtons={LEFT:THREE.MOUSE.PAN,MIDDLE:THREE.MOUSE.PAN,RIGHT:THREE.MOUSE.ROTATE};
-  controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_PAN};
+  // Own two-finger orbit/tilt/pinch below; don't also apply OrbitControls pan.
+  controls.touches={ONE:THREE.TOUCH.PAN,TWO:null};
   // Disable OrbitControls wheel zoom: our capture listener retains independent
   // Command/Shift orbit, Alt tilt, and unmodified zoom for the existing users.
   setOrientation(camera,controls.target);controls.update();
@@ -115,14 +163,9 @@ export function createThreeTwin({canvas,onChange=()=>{},onPick=()=>{},onError=()
     raycaster.setFromCamera(new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,1-(e.clientY-rect.top)/rect.height*2),camera);
     const hit=raycaster.intersectObjects(meshes,false)[0];onPick(hit?.object.userData.cadId || null);
   };
-  let pinchDistance=null;
-  const pointers=new Map();
-  const touchDown=e=>{if(e.pointerType==='touch'){pointers.set(e.pointerId,[e.clientX,e.clientY]);if(pointers.size===2){const p=[...pointers.values()];pinchDistance=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]);down=null;}}};
-  const touchMove=e=>{if(!enabled || !pointers.has(e.pointerId))return;pointers.set(e.pointerId,[e.clientX,e.clientY]);if(pointers.size===2){const p=[...pointers.values()],distance=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]);if(pinchDistance>0){camera.zoom=THREE.MathUtils.clamp(camera.zoom*distance/pinchDistance,.25,12);camera.updateProjectionMatrix();onChange();}pinchDistance=distance;down=null;}};
-  const touchEnd=e=>{pointers.delete(e.pointerId);pinchDistance=null;};
   const contextLost=e=>{e.preventDefault();if(!disposed)onError(new Error('WebGL context lost'));};
   canvas.addEventListener('pointerdown',pointerDown);canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',resetPointer);
-  canvas.addEventListener('pointerdown',touchDown);canvas.addEventListener('pointermove',touchMove);canvas.addEventListener('pointerup',touchEnd);canvas.addEventListener('pointercancel',touchEnd);
+  const touch=bindTwoFingerCamera({canvas,camera,controls,onChange,onMultiTouch:resetPointer,isEnabled:()=>enabled});
   renderer.domElement.addEventListener('webglcontextlost',contextLost);
   function clearGeometry(){
     for(const child of [...root.children]){root.remove(child);child.geometry?.dispose();}
@@ -162,9 +205,9 @@ export function createThreeTwin({canvas,onChange=()=>{},onPick=()=>{},onError=()
     zoomBy(factor){camera.zoom=THREE.MathUtils.clamp(camera.zoom*factor,.25,12);camera.updateProjectionMatrix();onChange();},
     project(point){return projectPoint(camera,point,width,height);},
     state(){const a=cameraAngles(camera,controls.target);return {yaw:a.yaw*180/Math.PI,pitch:a.pitch*180/Math.PI,zoom:camera.zoom,objects:meshes.length,triangles:renderer.info.render.triangles,calls:renderer.info.render.calls};},
-    setEnabled(value){enabled=value;controls.enabled=value;renderer.domElement.hidden=!value;down=null;pointers.clear();pinchDistance=null;},
-    dispose(){if(disposed)return;disposed=true;controls.removeEventListener('change',changed);controls.dispose();clearGeometry();material.dispose();lineMaterial.dispose();renderer.domElement.removeEventListener('webglcontextlost',contextLost);renderer.dispose();renderer.domElement.remove();canvas.removeEventListener('pointerdown',pointerDown);canvas.removeEventListener('pointerup',pointerUp);canvas.removeEventListener('pointercancel',resetPointer);canvas.removeEventListener('pointerdown',touchDown);canvas.removeEventListener('pointermove',touchMove);canvas.removeEventListener('pointerup',touchEnd);canvas.removeEventListener('pointercancel',touchEnd);}
+    setEnabled(value){if(enabled!==value){if(value)controls.connect(canvas);else controls.disconnect();}enabled=value;controls.enabled=value;renderer.domElement.hidden=!value;down=null;touch.reset();},
+    dispose(){if(disposed)return;disposed=true;touch.dispose();controls.removeEventListener('change',changed);controls.dispose();clearGeometry();material.dispose();lineMaterial.dispose();renderer.domElement.removeEventListener('webglcontextlost',contextLost);renderer.dispose();renderer.domElement.remove();canvas.removeEventListener('pointerdown',pointerDown);canvas.removeEventListener('pointerup',pointerUp);canvas.removeEventListener('pointercancel',resetPointer);}
   };
 }
 
-if(typeof window!=='undefined')window.ChinChunThree={create:createThreeTwin,revision:THREE.REVISION};
+if(typeof window!=='undefined')window.ChinChunThree={create:createThreeTwin,touchDelta:twoTouchDelta,revision:THREE.REVISION};

@@ -11,6 +11,7 @@
   const factoryRise = 1.5;
   const pointers = new Map();
   let gesture = null;
+  let legacyTouchBase=null;
   let detail = false;
   let restroomCutaway = true;
   let dieSite = null;
@@ -80,8 +81,10 @@
   zh.topView='正上方俯視';th.topView='มองจากด้านบน';
   Object.assign(zh,{viewMenu:'視角',displayMenu:'顯示',infoMenu:'資訊',menuClose:'收合',closeControls:'收合選項'});
   Object.assign(th,{viewMenu:'มุมมอง',displayMenu:'แสดง',infoMenu:'ข้อมูล',menuClose:'ย่อ',closeControls:'ย่อเมนู'});
-  zh.threeHelp='左鍵拖曳平移 · 右鍵拖曳旋轉 · 滾動縮放 · ⌘／Shift＋滾動：只左右旋轉 · ⌥＋滾動：只上下俯仰 · 方向鍵分軸旋轉 · 0 重設';
-  th.threeHelp='ลากซ้ายเลื่อน · ลากขวาหมุน · ล้อซูม · ⌘/Shift＋ล้อหมุนแนวราบ · ⌥＋ล้อปรับมุมก้ม · ปุ่มลูกศรแยกแกน · 0 คืนมุม';
+  zh.threeHelp='觸控：單指平移 · 雙指左右滑動／扭轉旋轉、上下滑動調俯視、張合縮放。滑鼠：左鍵平移 · 右鍵旋轉 · 滾動縮放 · ⌘／Shift＋滾動：左右旋轉 · ⌥＋滾動：上下俯仰 · 0 重設';
+  th.threeHelp='สัมผัส: นิ้วเดียวเลื่อน · สองนิ้วลากซ้ายขวา/บิดเพื่อหมุน ลากขึ้นลงปรับมุมก้ม กาง/หุบเพื่อซูม เมาส์: ลากซ้ายเลื่อน · ลากขวาหมุน · ล้อซูม · ⌘/Shift＋ล้อหมุน · ⌥＋ล้อปรับมุมก้ม · 0 คืนมุม';
+  zh.help='觸控：單指平移 · 雙指滑動／扭轉調整視角、張合縮放。'+zh.help;
+  th.help='สัมผัส: นิ้วเดียวเลื่อน · สองนิ้วลาก/บิดปรับมุมมอง กาง/หุบซูม '+th.help;
   zh.threeReady='Three.js 正交相機 · 2D 資料唯讀';th.threeReady='กล้องออร์โธกราฟิก Three.js · อ่านข้อมูล 2D เท่านั้น';
   zh.threeFailed='此裝置無法啟動 Three.js，已切回舊版；2D 資料未更動。';th.threeFailed='เริ่ม Three.js ไม่ได้ จึงใช้รุ่นเดิม ข้อมูล 2D ไม่เปลี่ยน';
   zh.photoDirections='照片方位';th.photoDirections='ทิศทางจากภาพ';
@@ -688,6 +691,7 @@
     const top=dialog.querySelector('#twinTopView');if(top)top.hidden=engineMode!=='three';
   }
   function switchEngine(mode,failed=false) {
+    pointers.clear();gesture=null;legacyTouchBase=null;
     if(usingThree()){const state=threeView.state();angle=state.yaw/90;pitch=state.pitch*Math.PI/180;}
     engineMode=mode==='legacy'?'legacy':'three';engineError=failed;
     if(engineMode==='three')threeView?.setAngles(angle*Math.PI/2,pitch);
@@ -935,6 +939,12 @@
   }
   function fit(){fitExtent=null;zoom=detail?1.5:1;pan={x:0,y:0};threeNeedsFit=true;requestDraw();}
   function zoomAt(factor,x=width/2,y=height/2){if(usingThree()){threeView.zoomBy(factor);return;}const next=Math.max(.4,Math.min(8,zoom*factor)),ratio=next/zoom;pan={x:x-width/2-(x-width/2-pan.x)*ratio,y:y-height/2-(y-height/2-pan.y)*ratio};zoom=next;requestDraw();}
+  function applyLegacyTouchGesture(baseline,points) {
+    const delta=window.ChinChunThree.touchDelta(baseline.points,points,width,height);
+    angle=baseline.angle+delta.yaw/(Math.PI/2);
+    pitch=Math.max(25*Math.PI/180,Math.min(65*Math.PI/180,baseline.pitch+delta.pitch));
+    zoom=Math.max(.4,Math.min(8,baseline.zoom*delta.zoom));
+  }
   // Reuse the controls and their listeners; only presentation containers move.
   // This controller never reads or writes CAD, mesh, camera or cloud state.
   function bindCompactTwinControls(root) {
@@ -1029,21 +1039,27 @@
     dialog.querySelector('#twinEdit').onclick=()=>{if(selected && selected.type!=='site'){const id=selected.type==='wall'?(data.walls || []).find(w=>selected.item.id===w.id || selected.item.id.startsWith(w.id+'_part_') || selected.item.id.startsWith(w.id+'_diecut_'))?.id || selected.item.id:selected.item.id;dialog.close();bridge?.edit(id,floor);}};
     closeTwinMenus=bindCompactTwinControls(dialog);
     canvas.addEventListener('wheel',e=>{if(usingThree())e.stopImmediatePropagation();cameraWheel(e);},{capture:true,passive:false});
-    canvas.onpointerdown=e=>{if(usingThree())return;canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});gesture={x:e.clientX,y:e.clientY,moved:false};};
+    const rebaseLegacyTouch=()=>{legacyTouchBase=pointers.size===2?{points:[...pointers.values()].map(p=>[p.x,p.y]),angle,pitch,zoom}:null;if(pointers.size>=2 && gesture)gesture.moved=true;};
+    canvas.onpointerdown=e=>{if(usingThree())return;canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(!gesture)gesture={x:e.clientX,y:e.clientY,moved:false};rebaseLegacyTouch();};
     canvas.onpointermove=e=>{
       if(usingThree())return;
       const old=pointers.get(e.pointerId);if(!old || !gesture)return;
       const before=[...pointers.values()];pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-      if(pointers.size===2){const after=[...pointers.values()],dist=p=>Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(dist(before)>0)zoomAt(dist(after)/dist(before));gesture.moved=true;}
-      else {pan.x+=e.clientX-old.x;pan.y+=e.clientY-old.y;if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>4)gesture.moved=true;requestDraw();}
+      if(pointers.size===2){
+        if(legacyTouchBase && window.ChinChunThree?.touchDelta){
+          applyLegacyTouchGesture(legacyTouchBase,[...pointers.values()].map(p=>[p.x,p.y]));requestDraw();
+        }else{const after=[...pointers.values()],dist=p=>Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(dist(before)>0)zoomAt(dist(after)/dist(before));}
+        gesture.moved=true;
+      }else if(pointers.size===1){pan.x+=e.clientX-old.x;pan.y+=e.clientY-old.y;if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>4)gesture.moved=true;requestDraw();}
     };
     canvas.onpointerup=e=>{
       if(usingThree())return;
       if(gesture && !gesture.moved){const r=canvas.getBoundingClientRect();ctx.save();ctx.setTransform(1,0,0,1,0,0);selected=[...hits].reverse().find(h=>ctx.isPointInPath(h.path,e.clientX-r.left,e.clientY-r.top))?.s || (detail?selected:null);ctx.restore();updateInfo();requestDraw();}
-      pointers.delete(e.pointerId);if(pointers.size===0)gesture=null;
+      pointers.delete(e.pointerId);rebaseLegacyTouch();if(pointers.size===0)gesture=null;
     };
-    canvas.onpointercancel=e=>{pointers.delete(e.pointerId);gesture=null;};
-    dialog.addEventListener('close',()=>{pointers.clear();gesture=null;threeView?.setEnabled(false);document.getElementById('openDigitalTwin')?.focus();});
+    canvas.onpointercancel=e=>{pointers.delete(e.pointerId);rebaseLegacyTouch();if(pointers.size===0)gesture=null;else if(gesture)gesture.moved=true;};
+    canvas.onlostpointercapture=e=>{if(!usingThree() && pointers.delete(e.pointerId)){rebaseLegacyTouch();if(pointers.size===0)gesture=null;else if(gesture)gesture.moved=true;}};
+    dialog.addEventListener('close',()=>{pointers.clear();gesture=null;legacyTouchBase=null;threeView?.setEnabled(false);document.getElementById('openDigitalTwin')?.focus();});
     let previousCanvasWidth=0;
     new ResizeObserver(entries=>{
       const size=entries[0].contentRect;
