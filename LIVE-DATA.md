@@ -57,21 +57,31 @@ ChinChunLive.calibrate([
 const live = ChinChunLive;
 live.use(live.providers.websocket('wss://gateway/twin', { map: raw => raw }));   // 推播
 live.use(live.providers.poll('/api/mes/status', { intervalMs: 5000 }));           // MES 只有快照 API
+live.use(live.providers.supabase(client, { workspaceId }));                        // Supabase 資料表 + Realtime
 live.use(live.providers.simulation());                                              // 示範模擬
 live.stop();
 ```
 
-Twin 工具列「即時層」按鈕：網址帶 `?live=wss://gateway/twin` 時連該 gateway，否則啟動模擬。模擬：人員／堆高機沿 CAD `flows` 與 `aisles` 中線移動，機台狀態隨機，非現場數據。
+Twin 工具列「即時層」選單：關／模擬／雲端資料庫（需登入的工作區成員）／Gateway（網址帶 `?live=wss://gateway/twin` 時出現）。
+
+雲端資料庫模式：先套用啟用中的 `rtls_calibrations` 與 `equipment_bindings`，再載入 `equipment_status_current`、`rtls_tags_current`，之後以 Realtime 接收變更；校正或對照表變更時整批重新載入，原始 RTLS 座標以新校正重新換算。登出時自動停止。模擬：人員／堆高機沿 CAD `flows` 與 `aisles` 中線移動，機台狀態隨機，非現場數據。
 
 自訂 provider：`{ name, start({ ingest, getLayout }), stop() }`。
 
-## 建議資料表（未套用，待 MES／RTLS 規格確認）
+## 資料表（`supabase/migrations/20261024090000_add_live_twin_data.sql`）
 
-```sql
-create table equipment_binding (source_id text primary key, cad_id text not null, source text not null); -- MES/IoT id -> CAD id
-create table equipment_status  (cad_id text, status text, work_order text, count int, target int, ts timestamptz, primary key (cad_id, ts));
-create table rtls_position     (tag text, kind text, x real, y real, floor text, ts timestamptz, primary key (tag, ts));
-create table rtls_calibration  (id serial primary key, pairs jsonb not null, created_at timestamptz default now());
-```
+所有表以 `workspace_id` 隔離，沿用既有 `private.current_workspace_role()` 權限。
 
-歷史資料（軌跡回放、稼動率、人流熱圖、模擬比對）以這些表為來源；Twin 只需最新事件串流。
+| 表 | 用途 | 寫入 | 讀取 |
+|---|---|---|---|
+| `equipment_status_events` | 機台狀態歷史（稼動率、停機分析） | gateway（service role） | 成員 |
+| `equipment_status_current` | 每台最新狀態，由 trigger 維護，Realtime 推播 | 僅 trigger | 成員 |
+| `rtls_positions` | 定位歷史（軌跡回放、人流熱圖、模擬比對） | gateway（service role） | 成員 |
+| `rtls_tags_current` | 每個 tag 最新位置，由 trigger 維護，Realtime 推播 | 僅 trigger | 成員 |
+| `equipment_bindings` | MES／IoT 代號 → CAD id（`source`, `source_id` → `cad_id`）；gateway 寫入前以此換成 CAD id，Twin 另以 `source_id` 作備援比對 | owner／editor | 成員 |
+| `rtls_calibrations` | 校正點 `pairs`（同 `calibrate()` 格式），每個 workspace 僅一筆 `is_active` | owner／editor | 成員 |
+
+- 欄位與事件格式一致：`status` 限 run／idle／setup／down／offline；`kind` 限 person／forklift／cart／asset；`frame` 為 rtls 或 cad；座標拒收 NaN／Infinity。
+- 時間倒退的資料只進歷史表，不覆蓋 current；current 的工單、產量等欄位在新事件未帶值時保留舊值，`alarm` 以最新事件為準。
+- 一般登入者（含 editor）不能直接寫入狀態或定位，只有持 service role 的 gateway 可以；匿名無存取權。
+- 歷史表無自動清除。RTLS 高頻寫入時，請依保存期限定期刪除舊資料（例如 `pg_cron` 每日刪除 90 天前的 `rtls_positions`）。

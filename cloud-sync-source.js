@@ -511,6 +511,7 @@ async function handleSession(session) {
     lastHandledUserId = null;
     if (realtimeChannel) supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;
+    if (window.ChinChunLive?.mode() === "cloud") window.ChinChunLive.stop();
     updateAccountUi();
     renderDocumentOptions();
     return setCloudStatus("⚠ 本機模式（不會同步）", "offline", "請登入雲端帳號，否則其他人看不到這台的修改");
@@ -642,4 +643,7 @@ async function init(nextAdapter) {
   await handleSession(data.session);
 }
 
-window.ChinChunCloud = { init, scheduleSave, flushPendingSave, saveAsNewDocument };
+// Live twin data (IoT/MES/RTLS tables) reuses this signed-in client; members only.
+const liveSource = () => currentUser && currentRole ? { client: supabase, workspaceId: WORKSPACE_ID } : null;
+
+window.ChinChunCloud = { init, scheduleSave, flushPendingSave, saveAsNewDocument, liveSource };
