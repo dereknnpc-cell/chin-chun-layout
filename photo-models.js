@@ -162,7 +162,7 @@
     return m.faces;
   }
   function l41(item) {
-    const m=mesh(item,3.25,3),{box,tube,wheel}=m;
+    const m=mesh(item,3.25,3),{box,tube}=m;
     box(.17,.97,0,2.73,1.28,.87,cream,'vented-base-cabinet');
     for(const x of [.21,1.54]){
       box(x,.95,.12,1.28,.025,.68,'#d0d1bf','cabinet-door');

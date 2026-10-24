@@ -89,7 +89,7 @@ test('missing, malformed or duplicate archive blocks ALL repair and never substi
 test('local/cloud/import common loader repairs original walls before any EPS baseline migration',()=>{
   const app=fs.readFileSync(require.resolve('../app.js'),'utf8');
   const section=app.slice(app.indexOf('  function applySourceGeometryRevision('),app.indexOf('  // --- State Variables ---'));
-  const c={window:{ChinChunBuilding:building},SOURCE_GEOMETRY_REVISION:'new-eps',INITIAL_LAYOUT:{equipment:[],walls:[{id:'NOT_USER'}]},BASELINE_EQUIPMENT_IDS:new Set()};
+  const c={window:{ChinChunBuilding:building},SOURCE_GEOMETRY_REVISION:'new-eps',INITIAL_LAYOUT:{equipment:[],walls:[{id:'NOT_USER'}]}};
   vm.createContext(c);vm.runInContext(section,c);
   const repaired=c.applySourceGeometryRevision(legacy());assert.equal(repaired.buildingRepaired,true);
   assert.deepEqual(plain(repaired.layout.equipment),fixture().equipment);

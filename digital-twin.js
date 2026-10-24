@@ -107,6 +107,8 @@
   th.photoSiteNote='ทิศภาพ: มองออกจากเขตส้มคือซ้าย 2D มองเข้าจากซ้ายคือขวา 2D มองเข้าจากภายนอกเขตเขียวคือซ้าย 2D ภาพเห็นทางลาดสองด้านและหลังคาต่างระดับ ที่จอดผู้บริหารชิดอาคารเดิม PL-1/PL-2 เป็นชั้นเก็บ มีช่องว่างระหว่างกัน ข้างเขตเขียวคือ CNC Room เพิ่มเฉพาะข้อความอ้างอิง ไม่ประมาณหรือเพิ่มขนาดทางลาด ช่องจอด ช่องผนังหรือห้องกั้น';
   zh.buildingNote='以使用者原繪圖為準：廠內隔間、牆線及柱位不採A3比例描繪。外棚邊界依紅線X35–100，最新增建X90–100。2D與2.5D共用資料，設備未搬動。地坪：原廠+1.50／外棚+1.00／路面0米；外棚縱深、棚高沿用示意值，未另行推算。';
   th.buildingNote='ยึดแปลนเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอกตามเส้นแดง X35–100 ส่วนต่อเติม X90–100 ใช้ข้อมูลเดียวกับ 2D ไม่ย้ายเครื่อง พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกและความสูงโครงคงค่าภาพประกอบเดิม ไม่ประมาณใหม่';
+  Object.assign(zh,{live:'即時層',liveOff:'關',liveSim:'模擬',liveOn:'連線',run:'運轉',idle:'待機',setup:'換線',down:'停機',offline:'離線',person:'人員',forklift:'堆高機',cart:'台車',asset:'資產',workOrder:'工單',output:'產量',liveAge:'秒前',liveSimNote:'模擬資料：人員／堆高機沿 CAD 動線與走道移動，機台狀態隨機產生，非現場數據。',liveOnNote:'即時資料：IoT／MES 機台狀態與 RTLS 定位，僅顯示不寫入配置。'});
+  Object.assign(th,{live:'ชั้นเรียลไทม์',liveOff:'ปิด',liveSim:'จำลอง',liveOn:'เชื่อมต่อ',run:'ทำงาน',idle:'รอ',setup:'เปลี่ยนงาน',down:'หยุด',offline:'ออฟไลน์',person:'พนักงาน',forklift:'รถยก',cart:'รถเข็น',asset:'ทรัพย์สิน',workOrder:'ใบสั่งงาน',output:'ผลผลิต',liveAge:'วินาทีที่แล้ว',liveSimNote:'ข้อมูลจำลอง: พนักงาน/รถยกเคลื่อนตามเส้นทางและทางเดินใน CAD สถานะเครื่องสุ่ม ไม่ใช่ข้อมูลหน้างาน',liveOnNote:'ข้อมูลเรียลไทม์: สถานะเครื่องจาก IoT/MES และตำแหน่ง RTLS แสดงผลเท่านั้น ไม่เขียนลงแปลน'});
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
   Object.assign(zh,{site:'場地構造',connector:'原廠／外棚連接坡道',
     connectorNote:'依使用者黃線低端、紅線高端定位：由擴建棚 +1.00 m 往原廠 +1.50 m 上坡，高差 0.50 m。平面位置已改依確認電腦版的 CNC 聯絡通道（aisle_3），X86–89、Y40–45，寬 3.00 m；不再沿用舊手機底圖位置。坡長 5.00 m 為標示估算示意，非實測，不據此認定坡度。這是唯讀場地示意，不新增 2D 機台、不移動設備或隔間。',
@@ -130,7 +132,7 @@
   };
   function localize() {
     dialog.querySelectorAll('[data-twin-text]').forEach(el => { el.textContent = t(el.dataset.twinText); });
-    updateEngineInfo();
+    updateEngineInfo();updateLiveButton();
   }
   function rect(item, centered=false) {
     const w = Math.max(.05,n(item.width, .5)), h = Math.max(.05,n(item.height,.5));
@@ -760,6 +762,47 @@
     }
     return faces;
   }
+  // IoT/MES/RTLS overlay. Positions are CAD metres; nothing is written to layoutData.
+  const liveColors={run:'#3fbf6f',idle:'#e8c547',setup:'#4aa3df',down:'#e0503c',offline:'#8a948f'};
+  const liveLevel=p=>floor==='1F'?(window.ChinChunBuilding?.floorLevel(data,p) ?? (inFactory(p)?factoryRise:0)):0;
+  function drawLive(visible){
+    const live=window.ChinChunLive;if(!live || live.mode()==='off')return;
+    for(const s of visible){
+      if(s.type!=='equipment')continue;const state=live.equipmentState(s.item.id);if(!state)continue;
+      const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),high=threeSceneCache?.heights.get(s) ?? elevation(s)+s.z+.2,p=project(center,high);
+      // Sit above the equipment label rather than on top of its text.
+      ctx.beginPath();ctx.arc(p[0],p[1]-20,s===selected?7:5,0,Math.PI*2);ctx.fillStyle=liveColors[state.status];ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#10282a';ctx.stroke();
+    }
+    for(const tag of live.positions(floor)){
+      const level=liveLevel([tag.x,tag.y])+1.1,color=tag.kind==='forklift'?'#f59e0b':tag.kind==='person'?'#38bdf8':'#c084fc';
+      if(tag.trail.length>1){ctx.beginPath();tag.trail.forEach((q,i)=>{const v=project(q,liveLevel(q)+.05);i?ctx.lineTo(...v):ctx.moveTo(...v);});ctx.strokeStyle=color+'99';ctx.lineWidth=2;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);}
+      const foot=project([tag.x,tag.y],level-1.05),p=project([tag.x,tag.y],level);
+      ctx.beginPath();ctx.moveTo(...foot);ctx.lineTo(...p);ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+      ctx.beginPath();if(tag.kind==='person')ctx.arc(p[0],p[1],5,0,Math.PI*2);else ctx.rect(p[0]-5,p[1]-5,10,10);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#10282a';ctx.lineWidth=1.5;ctx.stroke();
+      if(labels && width>700){ctx.font='bold 10px system-ui';ctx.textAlign='left';ctx.lineWidth=3;ctx.strokeStyle='#10282a';ctx.strokeText(tag.label,p[0]+8,p[1]+3);ctx.fillStyle='#e8f6ff';ctx.fillText(tag.label,p[0]+8,p[1]+3);}
+    }
+    const legend=[...live.STATUS.map(k=>[liveColors[k],t(k),'dot']),['#38bdf8',t('person'),'dot'],['#f59e0b',t('forklift'),'box']];
+    ctx.font='11px system-ui';ctx.textAlign='left';let x=14;const y=height-14;
+    ctx.fillStyle='#18332ecc';ctx.fillRect(6,y-14,legend.reduce((w,[,text])=>w+ctx.measureText(text).width+24,8),22);
+    for(const [color,text,shape] of legend){ctx.beginPath();if(shape==='box')ctx.rect(x-4,y-7,8,8);else ctx.arc(x,y-3,4,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.fillStyle='#e8efe0';ctx.fillText(text,x+8,y+1);x+=ctx.measureText(text).width+24;}
+  }
+  function liveDetails(item){
+    const state=item && window.ChinChunLive?.equipmentState(item.id);if(!state)return '';
+    const age=Math.max(0,Math.round((Date.now()-state.ts)/1000));
+    return `\n● ${t(state.status)}${state.workOrder?` · ${t('workOrder')} ${state.workOrder}`:''}${state.count!==undefined?` · ${t('output')} ${state.count}${state.target?'/'+state.target:''}`:''} · ${state.source} · ${age}${t('liveAge')}`;
+  }
+  function updateLiveButton(){
+    const button=dialog?.querySelector('#twinLive');if(!button)return;
+    const mode=window.ChinChunLive?.mode() || 'off';
+    button.textContent=`${t('live')}: ${t(mode==='simulation'?'liveSim':mode==='off'?'liveOff':'liveOn')}`;button.setAttribute('aria-pressed',String(mode!=='off'));button.hidden=!window.ChinChunLive;
+  }
+  function toggleLive(){
+    const live=window.ChinChunLive;if(!live)return;
+    // ?live=wss://gateway/path selects a real feed; otherwise the demo simulation.
+    const url=new URLSearchParams(location.search).get('live');
+    if(live.mode()!=='off')live.stop();else live.use(url && /^wss?:\/\//.test(url)?live.providers.websocket(url):live.providers.simulation());
+    updateLiveButton();updateInfo();requestDraw();
+  }
   function drawThreeLabels(visible) {
     const occupied=[],overlap=(a,b)=>a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
     const canvasRect=canvas.getBoundingClientRect(),card=dialog.querySelector('.twin-info').getBoundingClientRect();
@@ -791,7 +834,7 @@
       threeSceneCache={scene,detail,selected,roof:buildingRoof,cutaway:restroomCutaway,heights};
     }
     if(threeNeedsFit){threeNeedsFit=false;threeView.fit();}
-    threeView.render();drawThreeLabels(visible);
+    threeView.render();drawThreeLabels(visible);drawLive(visible);
     for(const s of visible)if(s.model && (detail || s===selected))drawModelAnnotations(s,false);
     if(selected && !selected.model){
       const p=new Path2D(),points=isRamp(selected.item)?rampTopPoints(selected):selected.points.map(q=>[...q,elevation(selected)]);points.forEach((q,i)=>i?p.lineTo(...project(q,q[2]+.03)):p.moveTo(...project(q,q[2]+.03)));p.closePath();ctx.strokeStyle='#ffe5a1';ctx.lineWidth=2;ctx.stroke(p);
@@ -905,6 +948,7 @@
         ctx.strokeStyle='#fff1a1';ctx.lineWidth=3;ctx.stroke(outline);
       }
     });
+    drawLive(visible);
     dialog.querySelector('#twinCount').textContent=`${floor} / ${scene.length} ${t('count')} · ${t('updated')}`;
   }
   function updateInfo() {
@@ -935,6 +979,9 @@
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t(item.code==='RAMP-CONNECTOR'?'connectorNote':'ramp');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
+    if(s?.type==='equipment')dialog.querySelector('#twinDetails').textContent+=liveDetails(item);
+    const liveMode=window.ChinChunLive?.mode();
+    if(liveMode && liveMode!=='off')dialog.querySelector('[data-twin-text="note"]').textContent=t(liveMode==='simulation'?'liveSimNote':'liveOnNote');
     dialog.querySelector('#twinObjects').value=item?.id || '';
   }
   function fit(){fitExtent=null;zoom=detail?1.5:1;pan={x:0,y:0};threeNeedsFit=true;requestDraw();}
@@ -954,7 +1001,7 @@
     backdrop.setAttribute('aria-label',t('closeControls'));shell.append(backdrop);
     for(const [name,key,selectors] of [
       ['view','viewMenu',['#twinRotate','#twinOrbitLeft','#twinTiltUp','#twinTiltDown','#twinResetView','#twinTopView','#twinMinus','#twinPlus','#twinCameraStatus','#twinFocus']],
-      ['display','displayMenu',['#twinEngine','#twinLabels','#twinRoof','#twinPhotoDirections','#twinRestroomCutaway','#twinEngineStatus']],
+      ['display','displayMenu',['#twinEngine','#twinLabels','#twinLive','#twinRoof','#twinPhotoDirections','#twinRestroomCutaway','#twinEngineStatus']],
       ['info','infoMenu',['#twinObjects']]
     ]){
       const trigger=document.createElement('button');trigger.type='button';trigger.className='twin-menu-toggle';trigger.dataset.twinText=key;
@@ -1009,6 +1056,7 @@
     engineSelect.onchange=e=>switchEngine(e.target.value);engineLabel.append(engineTitle,engineSelect);dialog.querySelector('.twin-toolbar').prepend(engineLabel);
     const engineStatus=document.createElement('span');engineStatus.id='twinEngineStatus';engineStatus.className='twin-engine-status';engineStatus.setAttribute('role','status');dialog.querySelector('.twin-toolbar').append(engineStatus);
     const topView=document.createElement('button');topView.id='twinTopView';topView.dataset.twinText='topView';topView.onclick=()=>{if(usingThree())threeView.top();};dialog.querySelector('.twin-toolbar').append(topView);
+    const liveButton=document.createElement('button');liveButton.id='twinLive';liveButton.onclick=toggleLive;dialog.querySelector('.twin-toolbar').append(liveButton);
     const roofButton=document.createElement('button');roofButton.id='twinRoof';roofButton.dataset.twinText='buildingRoof';roofButton.hidden=true;
     roofButton.onclick=()=>{buildingRoof=!buildingRoof;updateInfo();requestDraw();};dialog.querySelector('.twin-toolbar').append(roofButton);
     const photoButton=document.createElement('button');photoButton.id='twinPhotoDirections';photoButton.dataset.twinText='photoDirections';photoButton.hidden=true;
@@ -1073,7 +1121,9 @@
     }).observe(canvas);
   }
   window.ChinChunTwin={
-    connect(api){bridge=api;document.getElementById('openDigitalTwin')?.addEventListener('click',()=>{mount();localize();closeTwinMenus();detail=false;dialog.showModal();threeView?.setEnabled(engineMode==='three');rebuild();fit();});},
+    connect(api){bridge=api;
+      window.ChinChunLive?.attach({layout:()=>data});
+      window.ChinChunLive?.subscribe(()=>{if(!dialog?.open)return;if(selected?.type==='equipment')updateInfo();updateLiveButton();requestDraw();});document.getElementById('openDigitalTwin')?.addEventListener('click',()=>{mount();localize();closeTwinMenus();detail=false;dialog.showModal();threeView?.setEnabled(engineMode==='three');rebuild();fit();});},
     update(layout,activeFloor){data=layout;if(!dialog?.open){floor=activeFloor==='2F'?'2F':'1F';return;}rebuild();}
   };
 })();

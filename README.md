@@ -2,6 +2,13 @@
 
 金讚鋼鐵與貼合加工廠房配置系統，支援廠區周邊示意（含 6 米環廠車道、西側花園與建物參考）、多樓層設計、獨立單面牆磁吸編輯、辦公室傢俱模組、SVG / DXF 匯出、即時歷史復原，以及 Supabase 跨裝置雲端同步。周邊示意參考衛星截圖，非地籍測量圖；使用前請以現場測量核對邊界與建物尺寸。
 
+## 即時資料層：IoT／MES／RTLS（2026-10-24）
+
+- 新增 `live-twin.js`（`window.ChinChunLive`）：機台狀態（運轉／待機／換線／停機／離線、工單、產量）與 RTLS 人員／堆高機定位疊加在 2.5D（Three.js 與舊版皆可），唯讀、不寫入配置或雲端。
+- Twin 工具列「即時層」：預設啟動模擬（人員／堆高機沿 CAD 動線與走道移動，機台狀態隨機）；網址加 `?live=wss://…` 改接 gateway。
+- 事件格式、MES 代號對應、RTLS 座標校正（2 點相似／3 點以上仿射）與建議資料表見 [LIVE-DATA.md](LIVE-DATA.md)。
+- 清除已失效的一次性 Python 改寫腳本、`app_template.js` 與 `scratch_layout_data.js`；`embed_layout_data.py` 只更新 `app.js`。
+
 ## 已確認電腦版底圖（2026-10-23）
 
 - 使用者已確認下載資料夾的 `factory_layout_data_v2.json`（2026-10-22 15:21）為正確版本：108 個設備、35 面牆，D1-1 為橫向 12×4 m，PL-1／PL-2 保留、沒有 PL-3。原始備份逐位元保存在 `baselines/desktop-confirmed-20261022.json`；舊的 55 設備預設圖封存在 `baselines/legacy-default-55.json`，不再作網站初始配置。
