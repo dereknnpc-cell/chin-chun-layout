@@ -9,11 +9,27 @@
   const options = { staleMs: 30000, trail: 24 };
   const equipment = new Map(), tags = new Map(), listeners = new Set();
   let bindings = new Map(), provider = null, mode = 'off', getLayout = () => null;
+  let sourceEpoch = 0, expiryTimer = null;
   let matrix = { a:1, b:0, c:0, d:1, tx:0, ty:0 };
   const num = v => v !== null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null;
   const time = v => { const t = typeof v === 'string' ? Date.parse(v) : num(v); return Number.isFinite(t) ? t : Date.now(); };
   let queued = false;
   const notify = () => { if (queued) return; queued = true; queueMicrotask(() => { queued = false; listeners.forEach(fn => fn()); }); };
+
+  // Expiry is a view event too: a silent gateway must not leave a green status
+  // or a stale RTLS marker painted until the next message/camera interaction.
+  function scheduleExpiry() {
+    clearTimeout(expiryTimer); expiryTimer = null;
+    const now = Date.now(); let next = Infinity;
+    for (const states of [equipment, tags]) for (const state of states.values()) {
+      const deadline = state.ts + options.staleMs + 1;
+      if (deadline > now) next = Math.min(next, deadline);
+    }
+    if (Number.isFinite(next)) {
+      expiryTimer = setTimeout(() => { expiryTimer = null; notify(); scheduleExpiry(); }, Math.min(2147483647, next - now));
+      expiryTimer?.unref?.();
+    }
+  }
 
   // RTLS anchor frame -> CAD metres (x right, y toward the drawing's bottom).
   const toCad = (x, y) => [matrix.a*x + matrix.b*y + matrix.tx, matrix.c*x + matrix.d*y + matrix.ty];
@@ -49,8 +65,10 @@
   // MES work-centre / IoT device ids -> CAD equipment id. Unbound ids fall back to
   // a CAD id or equipment code match, so codes such as "A1-1" work without a table.
   function resolve(id) {
-    const key = String(id ?? '').trim(); if (!key) return null;
-    if (bindings.has(key)) return bindings.get(key);
+    let key = String(id ?? '').trim(); if (!key) return null;
+    // Binding targets may be a CAD id OR a display code, just like direct ids.
+    if (bindings.has(key)) key = String(bindings.get(key) ?? '').trim();
+    if (!key) return null;
     const layout = getLayout(), all = [...(layout?.equipment || []), ...(layout?.equipment_2f || [])];
     const hit = all.find(e => e.id === key) || all.find(e => String(e.code || '').trim().toUpperCase() === key.toUpperCase());
     return hit?.id || key;
@@ -59,8 +77,10 @@
     if (!e || typeof e !== 'object') return false;
     if (e.type === 'equipment') {
       const id = resolve(e.id); if (!id) return false;
-      const prev = equipment.get(id) || {}, status = STATUS.includes(e.status) ? e.status : prev.status || 'offline';
-      equipment.set(id, { ...prev, id, sourceId: String(e.id), status, ts: time(e.ts), source: e.source || prev.source || mode,
+      const prev = equipment.get(id) || {}, ts = time(e.ts);
+      if (prev.ts !== undefined && ts < prev.ts) return false;
+      const status = STATUS.includes(e.status) ? e.status : prev.status || 'offline';
+      equipment.set(id, { ...prev, id, sourceId: String(e.id), status, ts, source: e.source || prev.source || mode,
         ...Object.fromEntries(['workOrder','product','count','target','oee','alarm'].filter(k => e[k] !== undefined).map(k => [k, e[k]])) });
       return true;
     }
@@ -78,7 +98,7 @@
   function ingest(events) {
     const list = Array.isArray(events) ? events : [events];
     let accepted = 0; for (const e of list) if (ingestOne(e)) accepted++;
-    if (accepted) notify();
+    if (accepted) { notify(); scheduleExpiry(); }
     return accepted;
   }
   const fresh = ts => Date.now() - ts <= options.staleMs;
@@ -88,12 +108,22 @@
   }
   const positions = (floor = '1F') => [...tags.values()].filter(t => t.floor === floor && fresh(t.ts)).map(t => ({ ...t, trail: t.trail.map(p => [...p]) }));
 
-  function stop() { const p = provider; provider = null; mode = 'off'; try { p?.stop?.(); } catch (error) { console.warn('Live provider stop failed', error); } equipment.clear(); tags.clear(); notify(); }
+  function stop() {
+    const p = provider; sourceEpoch++; provider = null; mode = 'off';
+    clearTimeout(expiryTimer); expiryTimer = null; equipment.clear(); tags.clear(); notify();
+    try { p?.stop?.(); } catch (error) { console.warn('Live provider stop failed', error); }
+  }
   function use(next) {
     stop(); if (!next) return;
-    provider = next; mode = next.name || 'live';
-    try { next.start({ ingest, getLayout: () => getLayout() }); }
-    catch (error) { console.warn('Live provider failed to start', error); provider = null; mode = 'off'; }
+    const epoch = sourceEpoch; provider = next; mode = next.name || 'live';
+    // An old fetch, queued WebSocket message or custom provider callback can
+    // finish after stop/switch. Only the current source may publish events.
+    const push = events => epoch === sourceEpoch && provider === next ? ingest(events) : 0;
+    try { next.start({ ingest: push, getLayout: () => getLayout() }); }
+    catch (error) {
+      console.warn('Live provider failed to start', error);
+      if (epoch === sourceEpoch && provider === next) stop();
+    }
     notify();
   }
 
@@ -145,30 +175,45 @@
   // Gateway feed (Node-RED / MQTT bridge / MES middleware) over WebSocket.
   // Each message is one event or an array; map() adapts a foreign payload.
   function websocket(url, { map = e => e, protocols } = {}) {
-    let ws = null, retry = 0, timer = null, closed = false;
+    let ws = null, retry = 0, timer = null, closed = false, version = 0;
     return { name: 'live', start({ ingest: push }) {
+      closed = false; retry = 0; const session = ++version;
+      const active = () => !closed && session === version;
       const open = () => {
-        if (closed) return;
-        ws = new WebSocket(url, protocols);
-        ws.onopen = () => { retry = 0; };
-        ws.onmessage = msg => { try { const raw = JSON.parse(msg.data), out = map(raw); push(Array.isArray(out) ? out : [out]); } catch (error) { console.warn('Live message ignored', error); } };
-        ws.onclose = () => { if (!closed) timer = setTimeout(open, Math.min(30000, 1000 * 2**retry++)); };
-        ws.onerror = () => ws.close();
+        if (!active()) return;
+        const socket = new WebSocket(url, protocols); ws = socket;
+        const current = () => active() && ws === socket;
+        socket.onopen = () => { if (current()) retry = 0; };
+        socket.onmessage = msg => { if (!current()) return; try { const raw = JSON.parse(msg.data), out = map(raw); push(Array.isArray(out) ? out : [out]); } catch (error) { console.warn('Live message ignored', error); } };
+        socket.onclose = () => { if (current()) { ws = null; timer = setTimeout(open, Math.min(30000, 1000 * 2**retry++)); } };
+        socket.onerror = () => { if (current()) socket.close(); };
       };
       open();
-    }, stop() { closed = true; clearTimeout(timer); ws?.close(); } };
+    }, stop() { closed = true; version++; clearTimeout(timer); const socket = ws; ws = null; socket?.close(); } };
   }
   // REST polling for MES endpoints that only offer snapshots.
   function poll(url, { intervalMs = 5000, map = e => e, init } = {}) {
-    let timer = null, stopped = false;
+    let timer = null, stopped = false, controller = null, version = 0;
     return { name: 'live', start({ ingest: push }) {
+      stopped = false; const session = ++version;
+      const active = () => !stopped && session === version;
       const run = async () => {
-        try { const res = await fetch(url, init); if (res.ok) { const out = map(await res.json()); push(Array.isArray(out) ? out : [out]); } }
-        catch (error) { console.warn('Live poll failed', error); }
-        if (!stopped) timer = setTimeout(run, intervalMs);
+        if (!active()) return;
+        const request = new AbortController(), externalSignal = init?.signal;
+        controller = request; const abort = () => request.abort();
+        if (externalSignal?.aborted) abort(); else externalSignal?.addEventListener('abort', abort, { once: true });
+        try {
+          const res = await fetch(url, { ...init, signal: request.signal });
+          if (active() && !request.signal.aborted && res.ok) {
+            const raw = await res.json();
+            if (active() && !request.signal.aborted) { const out = map(raw); push(Array.isArray(out) ? out : [out]); }
+          }
+        } catch (error) { if (active() && !request.signal.aborted) console.warn('Live poll failed', error); }
+        finally { externalSignal?.removeEventListener('abort', abort); if (controller === request) controller = null; }
+        if (active() && !externalSignal?.aborted) timer = setTimeout(run, intervalMs);
       };
       run();
-    }, stop() { stopped = true; clearTimeout(timer); } };
+    }, stop() { stopped = true; version++; clearTimeout(timer); controller?.abort(); controller = null; } };
   }
 
   window.ChinChunLive = {
