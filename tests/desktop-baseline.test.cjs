@@ -54,7 +54,7 @@ test('local, imported and cloud revisions never silently replace unknown or edit
 
 function ui(accepted=true,store=storage()){
   const calls=[],ctx={window,document:{documentElement:{lang:'zh-Hant'},createElement:()=>({click:()=>calls.push('download'),remove(){}}),body:{appendChild(){}}},
-    layoutData:plain(old),INITIAL_LAYOUT:desktop,currentFloor:'2F',localStorage:store,
+    layoutData:plain(old),INITIAL_LAYOUT:desktop,currentFloor:'2F',localStorage:store,applySourceGeometryRevision:layout=>({layout,migrated:false}),
     confirm:text=>{assert.match(text,/雲端/);return accepted;},Blob:class{},URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},setTimeout(){},
     pushHistoryState:()=>calls.push('undo'),ensureLayerSettings(){},updateLayerLockControls(){},deselectAll(){},renderFloorSelector(){},renderSvg(){},fitToScreen(){},updateViewBox(){},
     saveToLocalStorage:()=>calls.push('save'),showToast:(_text,type)=>calls.push(type)};

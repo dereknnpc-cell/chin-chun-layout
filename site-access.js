@@ -1,10 +1,27 @@
-/* Photo-confirmed access overlays, 2026-10-29. Read-only: no CAD/storage writes.
+/* Photo-confirmed access geometry, 2026-10-29. No storage writes here.
+   Overlays are read-only; alignLoadingRamp returns an archived, corrected clone.
    Black PDF arrows locate photos; blue arrows indicate uphill/upstairs.
    Levels are confirmed; footprint lengths, door width and tread sizes are illustrative. */
 (() => {
   'use strict';
   const source='工廠斜坡標示.pdf + 使用者確認：右側為樓梯、保留局部牆面';
   const finite=r=>r && ['x','y','width','height'].every(k=>Number.isFinite(r[k])) && r.width>0 && r.height>0;
+  // Explicit user correction: extend only the original loading ramp's low edge
+  // to the office south wall. Archive the old record; never overwrite later edits.
+  function alignLoadingRamp(layout){
+    const key='ramp-5m-office-alignment-20261029',b=window.ChinChunBuilding?.get(layout);
+    if(!b || layout.access_geometry_adjustments?.[key])return {layout,migrated:false};
+    const ramp=(layout.equipment || []).find(e=>e.id==='stairs_1789540016247' && e.code==='RAMP-5M' && (e.floor || '1F')==='1F');
+    if(!ramp || ramp.x!==15 || ramp.y!==35 || ramp.width!==5 || ramp.height!==2.5 || (ramp.rotation || 0)!==0 || ramp.ramp)return {layout,migrated:false};
+    const office=(layout.equipment || []).find(e=>e.id==='eq_office' && e.code==='Office' && (e.floor || '1F')==='1F' && finite(e));
+    const wall=office && (layout.walls || []).find(w=>(w.floor || '1F')==='1F' && Math.abs(w.y1-w.y2)<1e-8 && Math.abs(w.y1-(b.main.y+b.main.height))<1e-8 && Math.abs(w.y1-office.y-office.height)<.5 && Math.abs(Math.min(w.x1,w.x2)-(ramp.x+ramp.width))<1e-8 && Math.max(w.x1,w.x2)>=office.x+office.width/2);
+    if(!wall || wall.y1<=ramp.y+ramp.height)return {layout,migrated:false};
+    const result=JSON.parse(JSON.stringify(layout)),item=result.equipment.find(e=>e.id===ramp.id);
+    result.access_geometry_adjustments={...result.access_geometry_adjustments,[key]:{previous:JSON.parse(JSON.stringify(ramp)),alignedToWall:wall.id,lowY:wall.y1}};
+    item.height=wall.y1-item.y;
+    if(item.name==='車輛裝卸緩坡 (5.0×2.5M)')item.name='車輛裝卸緩坡 (5.0×5.0M)';
+    return {layout:result,migrated:true};
+  }
   function get(layout) {
     const b=window.ChinChunBuilding?.get(layout);if(!b)return {ramp:null,stairs:null};
     let ramp=null,stairs=null;
@@ -151,5 +168,5 @@
     const holes=routeHoles(layout,floor);
     return `<mask id="accessRouteMask" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${height}" style="mask-type:luminance"><rect width="${width}" height="${height}" fill="white"/>${holes.map(h=>`<polygon points="${h.map(p=>`${offset.x+p[0]*scale},${offset.y+p[1]*scale}`).join(' ')}" fill="black"/>`).join('')}</mask>`;
   }
-  window.ChinChunAccess={get,stairFaces,svg,references,footprint,groundOpenings,routeHoles,clipRoutes,routeMaskSvg};
+  window.ChinChunAccess={get,stairFaces,svg,references,footprint,groundOpenings,routeHoles,clipRoutes,routeMaskSvg,alignLoadingRamp};
 })();

@@ -12,6 +12,35 @@ function intersects(f,x,y,z){
   const ps=f.points;
   return Math.min(...ps.map(p=>p[0]))<=x && Math.max(...ps.map(p=>p[0]))>=x && Math.min(...ps.map(p=>p[1]))<=y && Math.max(...ps.map(p=>p[1]))>=y && Math.min(...ps.map(p=>p[2]))<=z && Math.max(...ps.map(p=>p[2]))>=z;
 }
+test('requested RAMP-5M extension aligns its low edge to the office wall, archives the old record and leaves every other CAD record intact',()=>{
+  const d=freeze(fixture()),before=JSON.stringify(d),result=access.alignLoadingRamp(d),next=result.layout;
+  assert.equal(result.migrated,true);assert.equal(JSON.stringify(d),before);
+  const ramp=next.equipment.find(e=>e.code==='RAMP-5M');
+  assert.deepEqual([ramp.x,ramp.y,ramp.width,ramp.height,ramp.rotation],[15,35,5,5,0]);
+  const reference=access.references(next).find(e=>e.code==='RAMP-5M');
+  assert.deepEqual(plain(reference.highPoint),[17.5,35,1.5]);assert.deepEqual(plain(reference.lowPoint),[17.5,40,0]);
+  assert.equal(reference.lowPoint[1],next.walls.find(w=>w.id==='wall_1789539311074').y1);
+  for(const key of Object.keys(d).filter(k=>k!=='equipment'))assert.deepEqual(plain(next[key]),plain(d[key]),key);
+  assert.deepEqual(plain(next.equipment.filter(e=>e.id!==ramp.id)),plain(d.equipment.filter(e=>e.id!==ramp.id)));
+  assert.deepEqual(plain(Object.values(next.access_geometry_adjustments)[0].previous),plain(d.equipment.find(e=>e.id===ramp.id)));
+  ramp.height=6.25;const later=access.alignLoadingRamp(next);assert.equal(later.layout,next);assert.equal(later.migrated,false);assert.equal(ramp.height,6.25);
+});
+test('loading ramp correction skips moved, resized, rotated, absent and unverified drawings',()=>{
+  for(const patch of [{x:16},{y:36},{width:6},{height:3},{rotation:90},{code:'CUSTOM-RAMP'}]){
+    const d=fixture();Object.assign(d.equipment.find(e=>e.code==='RAMP-5M'),patch);const before=JSON.stringify(d);
+    const result=access.alignLoadingRamp(d);assert.equal(result.migrated,false);assert.equal(result.layout,d);assert.equal(JSON.stringify(d),before);
+  }
+  for(const mutate of [d=>{delete d.building_geometry;},d=>{d.walls=[];},d=>{d.equipment=d.equipment.filter(e=>e.code!=='Office');}]){
+    const d=fixture();mutate(d);assert.equal(access.alignLoadingRamp(d).migrated,false);
+  }
+});
+test('the application revision bridge applies the same extended CAD record to local, imported and cloud drawings',()=>{
+  const app=read('app.js'),ctx={window,SOURCE_GEOMETRY_REVISION:fixture().source_geometry_revision};
+  vm.runInNewContext(app.slice(app.indexOf('  function applySourceGeometryRevision('),app.indexOf('  // --- State Variables ---'))+'this.apply=applySourceGeometryRevision;',ctx);
+  const result=ctx.apply(fixture());assert.equal(result.migrated,true);assert.equal(result.layout.equipment.find(e=>e.code==='RAMP-5M').height,5);
+  assert.equal(access.routeHoles(result.layout).filter(h=>h.some(p=>p[0]<16 && p[0]>14)).length,1);
+  const svg=access.svg(result.layout,1,{x:0,y:0});assert.match(svg,/x1="17.5" y1="40" x2="17.5" y2="35"/);
+});
 test('photo accesses derive from confirmed live drawing without changing any saved CAD or existing CNC connector',()=>{
   const d=freeze(fixture()),before=JSON.stringify(d),result=access.get(d);
   assert.equal(result.ramp.code,'RAMP-ANNEX-ENTRY');assert.equal(result.stairs.code,'STAIR-DIECUT');assert.equal(JSON.stringify(d),before);

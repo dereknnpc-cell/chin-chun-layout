@@ -4542,7 +4542,7 @@
       buildingRepaired:buildingRepair.changed,buildingBlocked:buildingRepair.blocked,
       leftBoundaryCorrected:Boolean(buildingRepair.leftBoundaryOnly)
     };
-    if(window.ChinChunBuilding?.get(candidate))return {layout:candidate,migrated:false};
+    if(window.ChinChunBuilding?.get(candidate))return window.ChinChunAccess?.alignLoadingRamp(candidate) || {layout:candidate,migrated:false};
     if (candidate.source_geometry_revision === SOURCE_GEOMETRY_REVISION) {
       return { layout: candidate, migrated: false };
     }
@@ -4553,7 +4553,7 @@
   }
 
   // --- State Variables ---
-  let layoutData = JSON.parse(JSON.stringify(INITIAL_LAYOUT));
+  let layoutData = applySourceGeometryRevision(JSON.parse(JSON.stringify(INITIAL_LAYOUT))).layout;
   let sourceGeometryMigrated = false;
   let buildingRepairedOnLoad = false;
   let leftBoundaryCorrectedOnLoad = false;
@@ -5147,7 +5147,7 @@
     }
     window.ChinChunCloud.init({
       getLayout: () => layoutData,
-      getInitialLayout: () => JSON.parse(JSON.stringify(INITIAL_LAYOUT)),
+      getInitialLayout: () => applySourceGeometryRevision(JSON.parse(JSON.stringify(INITIAL_LAYOUT))).layout,
       getCustomLibrary: () => customEquipmentLib,
       applyRemote: (remoteLayout, remoteLibrary) => {
         if (!remoteLayout || (!remoteLayout.equipment && !remoteLayout.dimensions)) return;
@@ -6065,7 +6065,7 @@
       showToast(thai?'สำรองไฟล์ไม่สำเร็จ จึงยังไม่เปลี่ยนแบบ':'備份未完成，未更動目前配置','error');return;
     }
     pushHistoryState('載入已確認電腦版（已備份）');
-    layoutData=prepared.layout;currentFloor='1F';ensureLayerSettings(layoutData);updateLayerLockControls();
+    layoutData=applySourceGeometryRevision(prepared.layout).layout;currentFloor='1F';ensureLayerSettings(layoutData);updateLayerLockControls();
     deselectAll();renderFloorSelector();renderSvg();fitToScreen();updateViewBox();saveToLocalStorage();
     showToast(thai?'โหลดไฟล์คอมพิวเตอร์แล้ว และเก็บสำเนาแบบเดิมไว้':'已載入確認電腦版；原配置已備份，可復原','success');
   }
