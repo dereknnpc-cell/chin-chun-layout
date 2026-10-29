@@ -17,6 +17,7 @@
   let dieSite = null;
   let dieGround = null;
   let photoAccess = null;
+  let groundCuts = [];
   let buildingRoof = false;
   let photoDirections = false;
   // Rendering preferences live only in this view, never in layoutData.
@@ -118,8 +119,8 @@
     connectorNote:'ตามเส้นเหลืองต่ำ/เส้นแดงสูง: ขึ้นจากอาคารต่อเติม +1.00 ม. สู่อาคารเดิม +1.50 ม. ต่าง 0.50 ม. ตำแหน่งยึดทางเดิน CNC (aisle_3) ในไฟล์คอมพิวเตอร์ที่ยืนยันแล้ว X86–89, Y40–45 กว้าง 3.00 ม. ไม่ใช้แปลนมือถือเดิม ระยะลาด 5.00 ม. ยังประมาณจากการขีด ไม่ใช่ค่ารังวัดหรือความชันยืนยัน เป็นภาพพื้นที่แบบอ่านอย่างเดียว ไม่เพิ่มเครื่องใน 2D ไม่ย้ายเครื่องหรือผนัง',
     rampHigh:'เส้นแดง ด้านสูง',rampLow:'เส้นเหลือง ด้านต่ำ'});
   const n = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
-  Object.assign(zh,{accessHigh:'高端',accessLow:'低端',accessRamp:'PL-1 左側外棚入口：依藍箭頭由路面 0 m 往外棚 +1.00 m 上坡。位置對齊既有物流走道；坡長為照片示意，非實測。',accessStairs:'Die Cut 旁為樓梯，往原廠方向上樓：外棚 +1.00 m → 原廠 +1.50 m。保留門側牆面、鄰側半牆／窗口及上方橫樑，只留通行開口；不畫成整面敞開。踏階、門寬與階深為照片示意，非實測。'});
-  Object.assign(th,{accessHigh:'ด้านสูง',accessLow:'ด้านต่ำ',accessRamp:'ทางเข้าภายนอกข้าง PL-1: ขึ้นจากถนน 0 ม. ไปยังพื้นอาคารภายนอก +1.00 ม. ตามลูกศรสีน้ำเงิน จัดแนวตามทางเดินเดิม ความยาวทางลาดเป็นภาพประมาณ ยังไม่วัดจริง',accessStairs:'ข้าง Die Cut เป็นบันได ขึ้นจากพื้นภายนอก +1.00 ม. ไปอาคารเดิม +1.50 ม. คงผนังข้างประตู ผนังเตี้ย/ช่องหน้าต่างและคานเหนือประตู เปิดเฉพาะช่องเดินผ่าน ขั้น ความกว้างประตูและระยะขั้นเป็นภาพประมาณ ยังไม่วัดจริง'});
+  Object.assign(zh,{accessHigh:'高端',accessLow:'低端',accessRamp:'PL-1 左側外棚入口：依藍箭頭由路面 0 m 往外棚 +1.00 m 上坡。自既有物流走道往 PL-1 方向延伸，切齊外棚下緣；坡長為照片示意，非實測。',accessStairs:'Die Cut 旁為三階樓梯，往原廠方向上樓：外棚 +1.00 m → 原廠 +1.50 m，高差 0.50 m。保留門側牆面、鄰側半牆／窗口及上方橫樑，只留通行開口；不畫成整面敞開。門寬與階深為照片示意，非實測。'});
+  Object.assign(th,{accessHigh:'ด้านสูง',accessLow:'ด้านต่ำ',accessRamp:'ทางเข้าภายนอกข้าง PL-1: ขึ้นจากถนน 0 ม. ไปยังพื้นอาคารภายนอก +1.00 ม. ตามลูกศรสีน้ำเงิน ขยายจากทางเดินเดิมไปทาง PL-1 จนเสมอขอบอาคารภายนอก ความยาวทางลาดเป็นภาพประมาณ ยังไม่วัดจริง',accessStairs:'ข้าง Die Cut เป็นบันได 3 ขั้น ขึ้นจากพื้นภายนอก +1.00 ม. ไปอาคารเดิม +1.50 ม. ต่าง 0.50 ม. คงผนังข้างประตู ผนังเตี้ย/ช่องหน้าต่างและคานเหนือประตู เปิดเฉพาะช่องเดินผ่าน ความกว้างประตูและระยะขั้นเป็นภาพประมาณ ยังไม่วัดจริง'});
   const isRamp = item => /^RAMP(?:-|$)/i.test(String(item?.code || ''));
   // The reference photo marks the office entrance at the south wall between X6 and X7.
   const isOfficeEntry = item => /^DOOR-1800$/i.test(String(item?.code || '')) && n(item.x)+n(item.width)/2>=20 && n(item.x)+n(item.width)/2<=35 && n(item.y)+n(item.height)/2>=37 && n(item.y)+n(item.height)/2<=42;
@@ -149,6 +150,7 @@
     dialog.querySelector('#twinFloor').value=floor;
     scene = [];
     photoAccess=floor==='1F'?window.ChinChunAccess?.get(data):null;
+    groundCuts=floor==='1F'?(window.ChinChunAccess?.groundOpenings(data) || []):[];
     dieSite=floor==='1F'?window.ChinChunModels?.dieCutSite?.(data):null;
     // Camera/equipment rotation must not change the local ground level. A
     // disconnected orientation hides the material connection, not the fill.
@@ -765,19 +767,37 @@
     }
     return faces;
   }
+  // A ramp that descends below a slab needs an opening in the slab skin too.
+  // Clipping circulation alone leaves the slope buried in the GPU depth buffer.
+  function groundPieces(points){
+    const access=window.ChinChunAccess;if(!access || floor!=='1F' || points[0][2]<=0)return [points];
+    const holes=groundCuts.filter(r=>r.low<points[0][2]-1e-6).map(r=>r.points);
+    return access.clipRoutes(points,holes);
+  }
+  function slabFaces(points,bottom,color){
+    const faces=[];
+    for(const piece of groundPieces(points)){
+      faces.push({points:piece,color});
+      for(let i=0;i<piece.length;i++){
+        const a=piece[i],b=piece[(i+1)%piece.length];
+        faces.push({points:[[a[0],a[1],bottom],[b[0],b[1],bottom],b,a],color:shade(color,-28)});
+      }
+    }
+    return faces;
+  }
   function threeGroundFaces(visible,b) {
     const faces=[];
     const quad=(points,color,s=null,part='ground')=>faces.push({points,color,s,part,nonInteractive:!s,model:true});
+    const surface=(points,color)=>{for(const piece of groundPieces(points))quad(piece,color);};
     const box=(r,bottom,top,color)=>{
       const p=[[r.x,r.y],[r.x+r.width,r.y],[r.x+r.width,r.y+r.height],[r.x,r.y+r.height]];
-      quad(p.map(q=>[...q,top]),color);
-      for(let i=0;i<4;i++){const j=(i+1)%4;quad([[...p[i],bottom],[...p[j],bottom],[...p[j],top],[...p[i],top]],shade(color,-28));}
+      for(const f of slabFaces(p.map(q=>[...q,top]),bottom,color))quad(f.points,f.color);
     };
     box({x:b.x0,y:b.y0,width:b.x1-b.x0,height:b.y1-b.y0},-1.4,-.01,'#829477');
     const tiles=(r,z)=>{
       const left=Math.max(r.x,b.x0),right=Math.min(r.x+r.width,b.x1),top=Math.max(r.y,b.y0),bottom=Math.min(r.y+r.height,b.y1);
       for(let x=Math.floor(left/5)*5;x<right;x+=5)for(let y=Math.floor(top/5)*5;y<bottom;y+=5)
-        quad([[Math.max(left,x),Math.max(top,y),z],[Math.min(right,x+5),Math.max(top,y),z],[Math.min(right,x+5),Math.min(bottom,y+5),z],[Math.max(left,x),Math.min(bottom,y+5),z]],Math.round(x/5+y/5)%2?'#bdc6ac':'#c8ceb6');
+        surface([[Math.max(left,x),Math.max(top,y),z],[Math.min(right,x+5),Math.max(top,y),z],[Math.min(right,x+5),Math.min(bottom,y+5),z],[Math.max(left,x),Math.min(bottom,y+5),z]],Math.round(x/5+y/5)%2?'#bdc6ac':'#c8ceb6');
     };
     tiles({x:b.x0,y:b.y0,width:b.x1-b.x0,height:b.y1-b.y0},0);
     if(floor==='1F'){
@@ -854,7 +874,8 @@
     const occupied=[],overlap=(a,b)=>a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
     const canvasRect=canvas.getBoundingClientRect(),card=dialog.querySelector('.twin-info').getBoundingClientRect();
     occupied.push({x:card.left-canvasRect.left,y:card.top-canvasRect.top,w:card.width,h:card.height});
-    const candidates=visible.filter(s=>s.type==='equipment' || isRamp(s.item) || s.item.code==='STAIR-DIECUT' || s===selected).sort((a,b)=>(b===selected?100:b.model?10:0)-(a===selected?100:a.model?10:0));
+    const priority=s=>s===selected?100:isRamp(s.item) || s.item.code==='STAIR-DIECUT'?30:s.model?10:0;
+    const candidates=visible.filter(s=>s.type==='equipment' || isRamp(s.item) || s.item.code==='STAIR-DIECUT' || s===selected).sort((a,b)=>priority(b)-priority(a));
     for(const s of candidates){
       if(!labels && s!==selected)continue;
       const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
@@ -932,30 +953,22 @@
     }
     if(floor==='1F'){
       const building=window.ChinChunBuilding?.get(data);
+      const surface=(points,color,stroke)=>{for(const piece of groundPieces(points))polygon(piece.map(p=>project(p,p[2])),color,stroke);};
+      const drawSlab=(points,color)=>{for(const f of slabFaces(points,0,color).sort((a,b)=>faceDepth(a.points)-faceDepth(b.points)))polygon(f.points.map(p=>project(p,p[2])),f.color,'#697b6c');};
       const slabRect=(r,rise,color)=>{
         const left=Math.max(r.x,b.x0),right=Math.min(r.x+r.width,b.x1),top=Math.max(r.y,b.y0),bottom=Math.min(r.y+r.height,b.y1);
         if(right<=left || bottom<=top)return;
         const slab=[[left,top],[right,top],[right,bottom],[left,bottom]];
-        for(let i=0;i<4;i++){
-          const j=(i+1)%4;
-          if(project(slab[j],rise)[0]>=project(slab[i],rise)[0])continue;
-          polygon([[...slab[i],0],[...slab[j],0],[...slab[j],rise],[...slab[i],rise]].map(p=>project(p,p[2])),'#68766f','#52625a');
-        }
-        polygon(slab.map(p=>project(p,rise)),color,'#697b6c');
+        drawSlab(slab.map(p=>[...p,rise]),color);
       };
       if(building)slabRect(building.annex,building.annex.rise,'#d4cbaa');
       const slabWidth=n(data.grid?.factory_width,100),slabDepth=n(data.grid?.factory_depth,40);
       const left=Math.max(0,b.x0),right=Math.min(slabWidth,b.x1),top=Math.max(0,b.y0),bottom=Math.min(slabDepth,b.y1);
       const slab=[[left,top],[right,top],[right,bottom],[left,bottom]];
       if(right>left && bottom>top){
-      for(let i=0;i<4;i++){
-        const j=(i+1)%4;
-        if(project(slab[j],factoryRise)[0]>=project(slab[i],factoryRise)[0])continue;
-        polygon([[...slab[i],0],[...slab[j],0],[...slab[j],factoryRise],[...slab[i],factoryRise]].map(p=>project(p,p[2])),'#68766f','#52625a');
-      }
-      polygon(slab.map(p=>project(p,factoryRise)),'#c3c6af','#697b6c');
+      drawSlab(slab.map(p=>[...p,factoryRise]),'#c3c6af');
       for(let x=Math.floor(left/5)*5;x<right;x+=5)for(let y=Math.floor(top/5)*5;y<bottom;y+=5){
-        polygon([[Math.max(left,x),Math.max(top,y)],[Math.min(right,x+5),Math.max(top,y)],[Math.min(right,x+5),Math.min(bottom,y+5)],[Math.max(left,x),Math.min(bottom,y+5)]].map(p=>project(p,factoryRise)),(Math.round(x/5+y/5)%2)?'#c4c8b4':'#cdd0bc','#aeb7a4');
+        surface([[Math.max(left,x),Math.max(top,y),factoryRise],[Math.min(right,x+5),Math.max(top,y),factoryRise],[Math.min(right,x+5),Math.min(bottom,y+5),factoryRise],[Math.max(left,x),Math.min(bottom,y+5),factoryRise]],(Math.round(x/5+y/5)%2)?'#c4c8b4':'#cdd0bc','#aeb7a4');
       }
       }
     }

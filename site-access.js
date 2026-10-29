@@ -11,11 +11,13 @@
     const lanes=(layout.aisles || []).filter(a=>(a.floor || '1F')==='1F' && finite(a));
     const mainLane=lanes.find(a=>a.id==='aisle_1');
     if(mainLane && mainLane.x<b.annex.x && mainLane.x+mainLane.width>b.annex.x && mainLane.y>=b.annex.y && mainLane.y+mainLane.height<=b.annex.y+b.annex.height && b.annex.rise>b.roadRise){
-      const run=5,width=mainLane.height,cx=b.annex.x-run/2,cy=mainLane.y+width/2;
+      // Keep the uphill edge on the west slab edge, widening south along PL-1
+      // until it meets the user's outer canopy boundary.
+      const run=5,width=b.annex.y+b.annex.height-mainLane.y,cx=b.annex.x-run/2,cy=mainLane.y+width/2;
       ramp={id:'site_annex_west_ramp',code:'RAMP-ANNEX-ENTRY',name:'PL-1 左側外棚入口斜坡',
         x:cx-width/2,y:cy-run/2,width,height:run,rotation:90,
         ramp:{low:b.roadRise,high:b.annex.rise,highEdge:'first'},source,
-        accuracy:'photo-position; existing-aisle-width; illustrative-run',
+        accuracy:'user-confirmed-canopy-edge; illustrative-run',
         lowPoint:[b.annex.x-run,cy,b.roadRise],highPoint:[b.annex.x,cy,b.annex.rise]};
     }
     const lane=lanes.find(a=>a.id==='aisle_2'),boundary=b.main.y+b.main.height;
@@ -29,7 +31,7 @@
       const hi=Math.min(...walls.map(w=>Math.min(w.x1,w.x2)).filter(x=>x>=right));
       if(!blocked && Number.isFinite(lo) && Number.isFinite(hi) && hi-lo<=6 && die.x>right && die.x-cx<6 && die.y>=boundary && die.y-boundary<4){
         stairs={id:'site_diecut_stairs',code:'STAIR-DIECUT',name:'Die Cut 旁通行樓梯與局部牆面',
-          x:left,y:boundary,width,height:1,rotation:0,low:b.annex.rise,high:b.main.rise,steps:2,
+          x:left,y:boundary,width,height:1,rotation:0,low:b.annex.rise,high:b.main.rise,steps:3,
           portal:{left:lo,right:hi,y:boundary,openingLeft:left,openingRight:right,thickness:.2,top:b.main.rise+2.4,head:b.main.rise+2.1,sill:b.main.rise+.8},
           source,accuracy:'photo-position; illustrative-door-and-treads',
           lowPoint:[cx,boundary+1,b.annex.rise],highPoint:[cx,boundary,b.main.rise]};
@@ -58,17 +60,51 @@
     box(p.left,y,p.head,p.right-p.left,p.thickness,p.top-p.head,'#d9d4c4','access-wall-header');
     return faces;
   }
+  function footprint(item,padding=0){
+    const w=item.width+2*padding,h=item.height+2*padding,cx=item.x+item.width/2,cy=item.y+item.height/2;
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    return [[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([x,y])=>[cx+x*c-y*s,cy+x*s+y*c]);
+  }
+  function references(layout){
+    const access=get(layout),b=window.ChinChunBuilding?.get(layout);
+    const ramps=[...(layout.equipment || []).filter(e=>(e.floor || '1F')==='1F' && /^RAMP(?:-|$)/i.test(String(e.code || ''))),access.ramp,window.ChinChunBuilding?.connectingRamp(layout)].filter(finite);
+    const center=b?[b.main.x+b.main.width/2,b.main.y+b.main.height/2]:[(layout.grid?.factory_width || 100)/2,(layout.grid?.factory_depth || 40)/2];
+    return [...ramps.map(item=>{
+      const p=footprint(item),mid=(a,b)=>a.map((v,i)=>(v+b[i])/2),first=mid(p[0],p[1]),last=mid(p[3],p[2]);
+      const spec=item.ramp,explicit=spec && Number.isFinite(spec.low) && Number.isFinite(spec.high) && spec.high>spec.low && ['first','last'].includes(spec.highEdge);
+      const firstHigh=explicit?spec.highEdge==='first':Math.hypot(first[0]-center[0],first[1]-center[1])<=Math.hypot(last[0]-center[0],last[1]-center[1]);
+      return {...item,lowPoint:[...(firstHigh?last:first),explicit?spec.low:(b?.roadRise || 0)],highPoint:[...(firstHigh?first:last),explicit?spec.high:(b?.main.rise ?? 1.5)]};
+    }),...(access.stairs?[access.stairs]:[])];
+  }
+  function groundOpenings(layout){
+    const b=window.ChinChunBuilding?.get(layout);
+    return references(layout).filter(item=>!item.steps).map(item=>{
+      const points=footprint(item),low=item.lowPoint;
+      // RAMP-5M sits in the loading entrance recess. Keep the saved slope and
+      // its road-level approach open through to the main slab's outer edge.
+      if(item.code==='RAMP-5M' && b && window.ChinChunBuilding.inside(b.main,low)){
+        const dx=low[0]-item.highPoint[0],dy=low[1]-item.highPoint[1];
+        const distances=[dx>1e-8?(b.main.x+b.main.width-low[0])/dx:dx< -1e-8?(b.main.x-low[0])/dx:Infinity,dy>1e-8?(b.main.y+b.main.height-low[1])/dy:dy< -1e-8?(b.main.y-low[1])/dy:Infinity];
+        const t=Math.min(...distances.filter(d=>d>=0));
+        if(Number.isFinite(t))for(const p of points)if(Math.abs((p[0]-low[0])*dx+(p[1]-low[1])*dy)<1e-7){p[0]+=dx*t;p[1]+=dy*t;}
+      }
+      return {points,low:low[2],code:item.code};
+    });
+  }
   function svg(layout,scale,offset,thai=false){
-    const access=get(layout);let html='';
-    for(const item of [access.ramp,access.stairs].filter(Boolean)){
+    let html='';
+    const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+    for(const item of references(layout)){
       const xy=p=>[offset.x+p[0]*scale,offset.y+p[1]*scale],a=xy(item.lowPoint),b=xy(item.highPoint);
       const angle=Math.atan2(b[1]-a[1],b[0]-a[0]),head=7;
       const arrow=[b,[b[0]-head*Math.cos(angle-.45),b[1]-head*Math.sin(angle-.45)],[b[0]-head*Math.cos(angle+.45),b[1]-head*Math.sin(angle+.45)]];
-      html+=`<g class="photo-access-reference" pointer-events="none"><title>${thai?'ทิศขึ้นตามภาพ ตำแหน่งโดยประมาณ':'照片上行方向；尺寸為示意'}</title><line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#2563eb" stroke-width="2"/><polygon points="${arrow.map(p=>p.join(',')).join(' ')}" fill="#2563eb"/>`;
-      if(item===access.stairs)for(let i=0;i<=item.steps;i++){
+      const outline=footprint(item).map(xy),cx=(a[0]+b[0])/2,labelY=Math.min(...outline.map(p=>p[1]))-5;
+      html+=`<g class="photo-access-reference" data-access-code="${escape(item.code)}" pointer-events="none"><title>${thai?'ทิศขึ้นตามภาพ ตำแหน่งโดยประมาณ':'照片上行方向；尺寸為示意'}</title><polygon points="${outline.map(p=>p.join(',')).join(' ')}" fill="${item.steps?'#e2e0d6':'#f4d49b'}" stroke="#826b43" stroke-width="1.2"/>`;
+      if(item.steps)for(let i=0;i<=item.steps;i++){
         const y=offset.y+(item.y+item.height*i/item.steps)*scale;
         html+=`<line x1="${offset.x+item.x*scale}" y1="${y}" x2="${offset.x+(item.x+item.width)*scale}" y2="${y}" stroke="#475569" stroke-width="1.2"/>`;
       }
+      html+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#2563eb" stroke-width="2"/><polygon points="${arrow.map(p=>p.join(',')).join(' ')}" fill="#2563eb"/><circle cx="${a[0]}" cy="${a[1]}" r="2.5" fill="#eab308"/><circle cx="${b[0]}" cy="${b[1]}" r="2.5" fill="#dc2626"/><text x="${cx}" y="${labelY}" text-anchor="middle" font-size="8" font-weight="700" fill="#334155" stroke="white" stroke-width="2.5" paint-order="stroke">${escape(item.code)} · ${item.lowPoint[2].toFixed(2)} → ${item.highPoint[2].toFixed(2)} m${item.steps?` · ${item.steps}${thai?' ขั้น':'階'}`:''}</text>`;
       html+='</g>';
     }
     return html;
@@ -82,11 +118,7 @@
       const a=get(layout),connector=window.ChinChunBuilding?.connectingRamp(layout);
       items.push(...[a.ramp,a.stairs,connector].filter(Boolean));
     }
-    return items.filter(finite).map(item=>{
-      const padding=.12,w=item.width+2*padding,h=item.height+2*padding,cx=item.x+item.width/2,cy=item.y+item.height/2;
-      const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
-      return [[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([x,y])=>[cx+x*c-y*s,cy+x*s+y*c]);
-    });
+    return items.filter(finite).map(item=>footprint(item,.12));
   }
   const cross=(a,b,p)=>(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
   function halfPlane(points,a,b,inside){
@@ -119,5 +151,5 @@
     const holes=routeHoles(layout,floor);
     return `<mask id="accessRouteMask" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${height}" style="mask-type:luminance"><rect width="${width}" height="${height}" fill="white"/>${holes.map(h=>`<polygon points="${h.map(p=>`${offset.x+p[0]*scale},${offset.y+p[1]*scale}`).join(' ')}" fill="black"/>`).join('')}</mask>`;
   }
-  window.ChinChunAccess={get,stairFaces,svg,routeHoles,clipRoutes,routeMaskSvg};
+  window.ChinChunAccess={get,stairFaces,svg,references,footprint,groundOpenings,routeHoles,clipRoutes,routeMaskSvg};
 })();

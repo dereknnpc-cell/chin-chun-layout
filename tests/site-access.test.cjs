@@ -19,10 +19,11 @@ test('photo accesses derive from confirmed live drawing without changing any sav
   assert.ok(!d.equipment.some(e=>e.id===result.stairs.id || e.id===result.ramp.id));
   assert.deepEqual(plain(access.get({})),{ramp:null,stairs:null},'unknown/legacy layouts never get guessed overlays');
 });
-test('middle ramp ascends east from road 0 to annex 1 using aisle width and exact slab boundary',()=>{
+test('middle ramp ascends east from road 0 to annex 1 and extends south past PL-1 to the canopy edge',()=>{
   const d=fixture(),{ramp}=access.get(d),lane=d.aisles.find(a=>a.id==='aisle_1');
-  assert.deepEqual(plain(ramp.lowPoint),[30,47.5,0]);assert.deepEqual(plain(ramp.highPoint),[35,47.5,1]);
-  assert.equal(ramp.width,lane.height);assert.equal(ramp.ramp.highEdge,'first');
+  assert.deepEqual(plain(ramp.lowPoint),[30,52.25,0]);assert.deepEqual(plain(ramp.highPoint),[35,52.25,1]);
+  const ys=access.footprint(ramp).map(p=>p[1]);assert.equal(Math.min(...ys),lane.y);assert.equal(Math.max(...ys),d.building_geometry.annex.y+d.building_geometry.annex.height);
+  const pl=d.equipment.find(e=>e.code==='PL-1');assert.ok(Math.max(...ys)>pl.y+pl.height);assert.equal(ramp.ramp.highEdge,'first');
   assert.equal(building.floorLevel(d,ramp.lowPoint),0);assert.equal(building.floorLevel(d,ramp.highPoint),1);
   assert.match(ramp.accuracy,/illustrative/);
   d.building_geometry.annex.rise=1.2;assert.equal(access.get(d).ramp.highPoint[2],1.2);
@@ -31,7 +32,8 @@ test('Die Cut access has discrete stair treads up from 1 to 1.5, with a clear do
   const {stairs}=access.get(fixture()),faces=access.stairFaces(stairs),p=stairs.portal,cx=stairs.x+stairs.width/2;
   assert.deepEqual(plain(stairs.lowPoint),[52.5,41,1]);assert.deepEqual(plain(stairs.highPoint),[52.5,40,1.5]);
   const treadTops=faces.filter(f=>f.part==='access-stair-tread' && f.points.every(v=>v[2]===f.points[0][2]) && f.points[0][2]>stairs.low);
-  assert.deepEqual([...new Set(treadTops.map(f=>f.points[0][2]))].sort(),[1.25,1.5]);
+  const tops=[...new Set(treadTops.map(f=>f.points[0][2]))].sort();assert.equal(stairs.steps,3);assert.equal(tops.length,3);
+  tops.forEach((z,i)=>assert.ok(Math.abs(z-(1+(i+1)/6))<1e-8));
   assert.equal(faces.filter(f=>f.part==='ramp-surface').length,0);
   const walls=[...new Set(faces.filter(f=>!f.part.startsWith('access-stair')).map(f=>f.part))].map(part=>({part,points:faces.filter(f=>f.part===part).flatMap(f=>f.points)}));
   assert.ok(walls.some(f=>f.part==='access-wall-left'));assert.ok(walls.some(f=>f.part==='access-wall-sill'));assert.ok(walls.some(f=>f.part==='access-wall-header'));
@@ -49,9 +51,31 @@ test('a new user wall blocking the passage or moved Die Cut disables the photo s
 });
 test('2D direction references are non-interactive and use the same locations as 2.5D',()=>{
   const d=fixture(),before=JSON.stringify(d),html=access.svg(d,20,{x:100,y:200});
-  assert.match(html,/pointer-events="none"/);assert.match(html,/stroke="#2563eb"/);assert.match(html,/x1="700" y1="1150" x2="800" y2="1150"/);
+  assert.match(html,/pointer-events="none"/);assert.match(html,/stroke="#2563eb"/);assert.match(html,/x1="700" y1="1245" x2="800" y2="1245"/);
   assert.match(html,/x1="1150" y1="1020" x2="1150" y2="1000"/);assert.ok(!html.includes('NaN'));assert.equal(JSON.stringify(d),before);
   assert.match(building.svg(d,20,{x:100,y:200},true),/photo-access-reference/);
+  for(const code of ['RAMP-5M','RAMP-ANNEX-ENTRY','STAIR-DIECUT','RAMP-CONNECTOR'])assert.ok(html.includes(`data-access-code="${code}"`),code);
+  assert.match(html,/STAIR-DIECUT · 1.00 → 1.50 m · 3階/);
+  assert.match(html,/RAMP-CONNECTOR · 1.00 → 1.50 m/);
+});
+test('slab skins leave RAMP-5M exposed at every camera angle without lifting or moving its CAD geometry',()=>{
+  const source=read('digital-twin.js'),end='})();',w={};for(const f of ['building-geometry.js','site-access.js','twin-models.js'])vm.runInNewContext(read(f),{window:w});
+  const noop=()=>{},element=()=>({setAttribute:noop,replaceChildren:noop,add:noop});
+  const probe=`window.__groundTest={prepare(d){data=d;dialog={querySelector:element};rebuild();},scene:()=>scene,ground:()=>threeGroundFaces(scene,bounds),top:rampTopPoints};`;
+  vm.runInNewContext(source.trimEnd().slice(0,-end.length)+probe+end,{window:w,element,document:{documentElement:{lang:'zh-Hant'}},Option:function(){},requestAnimationFrame:noop});
+  const d=freeze(fixture()),before=JSON.stringify(d),api=w.__groundTest;api.prepare(d);
+  const ramp=api.scene().find(s=>s.item.code==='RAMP-5M'),top=api.top(ramp);
+  assert.deepEqual(plain(top),[[15,35,1.5],[20,35,1.5],[20,37.5,0],[15,37.5,0]]);
+  const covers=(poly,p)=>{
+    const cs=poly.map((a,i)=>{const b=poly[(i+1)%poly.length];return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);});
+    return cs.every(c=>c>=-1e-8)||cs.every(c=>c<=1e-8);
+  };
+  const skin=api.ground().filter(f=>f.part==='ground' && f.points.length>=3 && f.points.every(p=>p[2]===f.points[0][2]) && f.points[0][2]>1);
+  for(const p of [[16,35.5],[17.5,36.25],[19,37],[17.5,39.5]])assert.ok(!skin.some(f=>covers(f.points,p)),`slab must not bury ramp or road approach at ${p}`);
+  const front=api.ground().filter(f=>f.part==='ground' && f.points.every(p=>p[1]===40) && f.points.some(p=>p[2]>0));
+  assert.ok(!front.some(f=>Math.min(...f.points.map(p=>p[0]))<17.5 && Math.max(...f.points.map(p=>p[0]))>17.5),'outer slab edge cannot block the road-level entrance');
+  assert.ok(skin.some(f=>covers(f.points,[21,36])),'adjacent factory floor remains');
+  assert.equal(JSON.stringify(d),before);
 });
 test('Twin registers the stairs as read-only site geometry and renders the rotated middle ramp with its real levels',()=>{
   const source=read('digital-twin.js'),end='})();',w={};for(const f of ['building-geometry.js','site-access.js','twin-models.js'])vm.runInNewContext(read(f),{window:w});
