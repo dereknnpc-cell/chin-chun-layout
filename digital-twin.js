@@ -16,6 +16,7 @@
   let restroomCutaway = true;
   let dieSite = null;
   let dieGround = null;
+  let photoAccess = null;
   let buildingRoof = false;
   let photoDirections = false;
   // Rendering preferences live only in this view, never in layoutData.
@@ -103,7 +104,7 @@
   th.l41Photo='L4-1: ผู้ใช้ยืนยันว่าภาพ MANUAL ที่ไม่มีรหัสเป็นเครื่องนี้ มีตู้ฐานครีมพร้อมช่องระบาย เสานำ 4 เสา ฝาปรับทรงกลม หัวกดกว้าง โต๊ะถาวร ฝาข้างบานเกล็ดแดง โซ่/เฟือง ตู้ควบคุมข้างและโครงไฟ ไม่ใช่ Die Cut ไม่มีหมายเลขหรือ E1 อัตโนมัติ คงขนาดฐานและมุม 2D ปัจจุบัน สูงประมาณ 2.55 ม. และรายละเอียดประมาณจากภาพ ไม่รวมโฟม แม่พิมพ์ วัสดุหรือรถเข็น';
   zh.eva3Deferred='EVA 3：標注寫明「先不用建模，數據不足」，維持原2D占位，不新增照片模型。';
   th.eva3Deferred='EVA 3: ภาพระบุให้รอสร้างแบบเพราะข้อมูลไม่พอ คงพื้นที่ 2D เดิม ไม่มีแบบจากภาพเพิ่ม';
-  zh.photoSiteNote='照片方位：橘色區往外看＝2D左，由左往內看＝2D右；綠色區由外往內看＝2D左。左右入口照片皆可見斜坡，原區與綠色增建的屋頂高度不同；主管停車區沿原建物一側，PL-1／PL-2為貨架，中間留有空間，綠區旁為CNC Room。這次只加方位參考文字，不推算或新增坡道、停車格、牆洞與隔間尺寸。';
+  zh.photoSiteNote='照片方位：橘色區往外看＝2D左，由左往內看＝2D右；綠色區由外往內看＝2D左。PL-1 左側為路面至外棚的斜坡；Die Cut 旁是樓梯與局部通行開口，保留門側牆面、半牆／窗口及橫樑。藍箭頭為上行方向；未量測的坡長、階深與開口尺寸均為照片示意。主管停車區沿原建物一側，PL-1／PL-2為貨架，中間留有空間，綠區旁為CNC Room。';
   th.photoSiteNote='ทิศภาพ: มองออกจากเขตส้มคือซ้าย 2D มองเข้าจากซ้ายคือขวา 2D มองเข้าจากภายนอกเขตเขียวคือซ้าย 2D ภาพเห็นทางลาดสองด้านและหลังคาต่างระดับ ที่จอดผู้บริหารชิดอาคารเดิม PL-1/PL-2 เป็นชั้นเก็บ มีช่องว่างระหว่างกัน ข้างเขตเขียวคือ CNC Room เพิ่มเฉพาะข้อความอ้างอิง ไม่ประมาณหรือเพิ่มขนาดทางลาด ช่องจอด ช่องผนังหรือห้องกั้น';
   zh.buildingNote='以使用者原繪圖為準：廠內隔間、牆線及柱位不採A3比例描繪。外棚邊界依紅線X35–100，最新增建X90–100。2D與2.5D共用資料，設備未搬動。地坪：原廠+1.50／外棚+1.00／路面0米；外棚縱深、棚高沿用示意值，未另行推算。';
   th.buildingNote='ยึดแปลนเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอกตามเส้นแดง X35–100 ส่วนต่อเติม X90–100 ใช้ข้อมูลเดียวกับ 2D ไม่ย้ายเครื่อง พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกและความสูงโครงคงค่าภาพประกอบเดิม ไม่ประมาณใหม่';
@@ -117,6 +118,8 @@
     connectorNote:'ตามเส้นเหลืองต่ำ/เส้นแดงสูง: ขึ้นจากอาคารต่อเติม +1.00 ม. สู่อาคารเดิม +1.50 ม. ต่าง 0.50 ม. ตำแหน่งยึดทางเดิน CNC (aisle_3) ในไฟล์คอมพิวเตอร์ที่ยืนยันแล้ว X86–89, Y40–45 กว้าง 3.00 ม. ไม่ใช้แปลนมือถือเดิม ระยะลาด 5.00 ม. ยังประมาณจากการขีด ไม่ใช่ค่ารังวัดหรือความชันยืนยัน เป็นภาพพื้นที่แบบอ่านอย่างเดียว ไม่เพิ่มเครื่องใน 2D ไม่ย้ายเครื่องหรือผนัง',
     rampHigh:'เส้นแดง ด้านสูง',rampLow:'เส้นเหลือง ด้านต่ำ'});
   const n = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
+  Object.assign(zh,{accessHigh:'高端',accessLow:'低端',accessRamp:'PL-1 左側外棚入口：依藍箭頭由路面 0 m 往外棚 +1.00 m 上坡。位置對齊既有物流走道；坡長為照片示意，非實測。',accessStairs:'Die Cut 旁為樓梯，往原廠方向上樓：外棚 +1.00 m → 原廠 +1.50 m。保留門側牆面、鄰側半牆／窗口及上方橫樑，只留通行開口；不畫成整面敞開。踏階、門寬與階深為照片示意，非實測。'});
+  Object.assign(th,{accessHigh:'ด้านสูง',accessLow:'ด้านต่ำ',accessRamp:'ทางเข้าภายนอกข้าง PL-1: ขึ้นจากถนน 0 ม. ไปยังพื้นอาคารภายนอก +1.00 ม. ตามลูกศรสีน้ำเงิน จัดแนวตามทางเดินเดิม ความยาวทางลาดเป็นภาพประมาณ ยังไม่วัดจริง',accessStairs:'ข้าง Die Cut เป็นบันได ขึ้นจากพื้นภายนอก +1.00 ม. ไปอาคารเดิม +1.50 ม. คงผนังข้างประตู ผนังเตี้ย/ช่องหน้าต่างและคานเหนือประตู เปิดเฉพาะช่องเดินผ่าน ขั้น ความกว้างประตูและระยะขั้นเป็นภาพประมาณ ยังไม่วัดจริง'});
   const isRamp = item => /^RAMP(?:-|$)/i.test(String(item?.code || ''));
   // The reference photo marks the office entrance at the south wall between X6 and X7.
   const isOfficeEntry = item => /^DOOR-1800$/i.test(String(item?.code || '')) && n(item.x)+n(item.width)/2>=20 && n(item.x)+n(item.width)/2<=35 && n(item.y)+n(item.height)/2>=37 && n(item.y)+n(item.height)/2<=42;
@@ -145,6 +148,7 @@
     fitExtent=null;
     dialog.querySelector('#twinFloor').value=floor;
     scene = [];
+    photoAccess=floor==='1F'?window.ChinChunAccess?.get(data):null;
     dieSite=floor==='1F'?window.ChinChunModels?.dieCutSite?.(data):null;
     // Camera/equipment rotation must not change the local ground level. A
     // disconnected orientation hides the material connection, not the fill.
@@ -210,6 +214,11 @@
     (data.aisles || []).filter(item => (item.floor || '1F')===floor).forEach(item=>add(item,'aisle',rect(item),.02,'#b7bd85'));
     const connector=floor==='1F' && window.ChinChunBuilding?.connectingRamp?.(data);
     if(connector)add(connector,'site',rect(connector),connector.ramp.high,'#c9b576');
+    if(photoAccess?.ramp)add(photoAccess.ramp,'site',rect(photoAccess.ramp),photoAccess.ramp.ramp.high,'#dca84f');
+    if(photoAccess?.stairs){
+      const item=photoAccess.stairs;add(item,'site',rect(item),item.high,'#b5b3a8');
+      scene.at(-1).model=window.ChinChunAccess.stairFaces(item);
+    }
     const points=scene.flatMap(s=>s.points);
     const building=floor==='1F' && window.ChinChunBuilding?.get(data);
     if(building)for(const r of [building.main,building.annex])points.push([r.x,r.y],[r.x+r.width,r.y+r.height]);
@@ -292,6 +301,7 @@
   function viewBounds() {
     if(!detail || !selected)return bounds;
     const xs=selected.points.map(p=>p[0]),ys=selected.points.map(p=>p[1]);
+    if(selected.item.code==='STAIR-DIECUT')for(const f of selected.model || [])for(const p of f.points){xs.push(p[0]);ys.push(p[1]);}
     if(dieSite && selected.item.id===dieSite.item.id){
       const r=dieSite.collection;xs.push(r.x,r.x+r.width);ys.push(r.y,r.y+r.height);
       const neighbor=scene.find(q=>referenceCode(q.item)==='L4-1');
@@ -372,6 +382,15 @@
   }
   function drawModelAnnotations(s,showCode=true) {
     const z=elevation(s);
+    if(s.item.code==='STAIR-DIECUT'){
+      if(showCode && (labels || s===selected)){
+        const p=project(s.item.highPoint,s.item.high+.2);ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,...p);
+      }
+      if(detail)for(const [point,key] of [[s.item.highPoint,'accessHigh'],[s.item.lowPoint,'accessLow']]){
+        const p=project(point,point[2]+.15);ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#18332e';ctx.strokeText(`${t(key)} +${point[2].toFixed(2)} m`,...p);ctx.fillStyle='#f5e6b4';ctx.fillText(`${t(key)} +${point[2].toFixed(2)} m`,...p);
+      }
+      return;
+    }
     if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,z+.02)):path.moveTo(...project(p,z+.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
     if(showCode && (labels || s===selected)){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,z+(window.ChinChunPhotoModels?.height(s.item) || 2.5)+.2);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
     if(detail)for(const marker of window.ChinChunPhotoModels?.markers(s.item) || []){
@@ -526,8 +545,8 @@
     return {high:top.filter(p=>p[2]===high),low:top.filter(p=>p[2]===low)};
   }
   function rampEndLabels(s,top=rampTopPoints(s)) {
-    const edges=rampEdges(s,top),connector=s.item.code==='RAMP-CONNECTOR';
-    return [['high',connector?'rampHigh':'rampInside','#ff6258'],['low',connector?'rampLow':'rampOutside','#ffdb48']].map(([end,key,color])=>({edge:edges[end],color:connector?color:'#fff5d7',text:connector?`${t(key)} +${edges[end][0][2].toFixed(2)} m`:t(key)}));
+    const edges=rampEdges(s,top),connector=s.item.code==='RAMP-CONNECTOR',entry=s.item.code==='RAMP-ANNEX-ENTRY';
+    return [['high',entry?'accessHigh':connector?'rampHigh':'rampInside','#ff6258'],['low',entry?'accessLow':connector?'rampLow':'rampOutside','#ffdb48']].map(([end,key,color])=>({edge:edges[end],color:connector?color:'#fff5d7',text:connector || entry?`${t(key)} +${edges[end][0][2].toFixed(2)} m`:t(key)}));
   }
   function rampFaces(s) {
     const top=rampTopPoints(s),base=Math.min(...top.map(p=>p[2])),bottom=s.points.map(p=>[...p,base]),faces=[];
@@ -674,6 +693,17 @@
     }
     ctx.restore();
   }
+  function drawAccessDirections() {
+    if(!photoAccess || !(photoDirections || detail))return;
+    ctx.save();
+    for(const item of [photoAccess.ramp,photoAccess.stairs].filter(Boolean)){
+      if(detail && selected?.item.id!==item.id)continue;
+      const a=project(item.lowPoint,item.lowPoint[2]+.09),b=project(item.highPoint,item.highPoint[2]+.09),angle=Math.atan2(b[1]-a[1],b[0]-a[0]);
+      for(const [color,lineWidth] of [['#e5efff',6],['#2563eb',3]]){ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...b);ctx.strokeStyle=color;ctx.lineWidth=lineWidth;ctx.stroke();}
+      ctx.beginPath();ctx.moveTo(...b);ctx.lineTo(b[0]-10*Math.cos(angle-.5),b[1]-10*Math.sin(angle-.5));ctx.lineTo(b[0]-10*Math.cos(angle+.5),b[1]-10*Math.sin(angle+.5));ctx.closePath();ctx.fillStyle='#2563eb';ctx.fill();
+    }
+    ctx.restore();
+  }
   function objectFaces(s) {
     const rise=elevation(s);
     const lift=faces=>rise?faces.map(f=>{const points=f.points.map(p=>[p[0],p[1],p[2]+rise]);return {...f,points,depth:faceDepth(points)};}):faces;
@@ -816,7 +846,7 @@
     const occupied=[],overlap=(a,b)=>a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
     const canvasRect=canvas.getBoundingClientRect(),card=dialog.querySelector('.twin-info').getBoundingClientRect();
     occupied.push({x:card.left-canvasRect.left,y:card.top-canvasRect.top,w:card.width,h:card.height});
-    const candidates=visible.filter(s=>s.type==='equipment' || isRamp(s.item) || s===selected).sort((a,b)=>(b===selected?100:b.model?10:0)-(a===selected?100:a.model?10:0));
+    const candidates=visible.filter(s=>s.type==='equipment' || isRamp(s.item) || s.item.code==='STAIR-DIECUT' || s===selected).sort((a,b)=>(b===selected?100:b.model?10:0)-(a===selected?100:a.model?10:0));
     for(const s of candidates){
       if(!labels && s!==selected)continue;
       const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
@@ -853,7 +883,7 @@
         const p=project([(points[0][0]+points[1][0])/2,(points[0][1]+points[1][1])/2],points[0][2]+.2);ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.strokeStyle='#18332e';ctx.lineWidth=4;ctx.strokeText(text,...p);ctx.fillStyle=color;ctx.fillText(text,...p);
       }
     }
-    drawPhotoDirections();
+    drawPhotoDirections();drawAccessDirections();
     dialog.querySelector('#twinCount').textContent=`${floor} / ${scene.length} ${t('count')} · Three.js r${window.ChinChunThree.revision} · ${t('updated')}`;
   }
   function draw() {
@@ -936,9 +966,9 @@
     // Painter order must be per face: a whole long machine can straddle a column.
     renderSolids([...solids.flatMap(objectFaces),...siteFaces()],dpr);
     drawOfficeFacade();
-    drawPhotoDirections();
+    drawPhotoDirections();drawAccessDirections();
     solids.forEach(s=>{
-      if(s.type==='site' && !isRamp(s.item))return;
+      if(s.type==='site' && !isRamp(s.item) && s.item.code!=='STAIR-DIECUT')return;
       if(s.model){drawModelAnnotations(s);return;}
       if(s.type==='equipment' || isRamp(s.item)){
         const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,elevation(s)+(isRamp(s.item)?rampTopPoints(s).reduce((sum,q)=>sum+q[2]/4,0)+.12:s.z+.1));
@@ -982,10 +1012,11 @@
       dialog.querySelector('#twinDetails').textContent+='\n'+t('restroomNote');
       if(window.ChinChunModels?.restroomLayout?.(item)?.compact)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('restroomCompact');
     }
-    if(s?.model && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo','J1-3':'j13Photo','D1-1':'d11Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
+    if(s?.model && s.type==='equipment' && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo','J1-3':'j13Photo','D1-1':'d11Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
     if(item && ['EVA 3','EVA3'].includes(referenceCode(item)))dialog.querySelector('#twinDetails').textContent+='\n'+t('eva3Deferred');
     if(item && referenceCode(item)==='DIE CUT' && !dieSite)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('dieCutDisconnected');
-    if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t(item.code==='RAMP-CONNECTOR'?'connectorNote':'ramp');
+    if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t(item.code==='RAMP-ANNEX-ENTRY'?'accessRamp':item.code==='RAMP-CONNECTOR'?'connectorNote':'ramp');
+    if(item?.code==='STAIR-DIECUT')dialog.querySelector('#twinDetails').textContent+='\n'+t('accessStairs');
     if(item && isOfficeEntry(item))dialog.querySelector('#twinDetails').textContent+='\n'+t('officeSteps');
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
     if(s?.type==='equipment')dialog.querySelector('#twinDetails').textContent+=liveDetails(item);

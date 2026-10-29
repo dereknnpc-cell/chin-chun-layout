@@ -134,6 +134,7 @@
       html+=`<line x1="${offset.x+(e.x+e.width/2)*scale}" x2="${offset.x+(e.x+e.width/2)*scale}" y1="${offset.y+e.y*scale}" y2="${offset.y+(e.y+e.height)*scale}" stroke="${e.color}" stroke-width=".8" stroke-dasharray="3,3"/>`;
       html+=`<text x="${offset.x+b.annex.x*scale}" y="${offset.y+(b.annex.y+b.annex.height+1.8)*scale}" font-size="8" fill="#64748b">${thai?'ผนังกั้นและเสายึดแปลนผู้ใช้ ไม่ใช้ผนังประมาณจาก A3':'廠內隔間、牆線及柱位沿用使用者原繪圖；不採A3比例描繪'}</text>`;
     }
+    if(foreground)html+=window.ChinChunAccess?.svg(layout,scale,offset,thai) || '';
     return html+'</g>';
   }
   function frameFaces(layout,roof=false) {

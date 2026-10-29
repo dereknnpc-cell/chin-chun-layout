@@ -8,6 +8,7 @@ const staticFiles = [
   "desktop-baseline.js",
   "factory_layout_data.json",
   "building-geometry.js",
+  "site-access.js",
   "digital-twin.js",
   "live-twin.js",
   "twin-models.js",
