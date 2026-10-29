@@ -73,5 +73,51 @@
     }
     return html;
   }
-  window.ChinChunAccess={get,stairFaces,svg};
+  // Circulation paint must never hide the actual access surfaces. These convex
+  // footprints are shared by SVG masks and both 2.5D renderers, including rotated ramps.
+  function routeHoles(layout,floor='1F'){
+    if(floor==='OVERLAY')floor='1F';
+    const items=(floor==='2F'?layout.equipment_2f || []:layout.equipment || []).filter(e=>(e.floor || (floor==='2F'?'2F':'1F'))===floor && /^RAMP(?:-|$)/i.test(String(e.code || '')));
+    if(floor==='1F'){
+      const a=get(layout),connector=window.ChinChunBuilding?.connectingRamp(layout);
+      items.push(...[a.ramp,a.stairs,connector].filter(Boolean));
+    }
+    return items.filter(finite).map(item=>{
+      const padding=.12,w=item.width+2*padding,h=item.height+2*padding,cx=item.x+item.width/2,cy=item.y+item.height/2;
+      const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+      return [[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([x,y])=>[cx+x*c-y*s,cy+x*s+y*c]);
+    });
+  }
+  const cross=(a,b,p)=>(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
+  function halfPlane(points,a,b,inside){
+    const out=[];
+    for(let i=0;i<points.length;i++){
+      const p=points[i],q=points[(i+1)%points.length],dp=cross(a,b,p),dq=cross(a,b,q),ip=inside?dp>=0:dp<=0,iq=inside?dq>=0:dq<=0;
+      if(ip)out.push([...p]);
+      if(ip!==iq){const t=dp/(dp-dq);out.push(p.map((v,k)=>v+(q[k]-v)*t));}
+    }
+    return out;
+  }
+  const area=points=>Math.abs(points.reduce((sum,p,i)=>{const q=points[(i+1)%points.length];return sum+p[0]*q[1]-q[0]*p[1];},0))/2;
+  function clipRoutes(points,holes){
+    let pieces=[points];
+    for(const hole of holes){
+      const next=[];
+      for(const piece of pieces){
+        let remaining=piece;
+        for(let i=0;i<hole.length && remaining.length>=3;i++){
+          const a=hole[i],b=hole[(i+1)%hole.length],outside=halfPlane(remaining,a,b,false);
+          if(outside.length>=3 && area(outside)>1e-9)next.push(outside);
+          remaining=halfPlane(remaining,a,b,true);
+        }
+      }
+      pieces=next;
+    }
+    return pieces;
+  }
+  function routeMaskSvg(layout,scale,offset,width,height,floor){
+    const holes=routeHoles(layout,floor);
+    return `<mask id="accessRouteMask" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${height}" style="mask-type:luminance"><rect width="${width}" height="${height}" fill="white"/>${holes.map(h=>`<polygon points="${h.map(p=>`${offset.x+p[0]*scale},${offset.y+p[1]*scale}`).join(' ')}" fill="black"/>`).join('')}</mask>`;
+  }
+  window.ChinChunAccess={get,stairFaces,svg,routeHoles,clipRoutes,routeMaskSvg};
 })();

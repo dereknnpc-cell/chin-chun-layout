@@ -747,6 +747,24 @@
   }
   // Floors and routes share the same GPU depth buffer as all equipment.
   // This builds display faces from current data; it never changes the layout.
+  function circulationFaces(visible) {
+    const faces=[],access=window.ChinChunAccess,holes=access?.routeHoles(data,floor) || [];
+    const quad=(points,color,s=null,part='flow')=>{
+      for(const piece of access?access.clipRoutes(points,holes):[points])faces.push({points:piece,color,s,part,nonInteractive:!s,model:true});
+    };
+    for(const s of visible.filter(s=>s.type==='aisle' || s.type==='zone'))quad(s.points.map(p=>[...p,elevation(s)+.03]),s.color,s,'aisle');
+    const flowLevel=p=>floor==='1F'?(window.ChinChunBuilding?.floorLevel(data,p) ?? (inFactory(p)?factoryRise:0)):0;
+    for(const f of (detail?[]:data.flows || []).filter(f=>(f.floor || '1F')===floor)){
+      if(!Array.isArray(f.points))continue;
+      for(let i=1;i<f.points.length;i++){
+        const a=[n(f.points[i-1].x),n(f.points[i-1].y)],q=[n(f.points[i].x),n(f.points[i].y)],dx=q[0]-a[0],dy=q[1]-a[1],length=Math.hypot(dx,dy);if(length<.001)continue;
+        const point=(d,side)=>[a[0]+dx*d/length-dy/length*side,a[1]+dy*d/length+dx/length*side];
+        for(let start=0;start<length;start+=1.2){const end=Math.min(length,start+.7),p=[point(start,-.045),point(end,-.045),point(end,.045),point(start,.045)];quad(p.map(v=>[...v,flowLevel(v)+.08]),'#f8e7a1');}
+        if(i===f.points.length-1){const p=[q,point(Math.max(0,length-.65),.30),point(Math.max(0,length-.65),-.30)];quad(p.map(v=>[...v,flowLevel(v)+.09]),'#f8e7a1',null,'flow-arrow');}
+      }
+    }
+    return faces;
+  }
   function threeGroundFaces(visible,b) {
     const faces=[];
     const quad=(points,color,s=null,part='ground')=>faces.push({points,color,s,part,nonInteractive:!s,model:true});
@@ -772,17 +790,7 @@
         box(clipped,0,r.rise,r===building?.annex?'#d4cbaa':'#c3c6af');tiles(clipped,r.rise+.002);
       }
     }
-    for(const s of visible.filter(s=>s.type==='aisle' || s.type==='zone'))quad(s.points.map(p=>[...p,elevation(s)+.03]),s.color,s,'aisle');
-    const flowLevel=p=>floor==='1F'?(window.ChinChunBuilding?.floorLevel(data,p) ?? (inFactory(p)?factoryRise:0)):0;
-    for(const f of (detail?[]:data.flows || []).filter(f=>(f.floor || '1F')===floor)){
-      if(!Array.isArray(f.points))continue;
-      for(let i=1;i<f.points.length;i++){
-        const a=[n(f.points[i-1].x),n(f.points[i-1].y)],q=[n(f.points[i].x),n(f.points[i].y)],dx=q[0]-a[0],dy=q[1]-a[1],length=Math.hypot(dx,dy);if(length<.001)continue;
-        const point=(d,side)=>[a[0]+dx*d/length-dy/length*side,a[1]+dy*d/length+dx/length*side];
-        for(let start=0;start<length;start+=1.2){const end=Math.min(length,start+.7),p=[point(start,-.045),point(end,-.045),point(end,.045),point(start,.045)];quad(p.map(v=>[...v,flowLevel(v)+.08]),'#f8e7a1',null,'flow');}
-        if(i===f.points.length-1){const p=[q,point(Math.max(0,length-.65),.30),point(Math.max(0,length-.65),-.30)];quad(p.map(v=>[...v,flowLevel(v)+.09]),'#f8e7a1',null,'flow-arrow');}
-      }
-    }
+    faces.push(...circulationFaces(visible));
     const office=scene.find(s=>isOfficeEntry(s.item));
     if(floor==='1F' && office && (!detail || selected===office)){
       const entry=officeEntrance(office),z=elevation(office);
@@ -951,16 +959,10 @@
       }
       }
     }
-    visible.filter(s=>s.type==='aisle' || s.type==='zone').forEach(s=>{const path=polygon(s.points.map(p=>project(p,elevation(s)+.03)),s.color,'#e5dca2');hits.push({path,s});});
-    (detail?[]:data.flows || []).filter(f=>(f.floor || '1F')===floor).forEach(f=>{
-      if(!Array.isArray(f.points) || f.points.length<2)return;
-      const flowLevel=p=>floor==='1F'?(window.ChinChunBuilding?.floorLevel(data,p) ?? (inFactory(p)?factoryRise:0)):0;
-      ctx.beginPath();f.points.forEach((p,i)=>{const xy=[n(p.x),n(p.y)],v=project(xy,.08+flowLevel(xy));i?ctx.lineTo(...v):ctx.moveTo(...v);});
-      ctx.strokeStyle='#f8e7a1';ctx.lineWidth=3;ctx.setLineDash([7,5]);ctx.stroke();ctx.setLineDash([]);
-      const endPoint=[n(f.points.at(-1).x),n(f.points.at(-1).y)],prevPoint=[n(f.points.at(-2).x),n(f.points.at(-2).y)];
-      const end=project(endPoint,.08+flowLevel(endPoint)),prev=project(prevPoint,.08+flowLevel(prevPoint)),a=Math.atan2(end[1]-prev[1],end[0]-prev[0]);
-      polygon([end,[end[0]-9*Math.cos(a-.45),end[1]-9*Math.sin(a-.45)],[end[0]-9*Math.cos(a+.45),end[1]-9*Math.sin(a+.45)]],'#f8e7a1','#927d3b');
-    });
+    for(const f of circulationFaces(visible)){
+      const path=polygon(f.points.map(p=>project(p,p[2])),f.color,f.part==='aisle'?'#e5dca2':f.color);
+      if(f.s)hits.push({path,s:f.s});
+    }
     const solids=visible.filter(s=>s.type!=='aisle' && s.type!=='zone');
     solids.filter(s=>s.type==='equipment' || s.type==='wall').forEach(drawGroundContact);
     // Painter order must be per face: a whole long machine can straddle a column.

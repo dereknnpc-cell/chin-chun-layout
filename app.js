@@ -5381,6 +5381,7 @@
     window.ChinChunTwin?.update(layoutData, currentFloor);
     let html = `
       <defs>
+        ${window.ChinChunAccess?.routeMaskSvg(layoutData,SCALE,{x:OFFSET_X,y:OFFSET_Y},SVG_WIDTH,SVG_HEIGHT,currentFloor) || ''}
         <!-- Fine Grid Pattern -->
         <pattern id="gridPatternFine" width="${SCALE}" height="${SCALE}" patternUnits="userSpaceOnUse">
           <path d="M ${SCALE} 0 L 0 0 0 ${SCALE}" fill="none" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.1"/>
@@ -5442,7 +5443,7 @@
 
     // 1. Aisles Layer (1F) - 可點選、移動、微調尺寸與刪除之色塊走道
     if (layerState.aisles && (is1F || isOverlay)) {
-      html += `<g id="layerAisles" opacity="${isOverlay ? '0.4' : '1.0'}">`;
+      html += `<g id="layerAisles" ${window.ChinChunAccess?'mask="url(#accessRouteMask)"':''} opacity="${isOverlay ? '0.4' : '1.0'}">`;
       (layoutData.aisles || []).forEach(a => {
         const ax = OFFSET_X + a.x * SCALE;
         const ay = OFFSET_Y + a.y * SCALE;
@@ -5855,7 +5856,7 @@
 
     // 6. Interactive Circulation Flow Planning Layer (動線規劃層)
     if (layerState.flows) {
-      html += `<g id="layerFlows">`;
+      html += `<g id="layerFlows" ${window.ChinChunAccess?'mask="url(#accessRouteMask)"':''}>`;
       (layoutData.flows || []).forEach(f => {
         const isSelected = f.id === selectedId;
         const d = getPolylinePathD(f.points);
