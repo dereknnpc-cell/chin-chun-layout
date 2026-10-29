@@ -1,4 +1,4 @@
--- IoT/MES equipment status and RTLS positions for the live twin (see LIVE-DATA.md).
+-- Applied as 20261029072106: IoT/MES equipment status and RTLS positions (see LIVE-DATA.md).
 -- Gateways write with the service role (bypasses RLS); members read; owners/editors
 -- manage MES bindings and RTLS calibration. Layout tables are not touched.
 begin;
@@ -103,6 +103,13 @@ create table if not exists public.rtls_calibrations (
 create unique index if not exists rtls_calibrations_one_active_idx
   on public.rtls_calibrations (workspace_id)
   where is_active;
+create index if not exists rtls_calibrations_workspace_created_idx
+  on public.rtls_calibrations (workspace_id, created_at desc);
+
+-- Include workspace_id in old records so workspace-filtered config deletions
+-- also invalidate a connected twin's bindings/calibration.
+alter table public.equipment_bindings replica identity full;
+alter table public.rtls_calibrations replica identity full;
 
 -- Out-of-order rows stay in history but never overwrite a newer current state.
 create or replace function private.upsert_equipment_status_current()

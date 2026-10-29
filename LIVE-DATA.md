@@ -27,8 +27,8 @@ RTLS 引擎 ──────┘
   "ts": "2026-10-24T08:00:00Z" }
 ```
 
-- 未知 `status` 保留上一狀態；超過 `options.staleMs`（預設 30 s）未更新視為 `offline`，定位點隱藏。
-- 定位舊於已收資料（`ts` 倒退）會丟棄；每個 tag 保留最近 `options.trail`（24）點軌跡。
+- 未知 `status` 保留上一狀態；超過 `options.staleMs`（預設 30 s）未更新視為 `offline`，定位點隱藏。過期會自動通知 Twin 重繪，不必等下一則訊息或手動操作視角。
+- 機台狀態與定位舊於已收資料（`ts` 倒退）會丟棄；機台代號、CAD ID 和 MES 別名共用同一個時間順序。同時間戳可補齊工單、產量等欄位。每個 tag 保留最近 `options.trail`（24）點軌跡。
 
 ## 機台對應
 
@@ -37,6 +37,8 @@ RTLS 引擎 ──────┘
 ```js
 ChinChunLive.bind({ 'WC-CUT-07': 'eq_dc_n1_1', 'PLC-192.168.1.40': 'A1-1' });
 ```
+
+對照表右側可填 CAD ID 或設備代號；設備代號不分大小寫，最後一律以實際 CAD ID 儲存狀態，供畫面上的機台讀取。
 
 ## RTLS 座標校正
 
@@ -64,11 +66,13 @@ live.stop();
 
 Twin 工具列「即時層」選單：關／模擬／雲端資料庫（需登入的工作區成員）／Gateway（網址帶 `?live=wss://gateway/twin` 時出現）。
 
-雲端資料庫模式：先套用啟用中的 `rtls_calibrations` 與 `equipment_bindings`，再載入 `equipment_status_current`、`rtls_tags_current`，之後以 Realtime 接收變更；校正或對照表變更時整批重新載入，原始 RTLS 座標以新校正重新換算。登出時自動停止。模擬：人員／堆高機沿 CAD `flows` 與 `aisles` 中線移動，機台狀態隨機，非現場數據。
+雲端資料庫模式：完成啟用中的 `rtls_calibrations`、`equipment_bindings` 與最新狀態快照後才顯示資料；載入期間的 Realtime 更新先保留，之後依時間套用。校正或對照表在載入途中改動會重讀，既有原始 RTLS 座標與軌跡依新校正重新換算，不讓舊快照蓋掉新位置。查詢失敗會退避重試，停止或登出會取消重試與訂閱；晚到的舊資料也不能修改新來源的對照或校正。資料庫 `alarm = null` 會清除舊警報。模擬：人員／堆高機沿 CAD `flows` 與 `aisles` 中線移動，機台狀態隨機，非現場數據。
 
 自訂 provider：`{ name, start({ ingest, getLayout }), stop() }`。
 
-## 資料表（`supabase/migrations/20261024090000_add_live_twin_data.sql`）
+停止或切換來源時會清除舊狀態、取消過期計時器並中止未完成的 REST 請求。每次啟動來源都使用獨立的事件入口；即使舊請求、WebSocket 或自訂 provider 稍後才回傳，也不會覆蓋新來源。啟動失敗時會停止該 provider 並回到關閉狀態。
+
+## 資料表（`supabase/migrations/20261029072106_add_live_twin_data.sql`）
 
 所有表以 `workspace_id` 隔離，沿用既有 `private.current_workspace_role()` 權限。
 

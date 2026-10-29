@@ -8,7 +8,7 @@ const layout=JSON.parse(fs.readFileSync(require.resolve('../factory_layout_data.
 function load(){
   const window={},timers=[];
   const context={window,console,queueMicrotask,Date,Math,JSON,Number,String,Array,Map,Set,Object,Error,
-    setInterval:(fn)=>{timers.push(fn);return timers.length;},clearInterval:()=>{timers.length=0;}};
+    setInterval:(fn)=>{timers.push(fn);return timers.length;},clearInterval:()=>{timers.length=0;},setTimeout:()=>0,clearTimeout(){}};
   vm.runInNewContext(source,context);
   window.ChinChunLive.attach({layout:()=>layout});
   return {live:window.ChinChunLive,timers};
@@ -32,8 +32,10 @@ test('unknown status keeps the previous state and stale data reads as offline',(
   live.ingest({type:'equipment',id:'eq_dc_n1_1',status:'run'});
   live.ingest({type:'equipment',id:'eq_dc_n1_1',status:'exploded'});
   assert.equal(live.equipmentState('eq_dc_n1_1').status,'run');
-  live.ingest({type:'equipment',id:'eq_dc_n1_1',status:'run',ts:Date.now()-live.options.staleMs-1000});
-  const state=live.equipmentState('eq_dc_n1_1');
+  assert.equal(live.ingest({type:'equipment',id:'eq_dc_n1_1',status:'run',ts:Date.now()-live.options.staleMs-1000}),0,'older events must not replace a fresh state');
+  const other=layout.equipment.find(e=>e.code==='A1-1');
+  live.ingest({type:'equipment',id:other.id,status:'run',ts:Date.now()-live.options.staleMs-1000});
+  const state=live.equipmentState(other.id);
   assert.equal(state.status,'offline');assert.equal(state.stale,true);
 });
 
@@ -85,10 +87,10 @@ test('simulation moves tags along CAD routes and reports every machine without t
 });
 
 test('websocket provider maps gateway payloads, ignores bad JSON and reconnects with backoff',()=>{
-  const sockets=[],delays=[];
+  const sockets=[],timers=[];
   class FakeSocket{constructor(url){this.url=url;sockets.push(this);}close(){this.onclose?.();}}
   const window={},context={window,console:{warn(){}},queueMicrotask,Date,Math,JSON,Number,String,Array,Map,Set,Object,Error,WebSocket:FakeSocket,
-    setTimeout:(fn,ms)=>{delays.push(ms);fn();return delays.length;},clearTimeout(){}};
+    setTimeout:(fn,ms)=>{const timer={fn,ms};timers.push(timer);return timer;},clearTimeout(timer){if(timer)timer.cancelled=true;}};
   vm.runInNewContext(source,context);const live=window.ChinChunLive;live.attach({layout:()=>layout});
   live.use(live.providers.websocket('wss://gateway.local/twin',{map:raw=>raw.rows.map(r=>({type:'position',tag:r.id,x:r.px,y:r.py,frame:'cad'}))}));
   assert.equal(live.mode(),'live');assert.equal(sockets[0].url,'wss://gateway.local/twin');
@@ -96,8 +98,9 @@ test('websocket provider maps gateway payloads, ignores bad JSON and reconnects 
   sockets[0].onmessage({data:'{broken'});
   assert.equal(live.positions('1F')[0].x,3);
   sockets[0].onclose();
-  assert.equal(sockets.length,2);assert.equal(delays[0],1000);
-  sockets[1].onclose();assert.equal(delays[1],2000);
+  const firstRetry=timers.find(t=>t.ms===1000 && !t.cancelled);assert.ok(firstRetry);firstRetry.fn();
+  assert.equal(sockets.length,2);
+  sockets[1].onclose();const secondRetry=timers.find(t=>t.ms===2000 && !t.cancelled);assert.ok(secondRetry);
   live.stop();const count=sockets.length;sockets.at(-1).onclose?.();assert.equal(sockets.length,count);
 });
 
