@@ -103,3 +103,60 @@ test('websocket provider maps gateway payloads, ignores bad JSON and reconnects 
   sockets[1].onclose();const secondRetry=timers.find(t=>t.ms===2000 && !t.cancelled);assert.ok(secondRetry);
   live.stop();const count=sockets.length;sockets.at(-1).onclose?.();assert.equal(sockets.length,count);
 });
+
+function fakeSupabase(tables){
+  const queries=[],channels=[];
+  const client={
+    from(table){
+      const q={table,filters:[],select(){return q;},eq(k,v){q.filters.push([k,v]);return q;},limit(n){q.n=n;return q;},
+        then(resolve,reject){queries.push(q);const rows=(tables[table]||[]).filter(r=>q.filters.every(([k,v])=>r[k]===v)).slice(0,q.n??Infinity);return Promise.resolve({data:rows,error:null}).then(resolve,reject);}};
+      return q;
+    },
+    channel(name){const ch={name,handlers:[],removed:false,on(type,cfg,fn){ch.handlers.push({cfg,fn});return ch;},subscribe(fn){ch.status=fn;return ch;},emit(table,row){ch.handlers.filter(h=>h.cfg.table===table).forEach(h=>h.fn({new:row}));}};channels.push(ch);return ch;},
+    removeChannel(ch){ch.removed=true;}
+  };
+  return {client,queries,channels};
+}
+const settle=()=>new Promise(resolve=>setTimeout(resolve,0));
+
+test('supabase provider seeds from current tables with calibration and bindings, then follows realtime',async()=>{
+  const W='ws-1',now=new Date().toISOString(),a11=layout.equipment.find(e=>e.code==='A1-1');
+  const tables={
+    equipment_bindings:[{workspace_id:W,source:'mes',source_id:'WC-07',cad_id:a11.id},{workspace_id:'other',source:'mes',source_id:'X',cad_id:'eq_dc_n1_1'}],
+    rtls_calibrations:[{workspace_id:W,is_active:true,pairs:[{rtls:[0,0],cad:[5,40]},{rtls:[95,0],cad:[100,40]},{rtls:[0,40],cad:[5,0]}]}],
+    equipment_status_current:[{workspace_id:W,cad_id:'WC-07',status:'down',work_order:'WO-9',count:3,target:null,oee:'0.8125',alarm:null,source:'mes',ts:now}],
+    rtls_tags_current:[{workspace_id:W,tag:'EMP-1',kind:'person',label:null,x:10,y:10,floor:'1F',frame:'rtls',source:'rtls',ts:now}]
+  };
+  const {live}=load(),fake=fakeSupabase(tables);
+  live.use(live.providers.supabase(fake.client,{workspaceId:W}));
+  assert.equal(live.mode(),'cloud');
+  const ch=fake.channels[0];
+  assert.equal(ch.handlers.map(h=>h.cfg.table).join(),'equipment_status_current,rtls_tags_current,rtls_calibrations,equipment_bindings');
+  assert.ok(ch.handlers.every(h=>h.cfg.filter==='workspace_id=eq.ws-1'));
+  ch.status('SUBSCRIBED');await settle();await settle();
+  assert.ok(fake.queries.every(q=>q.filters.some(([k,v])=>k==='workspace_id' && v===W)));
+  const state=live.equipmentState(a11.id);
+  assert.equal(state.status,'down');assert.equal(state.workOrder,'WO-9');assert.equal(state.oee,.8125);assert.equal(state.target,undefined);
+  let [tag]=live.positions('1F');close(tag.x,15);close(tag.y,30);assert.equal(tag.label,'EMP-1');
+  ch.emit('rtls_tags_current',{workspace_id:W,tag:'EMP-1',kind:'person',x:20,y:20,floor:'1F',frame:'rtls',source:'rtls',ts:new Date(Date.now()+1000).toISOString()});
+  [tag]=live.positions('1F');close(tag.x,25);close(tag.y,20);
+  ch.emit('equipment_status_current',{workspace_id:W,cad_id:a11.id,status:'run',source:'iot',ts:new Date(Date.now()+1000).toISOString()});
+  assert.equal(live.equipmentState(a11.id).status,'run');
+  // A new calibration reloads everything and re-projects stored raw positions.
+  tables.rtls_calibrations=[{workspace_id:W,is_active:true,pairs:[{rtls:[0,0],cad:[0,0]},{rtls:[1,0],cad:[1,0]}]}];
+  tables.rtls_tags_current[0]={...tables.rtls_tags_current[0],x:20,y:20,ts:new Date(Date.now()+1000).toISOString()};
+  ch.emit('rtls_calibrations',{});await settle();await settle();
+  [tag]=live.positions('1F');close(tag.x,20);close(tag.y,20);
+  live.stop();
+  assert.equal(ch.removed,true);assert.equal(live.mode(),'off');
+});
+
+test('supabase provider falls back to identity on a bad calibration and survives query errors',async()=>{
+  const {live}=load(),fake=fakeSupabase({rtls_calibrations:[{workspace_id:'w',is_active:true,pairs:[{rtls:[0,0],cad:[0,0]},{rtls:[1,1],cad:[1,1]},{rtls:[2,2],cad:[2,2]}]}],
+    rtls_tags_current:[{workspace_id:'w',tag:'T',kind:'cart',x:7,y:8,floor:'1F',frame:'rtls',source:'rtls',ts:new Date().toISOString()}]});
+  live.use(live.providers.supabase(fake.client,{workspaceId:'w'}));fake.channels[0].status('SUBSCRIBED');await settle();await settle();
+  const [tag]=live.positions('1F');assert.equal(tag.x,7);assert.equal(tag.y,8);assert.equal(tag.kind,'cart');
+  const broken={...fake.client,from(){return {select(){return this;},eq(){return this;},limit(){return this;},then(resolve){return Promise.resolve({data:null,error:new Error('rls')}).then(resolve);}};}};
+  live.use(live.providers.supabase(broken,{workspaceId:'w'}));fake.channels[1].status('SUBSCRIBED');await settle();await settle();
+  assert.equal(live.mode(),'cloud');assert.equal(live.positions('1F').length,0);
+});

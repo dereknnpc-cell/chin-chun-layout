@@ -7,7 +7,7 @@
   const KINDS = ['person','forklift','cart','asset'];
   const NON_MACHINE = /^(Furniture|Door|Window|Storage|Elevator|Stairs|Infrastructure|Office|Sanitary)$/;
   const options = { staleMs: 30000, trail: 24 };
-  const equipment = new Map(), tags = new Map(), listeners = new Set();
+  const equipment = new Map(), tags = new Map(), rawTrails = new Map(), listeners = new Set();
   let bindings = new Map(), provider = null, mode = 'off', getLayout = () => null;
   let sourceEpoch = 0, expiryTimer = null;
   let matrix = { a:1, b:0, c:0, d:1, tx:0, ty:0 };
@@ -33,6 +33,13 @@
 
   // RTLS anchor frame -> CAD metres (x right, y toward the drawing's bottom).
   const toCad = (x, y) => [matrix.a*x + matrix.b*y + matrix.tx, matrix.c*x + matrix.d*y + matrix.ty];
+  function reproject() {
+    for (const [tag, points] of rawTrails) {
+      const state = tags.get(tag); if (!state) continue;
+      state.trail = points.map(p => p.frame === 'cad' ? [p.x, p.y] : toCad(p.x, p.y));
+      [state.x, state.y] = state.trail.at(-1);
+    }
+  }
   function solve3(m, r) {
     const det = (a,b,c) => a[0]*(b[1]*c[2]-b[2]*c[1]) - a[1]*(b[0]*c[2]-b[2]*c[0]) + a[2]*(b[0]*c[1]-b[1]*c[0]);
     const cols = [0,1,2].map(i => m.map(row => row[i])), d = det(...cols);
@@ -42,7 +49,7 @@
   // pairs: [{rtls:[x,y], cad:[x,y]}]. Two pairs fit rotation+scale+offset; three or more
   // fit a least-squares affine, which also absorbs a flipped Y axis.
   function calibrate(input) {
-    if (!Array.isArray(input)) { matrix = { a:1, b:0, c:0, d:1, tx:0, ty:0, ...input }; notify(); return { ...matrix }; }
+    if (!Array.isArray(input)) { matrix = { a:1, b:0, c:0, d:1, tx:0, ty:0, ...input }; reproject(); notify(); return { ...matrix }; }
     const pairs = input.filter(p => Array.isArray(p?.rtls) && Array.isArray(p?.cad) && p.rtls.length === 2 && p.cad.length === 2 && [...p.rtls, ...p.cad].every(v => num(v) !== null));
     if (pairs.length < 2) throw new Error('Calibration needs at least two point pairs');
     if (pairs.length === 2) {
@@ -59,7 +66,7 @@
       const [a, b, tx] = solve3(m, rx), [c, d, ty] = solve3(m, ry);
       matrix = { a, b, c, d, tx, ty };
     }
-    notify(); return { ...matrix };
+    reproject(); notify(); return { ...matrix };
   }
 
   // MES work-centre / IoT device ids -> CAD equipment id. Unbound ids fall back to
@@ -73,6 +80,7 @@
     const hit = all.find(e => e.id === key) || all.find(e => String(e.code || '').trim().toUpperCase() === key.toUpperCase());
     return hit?.id || key;
   }
+  function bind(map) { bindings = new Map(Object.entries(map || {}).map(([k, v]) => [String(k).trim(), String(v)])); notify(); }
   function ingestOne(e) {
     if (!e || typeof e !== 'object') return false;
     if (e.type === 'equipment') {
@@ -89,6 +97,7 @@
       const [cx, cy] = e.frame === 'cad' ? [x, y] : toCad(x, y), prev = tags.get(tag), ts = time(e.ts);
       if (prev && ts < prev.ts) return false;
       const trail = [...(prev?.trail || []), [cx, cy]].slice(-options.trail);
+      rawTrails.set(tag, [...(rawTrails.get(tag) || []), { x, y, frame: e.frame }].slice(-options.trail));
       tags.set(tag, { tag, kind: KINDS.includes(e.kind) ? e.kind : prev?.kind || 'person', label: e.label ?? prev?.label ?? tag,
         floor: e.floor === '2F' ? '2F' : '1F', x: cx, y: cy, ts, trail, source: e.source || mode });
       return true;
@@ -110,7 +119,7 @@
 
   function stop() {
     const p = provider; sourceEpoch++; provider = null; mode = 'off';
-    clearTimeout(expiryTimer); expiryTimer = null; equipment.clear(); tags.clear(); notify();
+    clearTimeout(expiryTimer); expiryTimer = null; equipment.clear(); tags.clear(); rawTrails.clear(); notify();
     try { p?.stop?.(); } catch (error) { console.warn('Live provider stop failed', error); }
   }
   function use(next) {
@@ -118,8 +127,8 @@
     const epoch = sourceEpoch; provider = next; mode = next.name || 'live';
     // An old fetch, queued WebSocket message or custom provider callback can
     // finish after stop/switch. Only the current source may publish events.
-    const push = events => epoch === sourceEpoch && provider === next ? ingest(events) : 0;
-    try { next.start({ ingest: push, getLayout: () => getLayout() }); }
+    const guard = fn => (...args) => epoch === sourceEpoch && provider === next ? fn(...args) : 0;
+    try { next.start({ ingest: guard(ingest), getLayout: () => getLayout(), calibrate: guard(calibrate), bind: guard(bind) }); }
     catch (error) {
       console.warn('Live provider failed to start', error);
       if (epoch === sourceEpoch && provider === next) stop();
@@ -216,14 +225,72 @@
     }, stop() { stopped = true; version++; clearTimeout(timer); controller?.abort(); controller = null; } };
   }
 
+  // Supabase tables from the live-twin migration: the *_current tables seed the view and
+  // Realtime pushes changes; the active calibration and MES bindings are applied first.
+  const opt = v => v ?? undefined;
+  const statusEvent = r => ({ type: 'equipment', id: r.cad_id, status: r.status, workOrder: opt(r.work_order), product: opt(r.product),
+    count: opt(r.count), target: opt(r.target), oee: r.oee == null ? undefined : Number(r.oee), alarm: r.alarm, source: r.source, ts: r.ts });
+  const tagEvent = r => ({ type: 'position', tag: r.tag, kind: r.kind, label: opt(r.label), x: r.x, y: r.y, floor: r.floor, frame: r.frame, source: r.source, ts: r.ts });
+  function supabaseFeed(client, { workspaceId }) {
+    let channel = null, retryTimer = null, version = 0;
+    return { name: 'cloud', start({ ingest: push, calibrate: setCalibration, bind: setBindings }) {
+      const session = ++version, active = () => session === version;
+      let loading = false, dirty = false, ready = false, retries = 0;
+      const pending = new Map();
+      const rows = async query => { const { data, error } = await query; if (error) throw error; return data || []; };
+      const scoped = table => client.from(table).select('*').eq('workspace_id', workspaceId);
+      const receive = event => {
+        if (!active()) return;
+        if (ready) { push(event); return; }
+        const key = event.type + ':' + (event.tag || event.id), previous = pending.get(key);
+        if (!previous || time(event.ts) >= time(previous.ts)) pending.set(key, event);
+      };
+      const load = async () => {
+        if (!active()) return;
+        dirty = true; ready = false; clearTimeout(retryTimer);
+        if (loading) return;
+        loading = true;
+        try {
+          do {
+            dirty = false;
+            const [bound, calibration, status, tagRows] = await Promise.all([
+              rows(scoped('equipment_bindings')), rows(scoped('rtls_calibrations').eq('is_active', true).limit(1)),
+              rows(scoped('equipment_status_current')), rows(scoped('rtls_tags_current'))
+            ]);
+            if (!active()) return;
+            // A config change during the snapshot invalidates it; drain the next
+            // load before replaying buffered events with the new coordinate frame.
+            if (dirty) continue;
+            setBindings(Object.fromEntries(bound.map(b => [b.source_id, b.cad_id])));
+            try { setCalibration(calibration[0] ? calibration[0].pairs : {}); }
+            catch (error) { console.warn('RTLS calibration ignored', error); setCalibration({}); }
+            push([...status.map(statusEvent), ...tagRows.map(tagEvent), ...pending.values()]);
+            pending.clear(); ready = true; retries = 0;
+          } while (dirty && active());
+        } catch (error) { console.warn('Live cloud load failed', error); }
+        finally {
+          loading = false;
+          if (active() && !ready) retryTimer = setTimeout(load, Math.min(30000, 1000 * 2**retries++));
+        }
+      };
+      const filter = `workspace_id=eq.${workspaceId}`, on = (table, handler) => channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, handler);
+      channel = client.channel(`live-twin:${workspaceId}`);
+      on('equipment_status_current', ({ new: r }) => { if (r?.cad_id) receive(statusEvent(r)); });
+      on('rtls_tags_current', ({ new: r }) => { if (r?.tag) receive(tagEvent(r)); });
+      // Raw RTLS positions were converted with the old calibration: reload everything.
+      on('rtls_calibrations', () => load());
+      on('equipment_bindings', () => load());
+      channel.subscribe(status => { if (!active()) return; if (status === 'SUBSCRIBED') load(); else if (['CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) console.warn('Live cloud channel', status); });
+    }, stop() { version++; clearTimeout(retryTimer); if (channel) client.removeChannel(channel); channel = null; } };
+  }
+
   window.ChinChunLive = {
     STATUS, KINDS, options,
     attach({ layout } = {}) { if (typeof layout === 'function') getLayout = layout; },
-    bind(map) { bindings = new Map(Object.entries(map || {}).map(([k, v]) => [String(k).trim(), String(v)])); notify(); },
-    calibrate, toCad, ingest, use, stop, equipmentState, positions,
+    bind, calibrate, toCad, ingest, use, stop, equipmentState, positions,
     mode: () => mode,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     snapshot: () => ({ mode, equipment: [...equipment.keys()].map(equipmentState), tags: [...tags.values()].map(t => ({ ...t, trail: undefined })) }),
-    providers: { simulation, websocket, poll }
+    providers: { simulation, websocket, poll, supabase: supabaseFeed }
   };
 })();

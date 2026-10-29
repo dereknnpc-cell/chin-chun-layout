@@ -107,8 +107,8 @@
   th.photoSiteNote='ทิศภาพ: มองออกจากเขตส้มคือซ้าย 2D มองเข้าจากซ้ายคือขวา 2D มองเข้าจากภายนอกเขตเขียวคือซ้าย 2D ภาพเห็นทางลาดสองด้านและหลังคาต่างระดับ ที่จอดผู้บริหารชิดอาคารเดิม PL-1/PL-2 เป็นชั้นเก็บ มีช่องว่างระหว่างกัน ข้างเขตเขียวคือ CNC Room เพิ่มเฉพาะข้อความอ้างอิง ไม่ประมาณหรือเพิ่มขนาดทางลาด ช่องจอด ช่องผนังหรือห้องกั้น';
   zh.buildingNote='以使用者原繪圖為準：廠內隔間、牆線及柱位不採A3比例描繪。外棚邊界依紅線X35–100，最新增建X90–100。2D與2.5D共用資料，設備未搬動。地坪：原廠+1.50／外棚+1.00／路面0米；外棚縱深、棚高沿用示意值，未另行推算。';
   th.buildingNote='ยึดแปลนเดิมของผู้ใช้ ไม่ใช้ผนังประมาณจาก A3 ขอบภายนอกตามเส้นแดง X35–100 ส่วนต่อเติม X90–100 ใช้ข้อมูลเดียวกับ 2D ไม่ย้ายเครื่อง พื้นเดิม +1.50 / ภายนอก +1.00 / ถนน 0 ม. ความลึกและความสูงโครงคงค่าภาพประกอบเดิม ไม่ประมาณใหม่';
-  Object.assign(zh,{live:'即時層',liveOff:'關',liveSim:'模擬',liveOn:'連線',run:'運轉',idle:'待機',setup:'換線',down:'停機',offline:'離線',person:'人員',forklift:'堆高機',cart:'台車',asset:'資產',workOrder:'工單',output:'產量',liveAge:'秒前',liveSimNote:'模擬資料：人員／堆高機沿 CAD 動線與走道移動，機台狀態隨機產生，非現場數據。',liveOnNote:'即時資料：IoT／MES 機台狀態與 RTLS 定位，僅顯示不寫入配置。'});
-  Object.assign(th,{live:'ชั้นเรียลไทม์',liveOff:'ปิด',liveSim:'จำลอง',liveOn:'เชื่อมต่อ',run:'ทำงาน',idle:'รอ',setup:'เปลี่ยนงาน',down:'หยุด',offline:'ออฟไลน์',person:'พนักงาน',forklift:'รถยก',cart:'รถเข็น',asset:'ทรัพย์สิน',workOrder:'ใบสั่งงาน',output:'ผลผลิต',liveAge:'วินาทีที่แล้ว',liveSimNote:'ข้อมูลจำลอง: พนักงาน/รถยกเคลื่อนตามเส้นทางและทางเดินใน CAD สถานะเครื่องสุ่ม ไม่ใช่ข้อมูลหน้างาน',liveOnNote:'ข้อมูลเรียลไทม์: สถานะเครื่องจาก IoT/MES และตำแหน่ง RTLS แสดงผลเท่านั้น ไม่เขียนลงแปลน'});
+  Object.assign(zh,{live:'即時層',liveOff:'關',liveSim:'模擬',liveOn:'Gateway',liveCloud:'雲端資料庫',liveCloudLogin:'雲端資料庫（需登入）',liveCloudNote:'雲端資料：Supabase 最新機台狀態與 RTLS 位置，即時更新；超過 30 秒未更新視為離線。',run:'運轉',idle:'待機',setup:'換線',down:'停機',offline:'離線',person:'人員',forklift:'堆高機',cart:'台車',asset:'資產',workOrder:'工單',output:'產量',liveAge:'秒前',liveSimNote:'模擬資料：人員／堆高機沿 CAD 動線與走道移動，機台狀態隨機產生，非現場數據。',liveOnNote:'即時資料：IoT／MES 機台狀態與 RTLS 定位，僅顯示不寫入配置。'});
+  Object.assign(th,{live:'ชั้นเรียลไทม์',liveOff:'ปิด',liveSim:'จำลอง',liveOn:'Gateway',liveCloud:'ฐานข้อมูลคลาวด์',liveCloudLogin:'ฐานข้อมูลคลาวด์ (ต้องเข้าสู่ระบบ)',liveCloudNote:'ข้อมูลคลาวด์: สถานะเครื่องและตำแหน่ง RTLS ล่าสุดจาก Supabase อัปเดตแบบเรียลไทม์ ไม่อัปเดตเกิน 30 วินาทีถือว่าออฟไลน์',run:'ทำงาน',idle:'รอ',setup:'เปลี่ยนงาน',down:'หยุด',offline:'ออฟไลน์',person:'พนักงาน',forklift:'รถยก',cart:'รถเข็น',asset:'ทรัพย์สิน',workOrder:'ใบสั่งงาน',output:'ผลผลิต',liveAge:'วินาทีที่แล้ว',liveSimNote:'ข้อมูลจำลอง: พนักงาน/รถยกเคลื่อนตามเส้นทางและทางเดินใน CAD สถานะเครื่องสุ่ม ไม่ใช่ข้อมูลหน้างาน',liveOnNote:'ข้อมูลเรียลไทม์: สถานะเครื่องจาก IoT/MES และตำแหน่ง RTLS แสดงผลเท่านั้น ไม่เขียนลงแปลน'});
   const t = key => (document.documentElement.lang.startsWith('th') ? th : zh)[key];
   Object.assign(zh,{site:'場地構造',connector:'原廠／外棚連接坡道',
     connectorNote:'依使用者黃線低端、紅線高端定位：由擴建棚 +1.00 m 往原廠 +1.50 m 上坡，高差 0.50 m。平面位置已改依確認電腦版的 CNC 聯絡通道（aisle_3），X86–89、Y40–45，寬 3.00 m；不再沿用舊手機底圖位置。坡長 5.00 m 為標示估算示意，非實測，不據此認定坡度。這是唯讀場地示意，不新增 2D 機台、不移動設備或隔間。',
@@ -791,16 +791,25 @@
     const age=Math.max(0,Math.round((Date.now()-state.ts)/1000));
     return `\n● ${t(state.status)}${state.workOrder?` · ${t('workOrder')} ${state.workOrder}`:''}${state.count!==undefined?` · ${t('output')} ${state.count}${state.target?'/'+state.target:''}`:''} · ${state.source} · ${age}${t('liveAge')}`;
   }
+  // ?live=wss://gateway/path offers a direct gateway feed next to the cloud tables.
+  const liveGateway=()=>{const url=new URLSearchParams(location.search).get('live');return url && /^wss?:\/\//.test(url)?url:null;};
+  const liveSourceKey=mode=>({simulation:'simulation',cloud:'cloud',live:'gateway'})[mode] || 'off';
   function updateLiveButton(){
-    const button=dialog?.querySelector('#twinLive');if(!button)return;
-    const mode=window.ChinChunLive?.mode() || 'off';
-    button.textContent=`${t('live')}: ${t(mode==='simulation'?'liveSim':mode==='off'?'liveOff':'liveOn')}`;button.setAttribute('aria-pressed',String(mode!=='off'));button.hidden=!window.ChinChunLive;
+    const select=dialog?.querySelector('#twinLive');if(!select)return;
+    select.closest('label').hidden=!window.ChinChunLive;
+    const cloud=Boolean(window.ChinChunCloud?.liveSource?.()),options=[['off','liveOff'],['simulation','liveSim'],['cloud',cloud?'liveCloud':'liveCloudLogin'],...(liveGateway()?[['gateway','liveOn']]:[])];
+    // Rebuild only when the choices change: live ticks must not close an open dropdown.
+    const signature=options.map(([value,key])=>value+':'+t(key)).join('|');
+    if(select.dataset.signature!==signature){select.dataset.signature=signature;select.replaceChildren(...options.map(([value,key])=>{const option=new Option(t(key),value);option.disabled=value==='cloud' && !cloud;return option;}));}
+    select.value=liveSourceKey(window.ChinChunLive?.mode());
   }
-  function toggleLive(){
+  function selectLive(value){
     const live=window.ChinChunLive;if(!live)return;
-    // ?live=wss://gateway/path selects a real feed; otherwise the demo simulation.
-    const url=new URLSearchParams(location.search).get('live');
-    if(live.mode()!=='off')live.stop();else live.use(url && /^wss?:\/\//.test(url)?live.providers.websocket(url):live.providers.simulation());
+    const cloud=window.ChinChunCloud?.liveSource?.();
+    if(value==='simulation')live.use(live.providers.simulation());
+    else if(value==='cloud' && cloud)live.use(live.providers.supabase(cloud.client,{workspaceId:cloud.workspaceId}));
+    else if(value==='gateway' && liveGateway())live.use(live.providers.websocket(liveGateway()));
+    else live.stop();
     updateLiveButton();updateInfo();requestDraw();
   }
   function drawThreeLabels(visible) {
@@ -981,7 +990,7 @@
     if(item?.category==='Door' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1)dialog.querySelector('#twinDetails').textContent+='\n'+t('dockSite');
     if(s?.type==='equipment')dialog.querySelector('#twinDetails').textContent+=liveDetails(item);
     const liveMode=window.ChinChunLive?.mode();
-    if(liveMode && liveMode!=='off')dialog.querySelector('[data-twin-text="note"]').textContent=t(liveMode==='simulation'?'liveSimNote':'liveOnNote');
+    if(liveMode && liveMode!=='off')dialog.querySelector('[data-twin-text="note"]').textContent=t(liveMode==='simulation'?'liveSimNote':liveMode==='cloud'?'liveCloudNote':'liveOnNote');
     dialog.querySelector('#twinObjects').value=item?.id || '';
   }
   function fit(){fitExtent=null;zoom=detail?1.5:1;pan={x:0,y:0};threeNeedsFit=true;requestDraw();}
@@ -1056,7 +1065,8 @@
     engineSelect.onchange=e=>switchEngine(e.target.value);engineLabel.append(engineTitle,engineSelect);dialog.querySelector('.twin-toolbar').prepend(engineLabel);
     const engineStatus=document.createElement('span');engineStatus.id='twinEngineStatus';engineStatus.className='twin-engine-status';engineStatus.setAttribute('role','status');dialog.querySelector('.twin-toolbar').append(engineStatus);
     const topView=document.createElement('button');topView.id='twinTopView';topView.dataset.twinText='topView';topView.onclick=()=>{if(usingThree())threeView.top();};dialog.querySelector('.twin-toolbar').append(topView);
-    const liveButton=document.createElement('button');liveButton.id='twinLive';liveButton.onclick=toggleLive;dialog.querySelector('.twin-toolbar').append(liveButton);
+    const liveLabel=document.createElement('label'),liveTitle=document.createElement('span'),liveSelect=document.createElement('select');
+    liveTitle.dataset.twinText='live';liveSelect.id='twinLive';liveSelect.onchange=e=>selectLive(e.target.value);liveLabel.append(liveTitle,liveSelect);dialog.querySelector('.twin-toolbar').append(liveLabel);
     const roofButton=document.createElement('button');roofButton.id='twinRoof';roofButton.dataset.twinText='buildingRoof';roofButton.hidden=true;
     roofButton.onclick=()=>{buildingRoof=!buildingRoof;updateInfo();requestDraw();};dialog.querySelector('.twin-toolbar').append(roofButton);
     const photoButton=document.createElement('button');photoButton.id='twinPhotoDirections';photoButton.dataset.twinText='photoDirections';photoButton.hidden=true;
