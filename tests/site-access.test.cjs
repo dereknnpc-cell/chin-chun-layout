@@ -41,6 +41,21 @@ test('the application revision bridge applies the same extended CAD record to lo
   assert.equal(access.routeHoles(result.layout).filter(h=>h.some(p=>p[0]<16 && p[0]>14)).length,1);
   const svg=access.svg(result.layout,1,{x:0,y:0});assert.match(svg,/x1="17.5" y1="40" x2="17.5" y2="35"/);
 });
+test('a cloud document missing connector metadata still registers one ramp in 2D, circulation clearance and both 2.5D engines',()=>{
+  const source=read('digital-twin.js'),end='})();',w={};for(const f of ['building-geometry.js','site-access.js','twin-models.js'])vm.runInNewContext(read(f),{window:w});
+  const noop=()=>{},element=()=>({setAttribute:noop,replaceChildren:noop,add:noop});
+  const probe=`window.__cloudRampTest={prepare(d){data=d;dialog={querySelector:element};rebuild();},scene:()=>scene,faces(s){allFaces=true;return objectFaces(s);},routes:()=>circulationFaces(scene)};`;
+  vm.runInNewContext(source.trimEnd().slice(0,-end.length)+probe+end,{window:w,element,document:{documentElement:{lang:'zh-Hant'}},Option:function(){},requestAnimationFrame:noop});
+  const d=fixture();delete d.building_geometry.connectingRamp;delete d.baseline_revision;const before=JSON.stringify(d);freeze(d);
+  const api=w.__cloudRampTest;api.prepare(d);
+  const ramps=api.scene().filter(s=>s.item.code==='RAMP-CONNECTOR');assert.equal(ramps.length,1);assert.equal(ramps[0].type,'site');
+  const surface=api.faces(ramps[0]).find(f=>f.part==='ramp-surface');assert.deepEqual(plain(surface.points),[[86,40,1.5],[89,40,1.5],[89,45,1],[86,45,1]]);
+  assert.match(access.svg(d,1,{x:0,y:0}),/data-access-code="RAMP-CONNECTOR"/);
+  const contains=(poly,p)=>poly.every((a,i)=>{const b=poly[(i+1)%poly.length];return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])>=-1e-8;});
+  assert.ok(access.routeHoles(d).some(h=>contains(h,[87.5,42])));
+  assert.ok(!api.routes().some(f=>contains(f.points,[87.5,42])));
+  assert.equal(JSON.stringify(d),before);assert.equal(api.scene().filter(s=>s.type==='equipment').length,d.equipment.length);
+});
 test('photo accesses derive from confirmed live drawing without changing any saved CAD or existing CNC connector',()=>{
   const d=freeze(fixture()),before=JSON.stringify(d),result=access.get(d);
   assert.equal(result.ramp.code,'RAMP-ANNEX-ENTRY');assert.equal(result.stairs.code,'STAIR-DIECUT');assert.equal(JSON.stringify(d),before);

@@ -34,16 +34,29 @@
   }
   // Read-only site presentation, NOT a CAD equipment record or a migration.
   // User's 2026-10-23 annotation: red/north edge high, yellow/south edge low.
-  // Plan position must be supplied by the confirmed desktop drawing, not the
-  // obsolete mobile/default thumbnail. Never silently reuse the old X86.5 box.
+  // Use explicit geometry when supplied. Older cloud documents have the user's
+  // confirmed E1-1/aisle_3 drawing but lack the later connectingRamp field.
+  // Recover their display from that live corridor, never from a default box.
+  function cloudCorridorRamp(layout,b){
+    const lane=(layout.aisles || []).find(a=>a.id==='aisle_3' && (a.floor || '1F')==='1F');
+    const e1=(layout.equipment || []).find(e=>String(e.photoModelCode || e.code || '').trim().toUpperCase()==='E1-1' && (e.floor || '1F')==='1F');
+    const finite=r=>r && ['x','y','width','height'].every(k=>Number.isFinite(r[k])) && r.width>0 && r.height>0;
+    if(!finite(lane) || !finite(e1) || (lane.rotation || 0)%360!==0 || (e1.rotation || 0)%360!==0)return null;
+    const y=b.main.y+b.main.height,run=5,gap=lane.x-e1.x-e1.width;
+    if(lane.y>y || lane.y+lane.height<y+run || gap<0 || gap>5 || e1.y+e1.height>y || y-e1.y-e1.height>5)return null;
+    // A user-edited wall or closed passage wins; this fallback never cuts walls.
+    const blocked=(layout.walls || []).some(w=>(w.floor || '1F')==='1F' && Math.abs(w.y1-y)<.05 && Math.abs(w.y2-y)<.05 && Math.min(w.x1,w.x2)<lane.x+lane.width && Math.max(w.x1,w.x2)>lane.x);
+    if(blocked)return null;
+    return {x:lane.x,y,width:lane.width,height:run,source:'E1-1 右側已確認 CNC 通道 aisle_3；舊雲端檔缺少坡道欄位',geometryAccuracy:'corridor-aligned; run-estimate'};
+  }
   function connectingRamp(layout) {
     const b=get(layout);if(!b || b.main.rise<=b.annex.rise)return null;
-    const r=b.connectingRamp;
+    const r=Object.prototype.hasOwnProperty.call(b,'connectingRamp')?b.connectingRamp:cloudCorridorRamp(layout,b);
     if(!r || !['x','y','width','height'].every(k=>Number.isFinite(r[k])) || r.width<=0 || r.height<=0)return null;
     const {x,y,width,height}=r;
     if(Math.abs(y-b.main.y-b.main.height)>1e-6 || !inside(b.main,[x,y]) || !inside(b.main,[x+width,y]) || !inside(b.annex,[x,y]) || !inside(b.annex,[x+width,y+height]))return null;
     return {id:'site_annex_connecting_ramp',code:'RAMP-CONNECTOR',
-      name:'原廠／擴建棚連接坡道',x,y,width,height,rotation:0,
+      name:'E1-1 右側原廠／擴建棚連接坡道',x,y,width,height,rotation:0,
       ramp:{low:b.annex.rise,high:b.main.rise,highEdge:'first'},
       geometryAccuracy:r.geometryAccuracy || 'annotation-approximate',source:r.source};
   }

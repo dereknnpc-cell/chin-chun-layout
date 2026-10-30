@@ -6,6 +6,23 @@ const source=fs.readFileSync(require.resolve('../building-geometry.js'),'utf8');
 const window={};vm.runInNewContext(source,{window});const building=window.ChinChunBuilding;
 const plain=v=>JSON.parse(JSON.stringify(v));
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} vs ${b}`);
+test('older cloud drawings recover the E1-1 right-hand ramp from their own corridor without writes or duplicates',()=>{
+  const d=JSON.parse(fs.readFileSync(require.resolve('../factory_layout_data.json'),'utf8'));delete d.building_geometry.connectingRamp;delete d.baseline_revision;
+  const before=JSON.stringify(d),r=building.connectingRamp(d),lane=d.aisles.find(a=>a.id==='aisle_3');
+  assert.deepEqual([r.x,r.y,r.width,r.height],[lane.x,40,lane.width,5]);assert.deepEqual(plain(r.ramp),{low:1,high:1.5,highEdge:'first'});
+  assert.match(r.name,/E1-1/);assert.equal(JSON.stringify(d),before);
+  d.building_geometry.connectingRamp={x:86.25,y:40,width:2.5,height:4,source:'user edit'};
+  const explicit=building.connectingRamp(d);assert.equal(explicit.x,86.25);assert.equal(explicit.height,4);assert.equal(explicit.source,'user edit');
+  d.building_geometry.connectingRamp=null;assert.equal(building.connectingRamp(d),null,'an explicit removal is not recreated');
+  d.building_geometry.connectingRamp={x:'bad'};assert.equal(building.connectingRamp(d),null,'invalid explicit geometry does not invoke a default');
+});
+test('corridor recovery respects unknown drawings, floor, orientation, machine location and walls closing the passage',()=>{
+  const base=()=>{const d=JSON.parse(fs.readFileSync(require.resolve('../factory_layout_data.json'),'utf8'));delete d.building_geometry.connectingRamp;return d;};
+  for(const edit of [d=>{delete d.building_geometry;},d=>{d.aisles=[];},d=>{d.aisles.find(a=>a.id==='aisle_3').y=48;},d=>{d.aisles.find(a=>a.id==='aisle_3').floor='2F';},d=>{d.aisles.find(a=>a.id==='aisle_3').rotation=90;},d=>{d.equipment.find(e=>e.code==='E1-1').x=60;},d=>{d.walls.push({id:'user-closed',x1:86,y1:40,x2:89,y2:40});}]){
+    const d=base();edit(d);const before=JSON.stringify(d);assert.equal(building.connectingRamp(d),null);assert.equal(JSON.stringify(d),before);
+  }
+  const d=base();d.aisles.find(a=>a.id==='aisle_3').x=86.5;assert.equal(building.connectingRamp(d).x,86.5,'position follows the live confirmed corridor');
+});
 const fixture=()=>({source_geometry_revision:'existing-eps',grid:{factory_width:100,factory_depth:40,cols_x:21},
   equipment:[{id:'machine',code:'M1',x:55,y:41,width:3,height:4,rotation:33},{id:'office',code:'OFFICE',category:'Office',x:45,y:30,width:5,height:9}],
   columns:[{id:'user-column',x:100,y:40}],equipment_2f:[{id:'upstairs',x:1,y:1}],flows:[{id:'route',points:[{x:1,y:2},{x:3,y:4}]}],
