@@ -55,10 +55,10 @@ test('G2-1 correction rigidly turns every vertex 180 degrees around the same CAD
   assert.equal(models.rotationOffset({code:'G2-2'}),0);
   assert.equal(models.rotationOffset({code:'Q2-3'}),-90);
 });
-test('J1-2 photo model preserves its CAD record and fits its existing footprint',()=>{
+test('J1-1 and J1-2 share one photo model while preserving their own CAD records',()=>{
   const item=Object.freeze({id:'eq_vcut1_j1_2',code:'J1-2',x:75.25,y:35.34,width:4.45,height:4.57,rotation:0});
   const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
-  assert.ok(models.matches(item));assert.ok(models.matches({code:' j1-2 '}));
+  assert.ok(models.matches(item));assert.ok(models.matches({code:' j1-1 '}));assert.ok(models.matches({code:' j1-2 '}));
   assert.equal(JSON.stringify(item),before);assert.equal(models.rotationOffset(item),0);
   assert.ok(faces.length>600);
   assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
@@ -66,7 +66,16 @@ test('J1-2 photo model preserves its CAD record and fits its existing footprint'
   assert.equal(Math.min(...points.map(p=>p[2])),0);
   assert.ok(Math.abs(Math.max(...points.map(p=>p[2]))-2.30)<1e-9);
   for(const color of ['#ded7bd','#b8c4c4','#e8e5d5','#675346','#356e62','#303b3d'])assert.ok(faces.some(f=>f.color===color));
-  for(const code of ['J1-1','J1-3'])assert.equal(models.build({...item,code}),null,'other J machines are not changed');
+  const j11={...item,id:'eq_vcut2_j1_1',code:'J1-1',x:10,y:.73};
+  const j11Faces=models.build(j11);
+  assert.equal(j11Faces.length,faces.length);
+  faces.forEach((face,i)=>face.points.forEach((p,j)=>{
+    const q=j11Faces[i].points[j];
+    assert.ok(Math.abs(q[0]-p[0]-(j11.x-item.x))<1e-9);
+    assert.ok(Math.abs(q[1]-p[1]-(j11.y-item.y))<1e-9);
+    assert.equal(q[2],p[2]);
+  }));
+  assert.equal(models.build({...item,code:'J1-3'}),null,'J1-3 keeps its separate model provider');
 });
 test('J1-2 has two fixed work surfaces, a wooden edge and an open cutting throat without foam',()=>{
   const faces=models.build({code:'J1-2',x:0,y:0,width:4.45,height:4.57});
