@@ -76,6 +76,14 @@
     equipment:'อุปกรณ์', column:'เสา', wall:'ผนัง', aisle:'ทางเดิน', zone:'พื้นที่ชั้นลอย', size:'ขนาดแปลน', position:'พิกัด', rotation:'มุม', count:'วัตถุ',
     updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'ด้านบนเตาอบ 2.40 ม. (ยืนยันแล้ว)\nในแปลน: รับงานออกด้านซ้าย ป้อนเข้าด้านขวา\nสัดส่วนชิ้นส่วนอื่นประมาณจากภาพ', a1Photo:'วาด A1-1 ใหม่จากภาพล่าสุด: ป้อนวัสดุจากสายพานสีเขียวด้านขวา ผ่านลูกกลิ้งและดรัมใหญ่ที่อยู่ค่อนไปทางขวา แล้วแผ่นวัสดุลาดไปยังลูกกลิ้งรับงานด้านซ้าย ทิศทางยืนยันแล้ว แต่ขนาดและความสูงยังเป็นการประมาณจากภาพ', a1Entrance:'ป้อนเข้า (สายพานสีเขียว)', a1Collection:'รับงาน (ลูกกลิ้งสีเงิน)', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นทางเข้าสำนักงานยึดตำแหน่ง DOOR-1800; ความสูงเป็นภาพจำลองจากรูปถ่าย ต้องวัดจริง', dockSite:'ท่าโหลดฝั่งตะวันตกจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
   };
+  Object.assign(zh,{
+    c11Photo:'C1-1（沖孔機一）：依 PDF 箭頭所標照片方位建立。平面圖左側雙放料架，接上升送料架、中央門形沖孔主機、右側導輪與收料架；大飛輪及橘色側護罩在圖面下側。保留空料軸、雙缸與回位彈簧、上方導輪架、側控制台及固定橘色走台。位置、占地與角度跟隨目前 2D；最高約 3.15 m、各段比例及細部尺寸為照片估算，待量測。',
+    c11Feed:'雙放料架 · 入料',c11Press:'沖孔主機',c11Discharge:'收料架'
+  });
+  Object.assign(th,{
+    c11Photo:'C1-1 (เครื่องเจาะรู 1): สร้างตามทิศมองของภาพที่ลูกศรใน PDF ระบุ จากซ้ายแปลนเป็นชุดคลายม้วนคู่ ชุดป้อนลาดขึ้น เครื่องเจาะโครงซุ้มตรงกลาง ชุดลูกกลิ้งนำและม้วนเก็บด้านขวา ล้อช่วยแรงใหญ่และฝาข้างสีส้มอยู่ด้านล่างแปลน มีแกนเปล่า กระบอกคู่ สปริงคืน โครงลูกกลิ้งด้านบน คอนโซลข้างและทางเดินสีส้มติดเครื่อง ตำแหน่ง ขนาดฐานและมุมตาม 2D ปัจจุบัน สูงประมาณ 3.15 ม. สัดส่วนและรายละเอียดประมาณจากภาพ รอวัดจริง',
+    c11Feed:'ชุดคลายม้วนคู่ · ป้อนเข้า',c11Press:'เครื่องเจาะรู',c11Discharge:'ชุดม้วนเก็บ'
+  });
   zh.buildingRoof='外棚屋頂';th.buildingRoof='หลังคาอาคารต่อเติม';
   zh.engine='顯示引擎';th.engine='ตัวแสดงผล';
   zh.threeEngine='Three.js · 正交';th.threeEngine='Three.js · ออร์โธกราฟิก';
@@ -395,7 +403,7 @@
     }
     if(s===selected){ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='#ffe5a1';const path=new Path2D();s.points.forEach((p,i)=>i?path.lineTo(...project(p,z+.02)):path.moveTo(...project(p,z+.02)));path.closePath();ctx.stroke(path);ctx.setLineDash([]);}
     if(showCode && (labels || s===selected)){const center=s.points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]),p=project(center,z+(window.ChinChunPhotoModels?.height(s.item) || 2.5)+.2);ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#fff5d7';ctx.fillText(s.item.code,p[0],p[1]);}
-    if(detail)for(const marker of window.ChinChunPhotoModels?.markers(s.item) || []){
+    if(detail)for(const marker of [...(window.ChinChunPhotoModels?.markers(s.item) || []),...(window.ChinChunModels?.flowMarkers?.(s.item) || [])]){
       const p=project(marker.point,z+marker.point[2]);ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#18332e';ctx.strokeText(t(marker.key),...p);ctx.fillStyle='#fff5d7';ctx.fillText(t(marker.key),...p);
     }
     if(detail && dieSite && s.item.id===dieSite.item.id){
@@ -1027,7 +1035,7 @@
       dialog.querySelector('#twinDetails').textContent+='\n'+t('restroomNote');
       if(window.ChinChunModels?.restroomLayout?.(item)?.compact)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('restroomCompact');
     }
-    if(s?.model && s.type==='equipment' && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo','J1-3':'j13Photo','D1-1':'d11Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
+    if(s?.model && s.type==='equipment' && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','C1-1':'c11Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-2':'j12Photo','J1-3':'j13Photo','D1-1':'d11Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
     if(item && ['EVA 3','EVA3'].includes(referenceCode(item)))dialog.querySelector('#twinDetails').textContent+='\n'+t('eva3Deferred');
     if(item && referenceCode(item)==='DIE CUT' && !dieSite)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('dieCutDisconnected');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t(item.code==='RAMP-ANNEX-ENTRY'?'accessRamp':item.code==='RAMP-CONNECTOR'?'connectorNote':'ramp');

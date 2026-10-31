@@ -5,7 +5,7 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
+  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-2'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
   // Site relationship is a display overlay derived from live 2D, not another
   // equipment record or a mutation of the wall. Dimensions remain provisional.
   function dieCutSite(layout) {
@@ -1404,6 +1404,175 @@
     for(const z of [.49,.59])tube([3.96,.669,z],[3.96,.679,z],.025,z===.49?'#9e4935':'#5d9c68',10);
     return faces;
   }
+  function c11Point(item,[x,y,z]) {
+    const w=Math.max(.05,Number(item.width)||20.23),d=Math.max(.05,Number(item.height)||4.2);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const u=x/20.23*w-w/2,v=y/4.2*d-d/2;
+    return [(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
+  }
+  function flowMarkers(item) {
+    if(modelCode(item)!=='C1-1')return [];
+    return [['c11Feed',[2.7,2.05,2.1]],['c11Press',[10.85,.05,3.4]],['c11Discharge',[18.4,2.05,2.1]]]
+      .map(([key,point])=>({key,point:c11Point(item,point)}));
+  }
+  function buildC11(item) {
+    // 沖孔機一.pdf arrows locate the camera and its viewing direction, not
+    // material travel. Opposing photos establish CAD-left dual unwind, central
+    // press, CAD-right take-up; flywheel/guards face the plan's bottom (y+).
+    // Only permanent equipment: no stock rolls, scrap web, carts, green movable
+    // stands or the red building crane. Lengths and heights are photo estimates.
+    const faces=[],cream='#dfd6bb',chrome='#c4d2d2',steel='#879698',dark='#34413f';
+    const orange='#bf5735',deck='#a65b36',turquoise='#548c91',black='#28322f';
+    let section='unwind';
+    const face=(points,color,part)=>faces.push({points:points.map(p=>c11Point(item,p)),color,part,section});
+    function box(x,y,z,w,d,h,color=cream,part='frame') {
+      const p=[[x,y,z],[x+w,y,z],[x+w,y+d,z],[x,y+d,z],[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(i=>p[i]),color,part);
+    }
+    function tube(a,b,r,color=chrome,part='roller',n=16) {
+      const v=b.map((value,i)=>value-a[i]),len=Math.hypot(...v),u=v.map(value=>value/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);
+      const el=Math.hypot(...e);e=e.map(value=>value/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((value,j)=>value+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color,part);face(rb,color,part);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color,part));
+    }
+    function sidePlate(profile,y,d,color=cream,part='side-plate') {
+      const a=profile.map(([x,z])=>[x,y,z]),b=profile.map(([x,z])=>[x,y+d,z]);
+      face([...a].reverse(),color,part);face(b,color,part);
+      a.forEach((p,i)=>face([p,a[(i+1)%a.length],b[(i+1)%b.length],b[i]],color,part));
+    }
+    function motor(x,y,z,part='drive-motor') {
+      tube([x,y,z],[x,y+.32,z],.14,turquoise,part);
+      for(let yy=y+.04;yy<y+.30;yy+=.065)tube([x,yy,z],[x,yy+.018,z],.15,steel,part,12);
+      box(x-.10,y+.05,z+.10,.20,.18,.11,turquoise,part);
+      box(x-.16,y+.04,z-.22,.32,.26,.07,cream,'motor-foot');
+    }
+    function platform(x,w,y=.72,d=2.55,z=.12) {
+      box(x,y,z,w,d,.055,deck,'access-platform');
+      for(const xx of [x+.08,x+w-.16])for(const yy of [y+.08,y+d-.16])box(xx,yy,0,.08,.08,z,cream,'platform-leg');
+      // Sparse raised tread strips keep the fixed orange deck readable at scale.
+      for(let xx=x+.12;xx<x+w-.05;xx+=.24)box(xx,y+.08,z+.056,.014,d-.16,.006,'#c08259','deck-tread');
+    }
+    function console(x) {
+      const y=.10;
+      box(x-.10,y+.14,0,.22,.28,.65,cream,'console-pedestal');
+      sidePlate([[x-.32,.66],[x+.32,.66],[x+.32,.89],[x-.32,1.12]],y,.52,cream,'control-console');
+      for(const dx of [-.20,0,.20])for(const dy of [.11,.32]){
+        const z=1.12-(dx+.32)*.23/.64+.012;
+        tube([x+dx,y+dy,z],[x+dx+.006,y+dy,z+.028],.027,dx===.20?'#964632':'#426b52','control-button',8);
+      }
+      tube([x+.17,y+.42,.97],[x+.17,y+.42,.98],.074,dark,'console-fan',16);
+      box(x-.26,y+.32,.08,.52,.37,.34,turquoise,'hydraulic-reservoir');
+      tube([x-.04,y+.35,.49],[x+.19,y+.35,.49],.10,dark,'hydraulic-motor',12);
+    }
+    // Two independent serial unwind stations. Empty steel mandrels are machine
+    // geometry; the large white/black rolls visible in the photos are inventory.
+    for(const x of [1.35,4.0]) {
+      for(const y of [.76,3.08]) {
+        box(x-.85,y,0,1.7,.14,.11,cream,'unwind-base');
+        sidePlate([[x-.65,.11],[x+.64,.11],[x+.27,1.53],[x-.18,1.53]],y,.13,cream,'unwind-upright');
+        tube([x,y-.025,1.36],[x,y+.18,1.36],.12,steel,'unwind-bearing',12);
+      }
+      box(x-.70,.90,.12,.14,2.18,.12,cream,'unwind-crossmember');
+      tube([x,.66,1.36],[x,3.37,1.36],.07,chrome,'unwind-mandrel');
+      for(const xx of [x-.55,x+.42])tube([xx,.91,.70],[xx,3.08,.70],.095,chrome,'unwind-guide');
+      box(x-.18,3.23,.80,.31,.11,.81,orange,'unwind-drive-cover');
+      tube([x,3.37,1.36],[x,3.53,1.36],.11,dark,'unwind-brake',12);
+      console(x-.5);
+    }
+    platform(2.42,.64);platform(5.0,.64);
+    section='feed';
+    // Long open feed bridge rises from the unwind level to the press throat.
+    for(const y of [.80,3.12])sidePlate([[5.66,.14],[9.96,.14],[9.96,1.45],[9.42,1.45],[5.66,.72]],y,.10,cream,'inclined-feed-frame');
+    for(let i=0;i<12;i++){
+      const x=5.74+i*.375,z=.76+(x-5.74)/4.125*.64;
+      tube([x,.91,z],[x,3.12,z],.055,chrome,'inclined-feed-roller',12);
+    }
+    for(const x of [6.1,8.1,9.7])box(x,.87,.13,.10,2.30,.10,cream,'feed-crossmember');
+    section='press';
+    // Cream portal with a genuinely open working throat, two polished ram
+    // cylinders, four return springs, deep bed and an overhead drive motor.
+    for(const y of [.55,3.20]) {
+      box(10.10,y,0,1.60,.44,.16,cream,'press-foot');
+      box(10.25,y+.04,.16,1.28,.36,2.30,cream,'press-post');
+    }
+    box(10.25,.59,2.30,1.28,3.01,.34,cream,'press-header');
+    box(10.25,.96,.45,1.28,2.28,.40,cream,'press-bed');
+    box(10.16,.96,1.31,1.46,2.28,.11,steel,'press-table');
+    box(10.25,.96,1.61,1.28,2.28,.24,cream,'press-crosshead');
+    for(const y of [1.35,2.80]) {
+      tube([10.86,y,1.84],[10.86,y,2.04],.14,chrome,'ram-cylinder');
+      tube([10.86,y,2.04],[10.86,y,2.30],.061,steel,'ram-rod');
+      tube([10.86,y,2.27],[10.86,y,2.32],.17,chrome,'ram-flange');
+    }
+    for(const x of [10.47,11.27])for(const y of [1.04,3.08]){
+      tube([x,y,1.12],[x,y,2.14],.035,steel,'spring-guide',10);
+      // Open helical return springs, rather than opaque columns in the throat.
+      let prev=[x+.084,y,1.48];
+      for(let i=1;i<=48;i++){
+        const a=i*Math.PI/4,p=[x+.084*Math.cos(a),y+.084*Math.sin(a),1.48+i*.010];
+        tube(prev,p,.015,dark,'return-spring',6);prev=p;
+      }
+    }
+    // Flywheel is on the PDF's south/bottom side. An annular rim and three
+    // spokes leave visible openings; the orange belt housing sits behind it.
+    const cx=10.9,cz=1.86;
+    for(let i=0;i<32;i++){
+      const a=i*Math.PI/16,b=(i+1)*Math.PI/16;
+      for(const y of [3.68,3.84])face([[cx+.75*Math.cos(a),y,cz+.75*Math.sin(a)],[cx+.75*Math.cos(b),y,cz+.75*Math.sin(b)],[cx+.52*Math.cos(b),y,cz+.52*Math.sin(b)],[cx+.52*Math.cos(a),y,cz+.52*Math.sin(a)]],orange,'flywheel');
+      for(const [r,color] of [[.75,black],[.52,orange]])face([[cx+r*Math.cos(a),3.68,cz+r*Math.sin(a)],[cx+r*Math.cos(b),3.68,cz+r*Math.sin(b)],[cx+r*Math.cos(b),3.84,cz+r*Math.sin(b)],[cx+r*Math.cos(a),3.84,cz+r*Math.sin(a)]],color,'flywheel');
+    }
+    tube([cx,3.63,cz],[cx,3.89,cz],.17,dark,'flywheel-hub');
+    for(let i=0;i<3;i++){
+      const a=i*2*Math.PI/3;
+      tube([cx,3.76,cz],[cx+.59*Math.cos(a),3.76,cz+.59*Math.sin(a)],.095,orange,'flywheel-spoke',8);
+    }
+    box(11.68,3.50,.18,.28,.48,2.53,orange,'press-belt-guard');
+    box(10.57,2.90,2.64,.64,.60,.16,cream,'top-motor-mount');
+    tube([10.60,3.12,2.98],[11.20,3.12,2.98],.16,dark,'top-drive-motor',24);
+    for(let x=10.67;x<11.18;x+=.07)tube([x,3.12,2.98],[x+.02,3.12,2.98],.17,steel,'top-motor-fin',16);
+    box(10.18,1.06,2.41,.035,2.10,.09,dark,'press-light-housing');
+    box(10.14,1.10,2.43,.04,2.02,.045,'#f2f0d7','press-light');
+    box(10.18,3.28,1.90,.10,.17,.43,cream,'press-control');
+    for(const [z,color] of [[2.23,'#a4382e'],[2.10,'#4b8456'],[1.98,dark]])tube([10.16,3.36,z],[10.12,3.36,z],.035,color,'press-button',10);
+    platform(10.12,.65,3.81,.34,.30);
+    section='outfeed';
+    // Low driven roller cassettes and a distinct elevated return/guide frame.
+    // No sheet is stretched across the line: the openings remain visible.
+    for(const [x,z0,z1] of [[11.96,1.36,.85],[13.25,.85,1.24],[14.54,1.24,.88]]){
+      for(const y of [.80,3.12])sidePlate([[x,.13],[x+1.16,.13],[x+1.16,z1],[x,z0]],y,.10,cream,'output-roller-frame');
+      for(let i=0;i<4;i++){
+        const xx=x+.10+i*.31,z=z0+(xx-x)/1.16*(z1-z0);
+        tube([xx,.91,z],[xx,3.12,z],.065,chrome,'output-guide-roller');
+      }
+      motor(x+.18,3.29,.58);
+      box(x+.08,.84,.10,1.0,2.35,.10,cream,'output-base');
+    }
+    for(const x of [12.05,14.45])for(const y of [.65,3.30]){
+      box(x,y,.08,.08,.08,2.72,cream,'overhead-guide-post');
+      box(x-.08,y-.05,0,.24,.18,.08,cream,'guide-frame-foot');
+    }
+    for(const y of [.65,3.30])box(12.05,y,2.72,2.48,.08,.08,cream,'overhead-guide-rail');
+    for(const x of [12.18,13.28,14.38])tube([x,.73,2.72],[x,3.30,2.72],.075,chrome,'overhead-guide-roller');
+    for(const y of [1.12,2.70])box(12.12,y,2.58,2.28,.065,.07,'#eae9d6','overhead-light');
+    platform(15.74,.70);
+    section='rewind';
+    for(const y of [.76,3.10]) {
+      box(16.48,y,0,3.50,.16,.12,cream,'takeup-base');
+      sidePlate([[16.55,.12],[19.88,.12],[19.88,1.62],[19.55,1.62],[18.64,1.05],[16.55,1.05]],y,.13,cream,'takeup-upright');
+    }
+    for(const x of [16.68,18.12,19.72])box(x,.92,.12,.12,2.18,.10,cream,'takeup-crossmember');
+    for(const x of [16.80,17.34,17.88])tube([x,.91,1.03],[x,3.10,1.03],.105,chrome,'takeup-nip-roller',20);
+    tube([19.52,.64,1.46],[19.52,3.44,1.46],.065,chrome,'takeup-mandrel');
+    for(const y of [.72,3.10])tube([19.52,y,1.46],[19.52,y+.16,1.46],.12,steel,'takeup-bearing',12);
+    box(19.34,3.28,.79,.32,.16,.92,orange,'takeup-belt-guard');
+    sidePlate([[17.98,.12],[18.36,.12],[19.18,.78],[19.12,1.02],[18.90,1.02]],3.28,.16,orange,'takeup-drive-guard');
+    motor(18.5,3.48,.36,'takeup-motor');
+    console(18.5);
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'DIE CUT': return buildDieCut(item);
@@ -1411,6 +1580,7 @@
       case 'H1-1': return buildH1(item);
       case 'A1-1': return buildA1(item);
       case 'A1-2': return buildA12(item);
+      case 'C1-1': return buildC11(item);
       case 'F1-1': return buildF1(item);
       case 'G2-1': return buildG21(item);
       case 'G2-2': return buildG2(item);
@@ -1427,5 +1597,5 @@
       default: return window.ChinChunPhotoModels?.build(item) || null;
     }
   }
-  window.ChinChunModels = {matches,build,rotationOffset,referenceCode:modelCode,sectionMarkers,restroomLayout,dieCutSite,dieCutSiteFaces};
+  window.ChinChunModels = {matches,build,rotationOffset,referenceCode:modelCode,sectionMarkers,flowMarkers,restroomLayout,dieCutSite,dieCutSiteFaces};
 })();
