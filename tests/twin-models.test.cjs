@@ -55,6 +55,40 @@ test('G2-1 correction rigidly turns every vertex 180 degrees around the same CAD
   assert.equal(models.rotationOffset({code:'G2-2'}),0);
   assert.equal(models.rotationOffset({code:'Q2-3'}),-90);
 });
+test('N1-1 uses the PDF-mapped long slitter model inside its unchanged CAD footprint',()=>{
+  const item=Object.freeze({id:'eq_dc_n1_1',code:'N1-1',x:5.24,y:1.06,width:1.35,height:3.74,rotation:0});
+  const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);
+  assert.ok(models.matches(item));assert.ok(models.matches({code:' n1-1 '}));
+  assert.equal(JSON.stringify(item),before);assert.equal(models.rotationOffset(item),0);
+  assert.ok(faces.length>1200);
+  assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+  assert.ok(points.every(([x,y,z])=>x>=item.x-1e-9 && x<=item.x+item.width+1e-9 && y>=item.y-1e-9 && y<=item.y+item.height+1e-9 && z>=0 && z<=1.55+1e-9));
+  assert.equal(Math.min(...points.map(p=>p[2])),0);
+  assert.ok(Math.max(...points.map(p=>p[2]))>1.53);
+  for(const color of ['#d8d2bd','#c6d0d0','#9ba6a6','#333b3d','#a84b38','#38545a'])assert.ok(faces.some(f=>f.color===color));
+});
+test('N1-1 keeps an empty threaded mandrel, five fixed rollers and a separate control fascia',()=>{
+  const faces=models.build({code:'N1-1',x:0,y:0,width:1.35,height:3.74});
+  assert.ok(faces.filter(f=>f.part==='mandrel-thread').length>400);
+  assert.equal(faces.filter(f=>f.part==='chrome-roller').length,5*26);
+  assert.ok(faces.some(f=>f.part==='sliding-carriage'));
+  assert.ok(faces.some(f=>f.part==='handwheel'));
+  assert.equal(faces.filter(f=>f.part==='control-panel').length,1);
+  assert.ok(!faces.some(f=>['#272a31','#53565b','#62696b','#329cba'].includes(f.color)),'no material rolls or neighbouring machine colors');
+});
+test('N1-1 follows 2D movement, rotation and plan resizing without changing model height',()=>{
+  const item={code:'N1-1',x:0,y:0,width:1.35,height:3.74},original=models.build(item),resized=models.build({...item,width:2.7,height:5.61});
+  for(const rotation of [90,-90,180]) {
+    const turned=models.build({...item,rotation}),a=rotation*Math.PI/180;
+    original.forEach((face,i)=>face.points.forEach((p,j)=>{
+      const q=turned[i].points[j],r=resized[i].points[j];
+      assert.ok(Math.abs(q[0]-(.675+(p[0]-.675)*Math.cos(a)-(p[1]-1.87)*Math.sin(a)))<1e-9);
+      assert.ok(Math.abs(q[1]-(1.87+(p[0]-.675)*Math.sin(a)+(p[1]-1.87)*Math.cos(a)))<1e-9);
+      assert.equal(q[2],p[2]);assert.equal(r[2],p[2]);
+      assert.ok(Math.abs(r[0]-2*p[0])<1e-9 && Math.abs(r[1]-1.5*p[1])<1e-9);
+    }));
+  }
+});
 test('J1-1 and J1-2 share one photo model while preserving their own CAD records',()=>{
   const item=Object.freeze({id:'eq_vcut1_j1_2',code:'J1-2',x:75.25,y:35.34,width:4.45,height:4.57,rotation:0});
   const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);

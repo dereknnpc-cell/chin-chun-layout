@@ -5,7 +5,7 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
+  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
   // Site relationship is a display overlay derived from live 2D, not another
   // equipment record or a mutation of the wall. Dimensions remain provisional.
   function dieCutSite(layout) {
@@ -1311,6 +1311,87 @@
     }
     return faces;
   }
+  function buildN11(item) {
+    // PDF arrows identify these owner photos as N1-1. The permanent machine
+    // is the long cream slitter/rewinder only: stock rolls, tape, paper cores,
+    // desk, grinder and the neighbouring cutting table are all excluded.
+    const faces=[],cream='#d8d2bd',chrome='#c6d0d0',steel='#9ba6a6',dark='#333b3d';
+    const red='#a84b38',panel='#706d68',black='#252a2b',screen='#38545a';
+    const w=Math.max(.05,Number(item.width)||1.35),d=Math.max(.05,Number(item.height)||3.74);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{
+      const u=x/1.35*w-w/2,v=y/3.74*d-d/2;
+      return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];
+    };
+    const face=(points,color,part)=>faces.push({points:points.map(world),color,part});
+    function box(x,y,z,bw,bd,bh,color=cream,part='frame') {
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]].forEach(ids=>face(ids.map(i=>p[i]),color,part));
+    }
+    function tube(p0,p1,r,color=chrome,n=16,part='roller') {
+      const v=p1.map((value,i)=>value-p0[i]),len=Math.hypot(...v),u=v.map(value=>value/len);
+      const cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);
+      const el=Math.hypot(...e);e=e.map(value=>value/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((value,j)=>value+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(p0),rb=ring(p1);face([...ra].reverse(),color,part);face(rb,color,part);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color,part));
+    }
+    function wheel(x,y,z,r,part='handwheel') {
+      tube([x,y-.035,z],[x,y+.035,z],.025,dark,12,part);
+      for(let i=0;i<16;i++) {
+        const a=i*Math.PI/8,b=(i+1)*Math.PI/8;
+        tube([x+r*Math.cos(a),y,z+r*Math.sin(a)],[x+r*Math.cos(b),y,z+r*Math.sin(b)],.011,dark,6,part);
+        if(i%4===0)tube([x,y,z],[x+r*.94*Math.cos(a),y,z+r*.94*Math.sin(a)],.008,dark,6,part);
+      }
+    }
+    // Low chassis and two cream cabinet doors, with the plan long-axis kept
+    // aligned to the live N1-1 footprint.
+    for(const x of [.10,1.13])box(x,.22,0,.12,3.28,.10,steel,'base-rail');
+    for(const y of [.22,3.38])box(.10,y,.04,1.15,.12,.13,steel,'base-crossmember');
+    box(.16,.40,.12,1.03,2.94,.64,cream,'cabinet');
+    for(const y of [.43,1.90]) {
+      box(.145,y,.18,.012,1.38,.51,'#c9c2ac','cabinet-door');
+      for(const yy of [y+.20,y+.43,y+.66,y+.89])box(.132,yy,.28,.012,.14,.025,steel,'vent');
+    }
+    box(.20,.43,.78,.95,2.90,.08,cream,'roller-bed');
+    // Permanent polished rollers and rails are exposed above the cabinet.
+    for(const [x,z,r] of [[.24,.89,.065],[.42,.97,.082],[.60,1.02,.07],[.79,.94,.06],[.99,.87,.055]]) {
+      tube([x,.34,z],[x,3.40,z],r,chrome,24,'chrome-roller');
+      for(const y of [.31,3.37])box(x-.075,y,z-.08,.15,.13,.16,dark,'roller-bearing');
+    }
+    for(const x of [.30,.94])tube([x,.31,.76],[x,3.43,.76],.025,steel,14,'slide-rail');
+    box(.23,.62,.70,.87,.08,.09,black,'long-slot');
+    box(.23,3.04,.70,.87,.08,.09,black,'long-slot');
+    // The photo's long threaded mandrel remains empty; no core or product roll.
+    tube([.68,.23,1.42],[.68,3.51,1.42],.034,steel,20,'threaded-mandrel');
+    for(let y=.30;y<3.48;y+=.12)tube([.68,y,1.42],[.68,Math.min(y+.018,3.50),1.42],.044,dark,14,'mandrel-thread');
+    box(.50,1.26,1.29,.36,.40,.18,cream,'sliding-carriage');
+    box(.54,1.31,1.45,.28,.30,.06,dark,'sliding-clamp');
+    tube([.45,1.46,1.52],[.91,1.46,1.52],.025,steel,14,'carriage-handle');
+    // End cheeks and the two adjustment wheels hold the roller bank.
+    for(const y of [.18,3.43]) {
+      box(.14,y,.66,1.06,.13,.59,cream,'end-cheek');
+      box(.19,y-.012,.83,.96,.012,.28,'#c5bfa9','end-cover');
+    }
+    wheel(.18,.12,1.10,.115);wheel(1.12,3.62,1.08,.10);
+    // The sloped red control fascia is at the PDF-photo control end.
+    const lower=.83,upper=1.21,near=.08,far=.48;
+    face([[.16,near,lower],[1.18,near,lower],[1.18,far,upper],[.16,far,upper]],red,'control-panel');
+    face([[.16,near,lower-.05],[.16,far,upper-.05],[1.18,far,upper-.05],[1.18,near,lower-.05]],cream,'control-console');
+    face([[.16,near,lower-.05],[.16,near,lower],[.16,far,upper],[.16,far,upper-.05]],cream,'control-console');
+    face([[1.18,near,lower-.05],[1.18,far,upper-.05],[1.18,far,upper],[1.18,near,lower]],cream,'control-console');
+    face([[.16,near,lower-.05],[1.18,near,lower-.05],[1.18,near,lower],[.16,near,lower]],cream,'control-console');
+    face([[.16,far,upper-.05],[.16,far,upper],[1.18,far,upper],[1.18,far,upper-.05]],cream,'control-console');
+    const panelZ=y=>lower+(y-near)*(upper-lower)/(far-near)+.008;
+    face([[.49,.14,panelZ(.14)],[.83,.14,panelZ(.14)],[.83,.23,panelZ(.23)],[.49,.23,panelZ(.23)]],screen,'display');
+    for(const [x,y,color] of [[.36,.31,'#b64032'],[.52,.31,'#3a7d4f'],[.68,.31,'#d2ad3c'],[.84,.31,'#b64032'],[1.00,.31,'#3a7d4f']])
+      tube([x,y-.006,panelZ(y)],[x,y+.006,panelZ(y)+.012],.022,color,10,'control-button');
+    box(1.19,.12,.30,.13,.58,.42,black,'side-tray');
+    box(.18,3.45,.18,1.02,.16,.43,panel,'rear-service-box');
+    tube([.22,3.53,.49],[1.15,3.53,.49],.035,steel,16,'rear-shaft');
+    return faces;
+  }
   function buildJ12(item) {
     // Four owner photos: broad sliding worktable, open cream portal, a long
     // aluminium fence and exposed under-table rails. No foam, pallet or carts.
@@ -1595,6 +1676,7 @@
       case 'Q2-3': return buildQ23(item);
       case 'J1-1':
       case 'J1-2': return buildJ12(item);
+      case 'N1-1': return buildN11(item);
       default: return window.ChinChunPhotoModels?.build(item) || null;
     }
   }
