@@ -94,3 +94,14 @@ test('live scene cuts only the discharge aperture, preserving the sill, lintel a
   assert.equal(c.dieSite,null);assert.ok(c.dieGround,'rotation does not drop the machine from the filled ground');
   assert.equal(c.scene.filter(s=>s.type==='wall').length,1,'no false connection when turned away');
 });
+
+test('photo-based compressor and workstation can follow independent 2D placement',()=>{
+  const compressor={id:'air',code:'COMPRESSOR-DIECUT',x:60,y:41,width:1.8,height:.8};
+  const desk={id:'desk',code:'DESK-DIECUT',x:62,y:41,width:1.2,height:1.1};
+  for(const [record,parts] of [[compressor,['air-tank','compressor-pump','motor','belt-guard']],[desk,['desk-top','monitor-screen','chair-seat']]]){
+    const before=JSON.stringify(record), faces=models.build(record), moved=models.build({...record,x:record.x+2,y:record.y+3});
+    assert.ok(models.matches(record)); for(const part of parts)assert.ok(faces.some(f=>f.part===part),part);
+    faces.forEach((f,i)=>f.points.forEach((p,j)=>{near(moved[i].points[j][0],p[0]+2);near(moved[i].points[j][1],p[1]+3);near(moved[i].points[j][2],p[2]);}));
+    assert.equal(JSON.stringify(record),before);
+  }
+});

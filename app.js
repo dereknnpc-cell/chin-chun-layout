@@ -4586,6 +4586,31 @@
       working={...candidate,equipment,source_geometry_revision:SOURCE_GEOMETRY_REVISION};
       accessoriesAdded=true;
     }
+    // Add the two photo-confirmed accessories once, only on the known original
+    // Die Cut / J1-3 arrangement. Keep any existing position unless more room is needed.
+    if(working.source_geometry_revision==='2026-layout-for-ai-eps-v1.2-r4-desk-rotation' && !working.diecut_accessories_20261103 && Array.isArray(working.equipment)){
+      const die=working.equipment.find(q=>q.id==='eq_diecut_sub' && q.code==='Die Cut');
+      const vcut=working.equipment.find(q=>q.id==='eq_vcut3_j1_3' && q.code==='J1-3');
+      const valid=q=>q && ['x','y','width','height'].every(k=>Number.isFinite(Number(q[k]))) && Number(q.width)>0 && Number(q.height)>0 && !(Number(q.rotation)||0) && (q.floor || '1F')==='1F';
+      const known=valid(die) && valid(vcut) && Number(die.x)>=50 && Number(die.x)<65 && Number(die.y)>=40 && Number(die.y)<44 && Number(vcut.x)>Number(die.x) && Number(vcut.x)<70 && Number(vcut.y)>=40 && Number(vcut.y)<44;
+      const ids=new Set(working.equipment.map(q=>q.id));
+      if(known && !ids.has('eq_diecut_compressor') && !ids.has('eq_diecut_desk')){
+        const round=v=>Math.round(v*1000)/1000;
+        const airX=round(Number(die.x)+Number(die.width)+.15), deskX=round(airX+1.9), vcutX=round(Math.max(Number(vcut.x),deskX+1.4));
+        const additions=[
+          {id:'eq_diecut_compressor',code:'COMPRESSOR-DIECUT',name:'自動裁斷機空壓機',zone:'Cutting',color:'#008e78',floor:'1F',x:airX,y:40.15,width:1.8,height:.8,category:'Tool',rotation:0,geometryAccuracy:'PDF-photo-estimate'},
+          {id:'eq_diecut_desk',code:'DESK-DIECUT',name:'自動裁斷機辦公桌',zone:'Cutting',color:'#8B5E3C',floor:'1F',x:deskX,y:40.15,width:1.2,height:1.1,category:'Office',rotation:0,geometryAccuracy:'PDF-photo-estimate'}
+        ];
+        const proposed=[...additions,{...vcut,x:vcutX}];
+        const others=working.equipment.filter(q=>q!==die && q!==vcut && (q.floor || '1F')==='1F' && Number(q.width)>0 && Number(q.height)>0 && !['Door','Window'].includes(q.category));
+        const bounds=q=>{const a=(Number(q.rotation)||0)*Math.PI/180,w=Number(q.width),h=Number(q.height),cx=Number(q.x)+w/2,cy=Number(q.y)+h/2,bw=Math.abs(w*Math.cos(a))+Math.abs(h*Math.sin(a)),bh=Math.abs(w*Math.sin(a))+Math.abs(h*Math.cos(a));return [cx-bw/2,cy-bh/2,cx+bw/2,cy+bh/2];};
+        const overlap=(a,b)=>{const x=bounds(a),y=bounds(b);return x[0]<y[2] && x[2]>y[0] && x[1]<y[3] && x[3]>y[1];};
+        if(!proposed.some(q=>others.some(o=>overlap(q,o)))){
+        working={...working,diecut_accessories_20261103:{source:'自動裁斷機位置.pdf',previousVcut:{x:vcut.x,y:vcut.y},accuracy:'photo-estimate'},equipment:[...working.equipment.map(q=>q===vcut?{...q,x:vcutX}:q),...additions]};
+        accessoriesAdded=true;
+        }
+      }
+    }
     // Fix the three confirmed dock shutters to their 15 m host wall. Run once
     // per document and never replace any unrelated wall or equipment records.
     const dockIds=['door_1789543247410','door_1789543258711','door_1789543264240'];

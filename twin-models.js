@@ -5,7 +5,7 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'EVA 3', 'EVA3', 'C1-1', 'C1-2', 'T CUT 1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
+  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'EVA 3', 'EVA3', 'C1-1', 'C1-2', 'T CUT 1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT', 'COMPRESSOR-DIECUT', 'DESK-DIECUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
   // Site relationship is a display overlay derived from live 2D, not another
   // equipment record or a mutation of the wall. Dimensions remain provisional.
   function dieCutSite(layout) {
@@ -1426,6 +1426,33 @@
     box(.50,.25,.84,.10,.05,.06,'#242a29','power-switch');
     return faces;
   }
+  // Photo-based Fusheng compressor; dimensions follow its editable 2D footprint.
+  function buildDieCutCompressor(item) {
+    const faces=[], w=Math.max(.05,Number(item.width)||1.8), d=Math.max(.05,Number(item.height)||.8);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{const u=x/1.8*w-w/2,v=y/.8*d-d/2;return [(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];};
+    const face=(points,color,part)=>faces.push({points:points.map(world),color,part});
+    function box(x,y,z,bw,bd,bh,color,part){
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(i=>p[i]),color,part);
+    }
+    function cylinder(x0,x1,y,z,r,color,part){
+      const rings=[x0,x1].map(x=>Array.from({length:20},(_,i)=>[x,y+r*Math.cos(i*Math.PI/10),z+r*Math.sin(i*Math.PI/10)]));
+      face([...rings[0]].reverse(),color,part);face(rings[1],color,part);
+      rings[0].forEach((p,i)=>face([p,rings[0][(i+1)%20],rings[1][(i+1)%20],rings[1][i]],color,part));
+    }
+    const teal='#008e78',dark='#273c3c',steel='#899994';
+    for(const y of [.13,.59])box(.05,y,0,1.70,.08,.12,'#70543c','pallet');
+    for(const x of [.25,1.45])box(x,.18,.12,.10,.44,.10,steel,'tank-foot');
+    cylinder(.12,1.68,.40,.48,.29,teal,'air-tank');
+    box(.31,.25,.77,.58,.30,.17,teal,'compressor-pump');
+    for(const x of [.35,.52,.69])box(x,.28,.94,.12,.23,.19,dark,'pump-cylinder');
+    box(1.09,.27,.77,.39,.28,.28,'#7e8c8a','motor');
+    for(const x of [.31,.53,.75,1.22])cylinder(x,x+.07,.19,1.04,.085,dark,'pulley');
+    box(.28,.48,.90,1.25,.035,.38,'#3a5652','belt-guard');
+    box(1.52,.13,.74,.16,.12,.28,'#e0daca','control-box');
+    return faces;
+  }
   function buildCuttingDesk(item) {
     // The PDF arrow points to this office station left of N1-1.  It is a
     // separate selectable furniture object: desk, monitor, keyboard and chair
@@ -1874,7 +1901,9 @@
       case 'J1-1':
       case 'J1-2': return buildJ12(item);
       case 'N1-1': return buildN11(item);
-      case 'DESK-CUT': return buildCuttingDesk(item);
+      case 'DESK-CUT':
+      case 'DESK-DIECUT': return buildCuttingDesk(item);
+      case 'COMPRESSOR-DIECUT': return buildDieCutCompressor(item);
       case 'GRINDER-CUT': return buildCuttingGrinder(item);
       default: return window.ChinChunPhotoModels?.build(item) || null;
     }
