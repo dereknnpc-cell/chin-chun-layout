@@ -201,7 +201,7 @@
         }));
       }
       if(floor==='1F' && Math.abs(dy)<.01){
-        (data.equipment || []).filter(q=>isOfficeEntry(q) || (item.id==='wall_11' && isDockShutter(q))).forEach(q=>{
+        (data.equipment || []).filter(q=>isOfficeEntry(q) || q.id==='door_1789543393984' || (item.id==='wall_11' && isDockShutter(q))).forEach(q=>{
           const door=rect(q),xs=door.map(p=>p[0]),ys=door.map(p=>p[1]);
           if(Math.abs((Math.min(...ys)+Math.max(...ys))/2-n(item.y1))<.4)
             cuts.push([(Math.min(...xs)-n(item.x1))/dx,(Math.max(...xs)-n(item.x1))/dx]);
@@ -209,6 +209,10 @@
       }
       const opening=dieSite?.wall.id===item.id?dieSite.opening:null;
       if(opening)cuts.push([(opening.x-n(item.x1))/dx,(opening.x+opening.width-n(item.x1))/dx]);
+      // Only the photo-mapped X10–X11 office portions get the glazed facade.
+      const officeNorth=item.id==='wall_15' && Math.abs(dy)<.01 && Math.abs(n(item.y1)-30)<.01 && n(item.x1)<45 && n(item.x2)>=50;
+      const officeEast=item.id==='wall_1789539415779' && Math.abs(dx)<.01 && Math.abs(n(item.x1)-50)<.01 && n(item.y1)===30 && n(item.y2)===40;
+      if(officeNorth)segments=[[0,(45-n(item.x1))/dx],[(45-n(item.x1))/dx,1]];
       for(const cut of cuts){
         const lo=Math.min(...cut),hi=Math.max(...cut);
         if(hi<=0 || lo>=1)continue;
@@ -220,6 +224,7 @@
       segments.forEach(([start,end],index)=>{
         const p=(t,side)=>[n(item.x1)+dx*t+a*side,n(item.y1)+dy*t+b*side];
         add(index?{...item,id:`${item.id}_part_${index}`}:item,'wall',[p(start,1),p(end,1),p(end,-1),p(start,-1)],item.type==='exterior'?2.8:2.4,'#ddd4b9');
+        if(officeEast || (officeNorth && n(item.x1)+dx*start>=44.99))scene.at(-1).officeGlazing=true;
       });
       if(opening){
         const lo=(opening.x-n(item.x1))/dx,hi=(opening.x+opening.width-n(item.x1))/dx;
@@ -466,6 +471,18 @@
     ctx.fillStyle='#263a35';ctx.globalAlpha=.35;ctx.fill(path);ctx.globalAlpha=1;
   }
   function wallFaces(s) {
+    if(s.officeGlazing){
+      const [a,b,c,d]=s.points, length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      const point=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
+      const strip=(from,to)=>[point(a,b,from),point(a,b,to),point(d,c,to),point(d,c,from)];
+      const frames=[];
+      frames.push(...blockFaces(s,strip(0,1),0,.85,'#aeb4ae'));
+      frames.push(...blockFaces(s,strip(0,1),1.65,1.71,'#b8c3bf'));
+      frames.push(...blockFaces(s,strip(0,1),2.34,2.4,'#b8c3bf'));
+      const count=Math.max(1,Math.ceil(length/1.25)),bar=Math.min(.025, .055/Math.max(length,.01));
+      for(let i=0;i<=count;i++){const t=i/count;frames.push(...blockFaces(s,strip(Math.max(0,t-bar),Math.min(1,t+bar)),.85,2.4,'#b8c3bf'));}
+      return frames;
+    }
     const [a,b,c,d]=s.points,length=Math.hypot(b[0]-a[0],b[1]-a[1]);
     const count=Math.max(1,Math.ceil(length/2));
     const lerp=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
@@ -521,6 +538,11 @@
     return faces;
   }
   function doorFaces(s) {
+    if(s.item.id==='door_1789543393984'){
+      const [a,b,c,d]=s.points,lerp=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
+      const strip=(lo,hi)=>[lerp(a,b,lo),lerp(a,b,hi),lerp(d,c,hi),lerp(d,c,lo)];
+      return [...blockFaces(s,strip(0,.07),0,2.1,'#bdc9c4'),...blockFaces(s,strip(.93,1),0,2.1,'#bdc9c4'),...blockFaces(s,strip(0,1),2.03,2.1,'#bdc9c4'),...blockFaces(s,strip(0,1),0,.06,'#bdc9c4')];
+    }
     const roll=/ROLL/i.test(s.item.code || ''),bottom=s.points.map(p=>[...p,0]),top=s.points.map(p=>[...p,s.z]),faces=[];
     for(let i=0;i<4;i++){
       const j=(i+1)%4;
@@ -605,6 +627,8 @@
     return faces;
   }
   function equipmentFaces(s) {
+    // Office is an area label on the plan, not a solid 0.9 m cabinet over the desks.
+    if(s.item.id==='eq_office' && Math.abs(n(s.item.x)-45)<.1 && Math.abs(n(s.item.y)-30)<.1)return [];
     const hasBase=!/Window|Furniture|Office/.test(s.item.category || '');
     const faces=hasBase?equipmentBaseFaces(s):[];
     const [a,b,,d]=s.points;
