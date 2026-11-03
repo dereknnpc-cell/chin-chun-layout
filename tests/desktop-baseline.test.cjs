@@ -11,9 +11,15 @@ const old=JSON.parse(read('baselines/legacy-default-55.json'));
 const window={};vm.runInNewContext(read('desktop-baseline.js'),{window});
 function storage(){const entries=new Map();return {entries,getItem:key=>entries.get(key)??null,setItem:(key,v)=>entries.set(key,v)};}
 
-test('the byte-preserved confirmed desktop export supplies all drawing records, not the obsolete 55-machine baseline',()=>{
-  assert.equal(desktop.equipment.length,108);assert.equal(desktop.walls.length,35);
-  for(const key of ['equipment','walls','columns','aisles','flows','equipment_2f','mezzanine_2f','grid','layer_settings'])assert.deepEqual(desktop[key],raw[key],key);
+test('the byte-preserved desktop export stays intact and the two PDF-mapped cutting accessories append independently',()=>{
+  assert.equal(desktop.equipment.length,110);assert.equal(desktop.walls.length,35);
+  for(const key of ['walls','columns','aisles','flows','equipment_2f','mezzanine_2f','grid','layer_settings'])assert.deepEqual(desktop[key],raw[key],key);
+  assert.deepEqual(desktop.equipment.slice(0,raw.equipment.length),raw.equipment,'all 108 confirmed equipment records remain unchanged and in order');
+  assert.deepEqual(desktop.equipment.slice(raw.equipment.length).map(q=>[q.id,q.code,q.x,q.y,q.width,q.height]),[
+    ['eq_cutting_office_desk','DESK-CUT',1.1,.55,2.4,1.9],
+    ['eq_cutting_bench_grinder','GRINDER-CUT',7.95,.55,1.1,.9]
+  ]);
+  assert.equal(desktop.source_geometry_revision,'2026-layout-for-ai-eps-v1.2-r3-cutting-accessories');
   assert.equal(desktop.baseline_origin.sha256,crypto.createHash('sha256').update(rawText).digest('hex'));
   assert.equal(desktop.equipment.find(q=>q.code==='D1-1').width,12);
   assert.ok(!desktop.equipment.some(q=>q.code==='PL-3'));
@@ -39,14 +45,26 @@ test('full/disabled/corrupted backup storage prevents replacement; malformed des
   assert.throws(()=>window.ChinChunDesktop.prepare(current,{},storage()));assert.equal(JSON.stringify(current),before);
 });
 
-test('local, imported and cloud revisions never silently replace unknown or edited drawing geometry',()=>{
+test('local, imported and cloud revisions append accessories only to r2 while preserving every prior drawing record',()=>{
   const section=source.slice(source.indexOf('  function applySourceGeometryRevision('),source.indexOf('  // --- State Variables ---'));
   const ctx={window:{},SOURCE_GEOMETRY_REVISION:desktop.source_geometry_revision};vm.createContext(ctx);vm.runInContext(section,ctx);
-  for(const candidate of [plain(old),{...plain(raw),source_geometry_revision:'older-user-revision'}, {...plain(raw),baseline_revision:'future-desktop'}]){
+  for(const candidate of [
+    {...plain(old),source_geometry_revision:'legacy-user-revision'},
+    {...plain(raw),source_geometry_revision:'older-user-revision'}
+  ]){
     candidate.equipment[0].x=8.713;candidate.walls.push({id:'user-wall',x1:1,y1:2,x2:4,y2:2});
     const before=JSON.stringify(candidate),result=ctx.applySourceGeometryRevision(candidate);
     assert.equal(result.layout,candidate);assert.equal(result.migrated,false);assert.equal(JSON.stringify(candidate),before);
   }
+  const candidate={...plain(raw),baseline_revision:'future-desktop'};
+  candidate.equipment[0].x=8.713;candidate.walls.push({id:'user-wall',x1:1,y1:2,x2:4,y2:2});
+  const before=plain(candidate),result=ctx.applySourceGeometryRevision(candidate);
+  assert.notEqual(result.layout,candidate);assert.equal(result.migrated,true);assert.equal(result.accessoriesAdded,true);
+  assert.deepEqual(plain(result.layout.equipment.slice(0,before.equipment.length)),before.equipment);
+  assert.deepEqual(plain(result.layout.walls),before.walls);
+  for(const key of Object.keys(before).filter(k=>!['equipment','source_geometry_revision'].includes(k)))assert.deepEqual(plain(result.layout[key]),before[key],key);
+  assert.deepEqual(plain(result.layout.equipment.slice(-2).map(q=>q.id)),['eq_cutting_office_desk','eq_cutting_bench_grinder']);
+  assert.equal(result.layout.source_geometry_revision,desktop.source_geometry_revision);
   assert.ok(!section.includes('INITIAL_LAYOUT.equipment'));assert.ok(!section.includes('INITIAL_LAYOUT.walls'));
   const reload=source.slice(source.indexOf('    const forceReloadBtn ='),source.indexOf("    document.getElementById('loadDesktopBaselineBtn')"));
   assert.ok(!reload.includes('removeItem'),'refresh must preserve local drawing and custom library');

@@ -1,7 +1,7 @@
 /* Explicit, recoverable desktop-baseline loading. Never auto-replace a saved/cloud drawing. */
 (() => {
   'use strict';
-  const revision='desktop-confirmed-20261023';
+  const revision='desktop-confirmed-20261103';
   const clone=value=>JSON.parse(JSON.stringify(value));
   function prepare(current,desktop,storage,stamp=new Date().toISOString()) {
     if(desktop?.baseline_revision!==revision || !Array.isArray(desktop.equipment) || !Array.isArray(desktop.walls))throw new Error('Invalid desktop baseline');

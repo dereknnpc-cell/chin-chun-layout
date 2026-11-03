@@ -5,7 +5,7 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
+  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
   // Site relationship is a display overlay derived from live 2D, not another
   // equipment record or a mutation of the wall. Dimensions remain provisional.
   function dieCutSite(layout) {
@@ -1392,6 +1392,82 @@
     tube([.22,3.53,.49],[1.15,3.53,.49],.035,steel,16,'rear-shaft');
     return faces;
   }
+  function buildCuttingGrinder(item) {
+    // Independent bench grinder located by the corrected PDF arrow.  The red
+    // table and bucket shown in both owner photos are retained; nearby N1-1,
+    // tape rolls, bins and loose material are not part of this object.
+    const faces=[],steel='#aeb5b3',motor='#8f9693',dark='#3d4443',table='#9d4e3b',wheel='#75584f',cream='#d8d2c4';
+    const w=Math.max(.05,Number(item.width)||1.1),d=Math.max(.05,Number(item.height)||.9);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{const u=x/1.1*w-w/2,v=y/.9*d-d/2;return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];};
+    const face=(points,color,part)=>faces.push({points:points.map(world),color,part});
+    function box(x,y,z,bw,bd,bh,color=steel,part='frame'){
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(i=>p[i]),color,part);
+    }
+    function tube(p0,p1,r,color=steel,n=18,part='cylinder'){
+      const v=p1.map((q,i)=>q-p0[i]),len=Math.hypot(...v),u=v.map(q=>q/len),cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);const el=Math.hypot(...e);e=e.map(q=>q/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((q,j)=>q+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(p0),rb=ring(p1);face([...ra].reverse(),color,part);face(rb,color,part);ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color,part));
+    }
+    box(.07,.08,.72,.96,.70,.06,table,'table-top');
+    for(const x of [.10,.92])for(const y of [.11,.67])box(x,y,0,.08,.08,.72,dark,'table-leg');
+    for(const y of [.13,.65])box(.13,y,.23,.82,.05,.05,dark,'table-brace');
+    tube([.55,.45,0],[.55,.45,.53],.17,cream,20,'bucket');
+    tube([.36,.43,1.03],[.74,.43,1.03],.17,motor,24,'grinder-motor');
+    tube([.24,.43,1.03],[.86,.43,1.03],.035,dark,16,'grinder-shaft');
+    for(const [x,side] of [[.22,-1],[.88,1]]){
+      tube([x-.045*side,.43,1.03],[x+.035*side,.43,1.03],.245,steel,24,'wheel-guard');
+      tube([x+.037*side,.43,1.03],[x+.070*side,.43,1.03],.205,wheel,24,'grinding-wheel');
+      box(x-.13,.24,.77,.26,.11,.055,dark,'tool-rest');
+    }
+    box(.46,.34,.79,.18,.18,.08,dark,'motor-base');
+    box(.50,.25,.84,.10,.05,.06,'#242a29','power-switch');
+    return faces;
+  }
+  function buildCuttingDesk(item) {
+    // The PDF arrow points to this office station left of N1-1.  It is a
+    // separate selectable furniture object: desk, monitor, keyboard and chair
+    // only; the covered cutting table, stock and loose papers are excluded.
+    const faces=[],wood='#7b543d',edge='#5c3b2b',black='#252a2b',metal='#7d8585',screen='#274f59',seat='#34383a';
+    const w=Math.max(.05,Number(item.width)||2.4),d=Math.max(.05,Number(item.height)||1.9);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{const u=x/2.4*w-w/2,v=y/1.9*d-d/2;return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];};
+    const face=(points,color,part)=>faces.push({points:points.map(world),color,part});
+    function box(x,y,z,bw,bd,bh,color=wood,part='desk'){
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(i=>p[i]),color,part);
+    }
+    function tube(p0,p1,r,color=metal,n=14,part='tube'){
+      const v=p1.map((q,i)=>q-p0[i]),len=Math.hypot(...v),u=v.map(q=>q/len),cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);const el=Math.hypot(...e);e=e.map(q=>q/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((q,j)=>q+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(p0),rb=ring(p1);face([...ra].reverse(),color,part);face(rb,color,part);ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color,part));
+    }
+    box(.16,.16,.72,1.72,.67,.065,wood,'desk-top');
+    box(.18,.19,0,.46,.60,.72,wood,'drawer-pedestal');
+    for(const z of [.18,.36,.54]){box(.16,.15,z,.50,.035,.14,edge,'drawer-front');box(.385,.125,z+.06,.05,.025,.015,metal,'drawer-handle');}
+    box(1.72,.19,0,.12,.60,.72,edge,'desk-leg');
+    box(.58,.22,.24,1.15,.055,.41,edge,'modesty-panel');
+    tube([1.12,.43,.78],[1.12,.43,.91],.025,metal,12,'monitor-stand');
+    box(.82,.34,.90,.60,.07,.38,black,'monitor-frame');
+    box(.86,.332,.94,.52,.012,.29,screen,'monitor-screen');
+    box(.78,.60,.79,.66,.18,.025,'#4b5051','keyboard');
+    box(1.93,.18,0,.33,.58,.70,wood,'side-cabinet');
+    box(1.95,.16,.46,.29,.03,.15,edge,'side-drawer');
+    // Chair occupies the open front half of the independently selectable set.
+    tube([1.10,1.35,.08],[1.10,1.35,.47],.035,metal,14,'chair-column');
+    for(let i=0;i<5;i++){
+      const q=i*2*Math.PI/5,ex=1.10+.34*Math.cos(q),ey=1.35+.34*Math.sin(q);
+      tube([1.10,1.35,.10],[ex,ey,.06],.018,metal,10,'chair-base');
+      tube([ex,ey,.045],[ex,ey,.075],.04,black,10,'chair-caster');
+    }
+    box(.78,1.03,.47,.64,.52,.10,seat,'chair-seat');
+    box(.82,1.46,.58,.56,.09,.54,seat,'chair-back');
+    for(const x of [.82,1.36])tube([x,1.47,.48],[x,1.50,.72],.018,metal,10,'chair-back-support');
+    return faces;
+  }
   function buildJ12(item) {
     // Four owner photos: broad sliding worktable, open cream portal, a long
     // aluminium fence and exposed under-table rails. No foam, pallet or carts.
@@ -1677,6 +1753,8 @@
       case 'J1-1':
       case 'J1-2': return buildJ12(item);
       case 'N1-1': return buildN11(item);
+      case 'DESK-CUT': return buildCuttingDesk(item);
+      case 'GRINDER-CUT': return buildCuttingGrinder(item);
       default: return window.ChinChunPhotoModels?.build(item) || null;
     }
   }

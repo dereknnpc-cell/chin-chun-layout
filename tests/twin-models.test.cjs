@@ -89,6 +89,34 @@ test('N1-1 follows 2D movement, rotation and plan resizing without changing mode
     }));
   }
 });
+test('PDF-mapped cutting desk and grinder are separate selectable models inside their own CAD footprints',()=>{
+  const cases=[
+    {id:'eq_cutting_office_desk',code:'DESK-CUT',x:1.1,y:.55,width:2.4,height:1.9,maxZ:1.28,minFaces:170,parts:['desk-top','drawer-pedestal','monitor-screen','keyboard','chair-seat','chair-back']},
+    {id:'eq_cutting_bench_grinder',code:'GRINDER-CUT',x:7.95,y:.55,width:1.1,height:.9,maxZ:1.275,minFaces:180,parts:['table-top','bucket','grinder-motor','grinding-wheel','wheel-guard','tool-rest']}
+  ];
+  for(const item of cases){
+    const frozen=Object.freeze({...item,rotation:0}),before=JSON.stringify(frozen),faces=models.build(frozen),points=faces.flatMap(f=>f.points);
+    assert.ok(models.matches(frozen));assert.ok(models.matches({code:` ${item.code.toLowerCase()} `}));assert.equal(JSON.stringify(frozen),before);
+    assert.ok(faces.length>item.minFaces);assert.ok(points.every(p=>p.length===3 && p.every(Number.isFinite)));
+    assert.ok(points.every(([x,y,z])=>x>=item.x-1e-9 && x<=item.x+item.width+1e-9 && y>=item.y-1e-9 && y<=item.y+item.height+1e-9 && z>=0 && z<=item.maxZ+1e-9));
+    assert.equal(Math.min(...points.map(p=>p[2])),0);assert.ok(Math.abs(Math.max(...points.map(p=>p[2]))-item.maxZ)<1e-9);
+    for(const part of item.parts)assert.ok(faces.some(f=>f.part===part),`${item.code} is missing ${part}`);
+  }
+  assert.notDeepEqual(models.build(cases[0]),models.build(cases[1]));
+  assert.ok(!models.build({code:'N1-1',x:0,y:0,width:1.35,height:3.74}).some(f=>['grinding-wheel','desk-top','chair-seat'].includes(f.part)));
+});
+test('cutting desk and grinder follow independent 2D movement, rotation and plan resizing',()=>{
+  for(const item of [{code:'DESK-CUT',width:2.4,height:1.9},{code:'GRINDER-CUT',width:1.1,height:.9}]){
+    const original=models.build({...item,x:0,y:0}),moved=models.build({...item,x:3,y:2}),turned=models.build({...item,x:0,y:0,rotation:90}),resized=models.build({...item,x:0,y:0,width:item.width*2,height:item.height*1.5});
+    const cx=item.width/2,cy=item.height/2;
+    original.forEach((face,i)=>face.points.forEach((p,j)=>{
+      const m=moved[i].points[j],q=turned[i].points[j],r=resized[i].points[j];
+      assert.ok(Math.abs(m[0]-p[0]-3)<1e-9 && Math.abs(m[1]-p[1]-2)<1e-9 && m[2]===p[2]);
+      assert.ok(Math.abs(q[0]-(cx-(p[1]-cy)))<1e-9 && Math.abs(q[1]-(cy+p[0]-cx))<1e-9 && q[2]===p[2]);
+      assert.ok(Math.abs(r[0]-2*p[0])<1e-9 && Math.abs(r[1]-1.5*p[1])<1e-9 && r[2]===p[2]);
+    }));
+  }
+});
 test('J1-1 and J1-2 share one photo model while preserving their own CAD records',()=>{
   const item=Object.freeze({id:'eq_vcut1_j1_2',code:'J1-2',x:75.25,y:35.34,width:4.45,height:4.57,rotation:0});
   const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);

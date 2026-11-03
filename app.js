@@ -4037,6 +4037,36 @@
       "height": 0.15,
       "category": "Door",
       "rotation": 0
+    },
+    {
+      "x": 1.1,
+      "y": 0.55,
+      "id": "eq_cutting_office_desk",
+      "code": "DESK-CUT",
+      "name": "裁切分條部門辦公桌",
+      "zone": "裁切分條部門",
+      "color": "#8B5E3C",
+      "floor": "1F",
+      "width": 2.4,
+      "height": 1.9,
+      "category": "Office",
+      "rotation": 0,
+      "geometryAccuracy": "PDF-arrow/photo-estimate"
+    },
+    {
+      "x": 7.95,
+      "y": 0.55,
+      "id": "eq_cutting_bench_grinder",
+      "code": "GRINDER-CUT",
+      "name": "裁切分條部門砂輪機",
+      "zone": "裁切分條部門",
+      "color": "#8A6A58",
+      "floor": "1F",
+      "width": 1.1,
+      "height": 0.9,
+      "category": "Tool",
+      "rotation": 0,
+      "geometryAccuracy": "PDF-arrow/photo-estimate"
     }
   ],
   "title_block": {
@@ -4457,7 +4487,7 @@
     "lock_behavior_revision": "columns-editable-v1"
   },
   "source_geometry_file": "2026 Layout for AI.eps",
-  "source_geometry_revision": "2026-layout-for-ai-eps-v1.2-r2",
+  "source_geometry_revision": "2026-layout-for-ai-eps-v1.2-r3-cutting-accessories",
   "building_geometry": {
     "revision": "user-boundary-20261022-r2",
     "source": "使用者原繪圖及2026-10-22紅線更正",
@@ -4517,7 +4547,7 @@
       "geometryAccuracy": "corridor-aligned; run-estimate"
     }
   },
-  "baseline_revision": "desktop-confirmed-20261023",
+  "baseline_revision": "desktop-confirmed-20261103",
   "baseline_origin": {
     "file": "factory_layout_data_v2.json",
     "exportedAt": "2026-10-22T15:21:37+07:00",
@@ -4534,22 +4564,42 @@
     if (!candidate || (!candidate.equipment && !candidate.dimensions)) {
       return { layout: candidate, migrated: false };
     }
+    // The fixed cutting/slitting PDF adds two independent accessories without
+    // replacing any existing CAD record.  Upgrade only the immediately prior
+    // confirmed revision; unknown documents and later user deletions are left
+    // alone.  Existing equipment objects remain byte-for-byte untouched.
+    let working=candidate,accessoriesAdded=false;
+    if(candidate.source_geometry_revision==='2026-layout-for-ai-eps-v1.2-r2' && Array.isArray(candidate.equipment)){
+      const accessories=[
+        {x:1.1,y:.55,id:'eq_cutting_office_desk',code:'DESK-CUT',name:'裁切分條部門辦公桌',zone:'裁切分條部門',color:'#8B5E3C',floor:'1F',width:2.4,height:1.9,category:'Office',rotation:0,geometryAccuracy:'PDF-arrow/photo-estimate'},
+        {x:7.95,y:.55,id:'eq_cutting_bench_grinder',code:'GRINDER-CUT',name:'裁切分條部門砂輪機',zone:'裁切分條部門',color:'#8A6A58',floor:'1F',width:1.1,height:.9,category:'Tool',rotation:0,geometryAccuracy:'PDF-arrow/photo-estimate'}
+      ];
+      const ids=new Set(candidate.equipment.map(item=>item.id));
+      const missing=accessories.filter(item=>!ids.has(item.id));
+      if(missing.length){
+        working={...candidate,equipment:[...candidate.equipment,...missing.map(item=>({...item}))],source_geometry_revision:SOURCE_GEOMETRY_REVISION};
+        accessoriesAdded=true;
+      }
+    }
     // The user's original drawing wins over both the rejected A3 trace and
     // baseline migrations. Recover only from this document's own archive.
-    const buildingRepair=window.ChinChunBuilding?.repair(candidate);
+    const buildingRepair=window.ChinChunBuilding?.repair(working);
     if(buildingRepair?.changed || buildingRepair?.blocked)return {
-      layout:buildingRepair.layout,migrated:buildingRepair.changed,
+      layout:buildingRepair.layout,migrated:accessoriesAdded || buildingRepair.changed,
       buildingRepaired:buildingRepair.changed,buildingBlocked:buildingRepair.blocked,
-      leftBoundaryCorrected:Boolean(buildingRepair.leftBoundaryOnly)
+      leftBoundaryCorrected:Boolean(buildingRepair.leftBoundaryOnly),accessoriesAdded
     };
-    if(window.ChinChunBuilding?.get(candidate))return window.ChinChunAccess?.alignLoadingRamp(candidate) || {layout:candidate,migrated:false};
-    if (candidate.source_geometry_revision === SOURCE_GEOMETRY_REVISION) {
-      return { layout: candidate, migrated: false };
+    if(window.ChinChunBuilding?.get(working)){
+      const access=window.ChinChunAccess?.alignLoadingRamp(working) || {layout:working,migrated:false};
+      return {...access,migrated:accessoriesAdded || access.migrated,accessoriesAdded};
+    }
+    if (working.source_geometry_revision === SOURCE_GEOMETRY_REVISION) {
+      return { layout: working, migrated: accessoriesAdded, accessoriesAdded };
     }
 
     // A default revision is not permission to erase another document's edits.
     // Desktop loading is explicit, backed up and undoable in every entry path.
-    return {layout:candidate,migrated:false,desktopReview:true};
+    return {layout:working,migrated:accessoriesAdded,accessoriesAdded,desktopReview:true};
   }
 
   // --- State Variables ---

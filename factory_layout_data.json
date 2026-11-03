@@ -4005,6 +4005,36 @@
       "height": 0.15,
       "category": "Door",
       "rotation": 0
+    },
+    {
+      "x": 1.1,
+      "y": 0.55,
+      "id": "eq_cutting_office_desk",
+      "code": "DESK-CUT",
+      "name": "裁切分條部門辦公桌",
+      "zone": "裁切分條部門",
+      "color": "#8B5E3C",
+      "floor": "1F",
+      "width": 2.4,
+      "height": 1.9,
+      "category": "Office",
+      "rotation": 0,
+      "geometryAccuracy": "PDF-arrow/photo-estimate"
+    },
+    {
+      "x": 7.95,
+      "y": 0.55,
+      "id": "eq_cutting_bench_grinder",
+      "code": "GRINDER-CUT",
+      "name": "裁切分條部門砂輪機",
+      "zone": "裁切分條部門",
+      "color": "#8A6A58",
+      "floor": "1F",
+      "width": 1.1,
+      "height": 0.9,
+      "category": "Tool",
+      "rotation": 0,
+      "geometryAccuracy": "PDF-arrow/photo-estimate"
     }
   ],
   "title_block": {
@@ -4425,7 +4455,7 @@
     "lock_behavior_revision": "columns-editable-v1"
   },
   "source_geometry_file": "2026 Layout for AI.eps",
-  "source_geometry_revision": "2026-layout-for-ai-eps-v1.2-r2",
+  "source_geometry_revision": "2026-layout-for-ai-eps-v1.2-r3-cutting-accessories",
   "building_geometry": {
     "revision": "user-boundary-20261022-r2",
     "source": "使用者原繪圖及2026-10-22紅線更正",
@@ -4485,7 +4515,7 @@
       "geometryAccuracy": "corridor-aligned; run-estimate"
     }
   },
-  "baseline_revision": "desktop-confirmed-20261023",
+  "baseline_revision": "desktop-confirmed-20261103",
   "baseline_origin": {
     "file": "factory_layout_data_v2.json",
     "exportedAt": "2026-10-22T15:21:37+07:00",
