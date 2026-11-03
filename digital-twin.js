@@ -197,7 +197,7 @@
       let segments=[[0,1]];
       // A loading shutter must be an opening in the west wall, not painted over a solid wall.
       const cuts=[];
-      const officeDoorIds=['door_1790246720313','door_1789543356566','door_1789543339277'];
+      const officeDoorIds=['door_1790246720313','door_1789543356566','door_1789543339277','door_1789543364666'];
       const officeOpenings=[];
       if(floor==='1F')for(const q of (data.equipment || []).filter(q=>officeDoorIds.includes(q.id) && (q.floor || '1F')==='1F')){
         const corners=rect(q),xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]);
@@ -228,6 +228,11 @@
       const officeNorth=item.id==='wall_15' && Math.abs(dy)<.01 && Math.abs(n(item.y1)-30)<.01 && n(item.x1)<45 && n(item.x2)>=50;
       const officeEast=item.id==='wall_1789539415779' && Math.abs(dx)<.01 && Math.abs(n(item.x1)-50)<.01 && n(item.y1)===30 && n(item.y2)===40;
       if(officeNorth)segments=[[0,(45-n(item.x1))/dx],[(45-n(item.x1))/dx,1]];
+      const entranceFront=item.id==='wall_1789539311074' && Math.abs(dy)<.01 && n(item.x1)===20 && n(item.x2)===50 && n(item.y1)===40;
+      const meetingNorth=item.id==='wall_21' && Math.abs(dy)<.01 && n(item.x1)===20 && n(item.x2)===30 && n(item.y1)===35;
+      const meetingSide=['wall_1789539300962','wall_1789539439366'].includes(item.id) && Math.abs(dx)<.01 && Math.min(n(item.y1),n(item.y2))===35 && Math.max(n(item.y1),n(item.y2))===40 && [20,25].includes(n(item.x1));
+      if(entranceFront)segments=[[0,1/3],[1/3,1]];
+      if(meetingNorth)segments=[[0,.5],[.5,1]];
       for(const cut of cuts){
         const lo=Math.min(...cut),hi=Math.max(...cut);
         if(hi<=0 || lo>=1)continue;
@@ -240,6 +245,7 @@
         const p=(t,side)=>[n(item.x1)+dx*t+a*side,n(item.y1)+dy*t+b*side];
         add(index?{...item,id:`${item.id}_part_${index}`}:item,'wall',[p(start,1),p(end,1),p(end,-1),p(start,-1)],item.type==='exterior'?2.8:2.4,'#ddd4b9');
         if(officeEast || (officeNorth && n(item.x1)+dx*start>=44.99))scene.at(-1).officeGlazing=true;
+        if(meetingSide || (entranceFront && n(item.x1)+dx*(start+end)/2<30) || (meetingNorth && n(item.x1)+dx*(start+end)/2<25))scene.at(-1).fullGlass=true;
       });
       // The opening is only as high as the door; retain the wall above it.
       officeOpenings.forEach(([u,v],i)=>{
@@ -385,6 +391,8 @@
   }
   let solidRenderer;
   function renderSolids(faces,dpr) {
+    // Legacy depth renderer cannot blend glass; show open frames for a clear view.
+    faces=faces.filter(f=>!(f.opacity<1));
     // Actual per-pixel depth handles a long rail crossing in front of and behind
     // columns. Sorting face centers cannot represent those relationships.
     if(solidRenderer===undefined){
@@ -494,6 +502,17 @@
     ctx.fillStyle='#263a35';ctx.globalAlpha=.35;ctx.fill(path);ctx.globalAlpha=1;
   }
   function wallFaces(s) {
+    if(s.fullGlass){
+      const [a,b,c,d]=s.points,length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      const lerp=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
+      const strip=(lo,hi)=>[lerp(a,b,lo),lerp(a,b,hi),lerp(d,c,hi),lerp(d,c,lo)];
+      const frames=[...blockFaces(s,strip(0,1),0,.055,'#b8c3bf'),...blockFaces(s,strip(0,1),2.34,2.4,'#b8c3bf')];
+      const count=Math.max(1,Math.ceil(length/1.3)),bar=Math.min(.025,.035/Math.max(length,.01));
+      for(let i=0;i<=count;i++){const t=i/count;frames.push(...blockFaces(s,strip(Math.max(0,t-bar),Math.min(1,t+bar)),.055,2.4,'#b8c3bf'));}
+      const p=strip(0,1),m1=lerp(p[0],p[3],.5),m2=lerp(p[1],p[2],.5);
+      frames.push({s,points:[[...m1,.055],[...m2,.055],[...m2,2.34],[...m1,2.34]],color:'#a9d1d3',opacity:.24,part:'glass-wall',depth:faceDepth([[...m1,0],[...m2,0]])});
+      return frames;
+    }
     if(s.officeGlazing){
       const [a,b,c,d]=s.points, length=Math.hypot(b[0]-a[0],b[1]-a[1]);
       const point=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
@@ -561,6 +580,17 @@
     return faces;
   }
   function doorFaces(s) {
+    if(['door_1790246720313','door_1789543364666'].includes(s.item.id)){
+      const [a,b,c,d]=s.points,lerp=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
+      const strip=(lo,hi)=>[lerp(a,b,lo),lerp(a,b,hi),lerp(d,c,hi),lerp(d,c,lo)],double=s.item.id==='door_1790246720313';
+      const frames=[...blockFaces(s,strip(0,.035),0,2.1,'#c5cfca'),...blockFaces(s,strip(.965,1),0,2.1,'#c5cfca'),...blockFaces(s,strip(0,1),2.04,2.1,'#c5cfca'),...blockFaces(s,strip(0,1),0,.055,'#c5cfca')];
+      if(double)frames.push(...blockFaces(s,strip(.49,.51),0,2.1,'#c5cfca'));
+      for(const [lo,hi] of double?[[.035,.49],[.51,.965]]:[[.035,.965]]){
+        const p=strip(lo,hi),l=lerp(p[0],p[3],.5),r=lerp(p[1],p[2],.5),points=[[...l,.055],[...r,.055],[...r,2.04],[...l,2.04]];
+        frames.push({s,points,color:'#a9d1d3',opacity:.24,part:'glass-door',depth:faceDepth(points)});
+      }
+      return frames;
+    }
     if(s.item.id==='door_1789543393984'){
       const [a,b,c,d]=s.points,lerp=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
       const strip=(lo,hi)=>[lerp(a,b,lo),lerp(a,b,hi),lerp(d,c,hi),lerp(d,c,lo)];
@@ -875,13 +905,6 @@
       }
     }
     faces.push(...circulationFaces(visible));
-    const office=scene.find(s=>isOfficeEntry(s.item));
-    if(floor==='1F' && office && (!detail || selected===office)){
-      const entry=officeEntrance(office),z=elevation(office);
-      quad([entry.edge(-.9,.05),entry.edge(.9,.05),entry.edge(.9,.05),entry.edge(-.9,.05)].map((p,i)=>[...p,i<2?z+.12:z+2.45]),'#6d9ba4',office,'office-glass');
-      quad([entry.edge(-.035,.06),entry.edge(.035,.06),entry.edge(.035,.06),entry.edge(-.035,.06)].map((p,i)=>[...p,i<2?z+.12:z+2.45]),'#e3e8dc',office,'office-mullion');
-      quad([entry.edge(-2.2,-.05),entry.edge(2.2,-.05),entry.edge(2.2,.72),entry.edge(-2.2,.72)].map(p=>[...p,z+2.67]),'#cfd7cf',office,'office-canopy');
-    }
     return faces;
   }
   // IoT/MES/RTLS overlay. Positions are CAD metres; nothing is written to layoutData.
@@ -1044,7 +1067,6 @@
     solids.filter(s=>s.type==='equipment' || s.type==='wall').forEach(drawGroundContact);
     // Painter order must be per face: a whole long machine can straddle a column.
     renderSolids([...solids.flatMap(objectFaces),...siteFaces()],dpr);
-    drawOfficeFacade();
     drawPhotoDirections();drawAccessDirections();
     solids.forEach(s=>{
       if(s.type==='site' && !isRamp(s.item) && s.item.code!=='STAIR-DIECUT')return;

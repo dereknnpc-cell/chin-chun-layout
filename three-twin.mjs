@@ -142,6 +142,7 @@ export function createThreeTwin({canvas,onChange=()=>{},onPick=()=>{},onError=()
   scene.add(new THREE.HemisphereLight(0xf2f4df,0x526557,2.2));
   const light=new THREE.DirectionalLight(0xffffff,1.5);light.position.set(-40,90,30);scene.add(light);
   const material=new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+  const glassMaterial=new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide,transparent:true,opacity:.24,depthWrite:false});
   const lineMaterial=new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.55});
   const controls=new OrbitControls(camera,canvas);
   controls.enableDamping=false;controls.screenSpacePanning=true;controls.enableZoom=false;
@@ -173,10 +174,11 @@ export function createThreeTwin({canvas,onChange=()=>{},onPick=()=>{},onError=()
   }
   function setScene(faces) {
     clearGeometry();
-    for(const [id,parts] of groupFaces(faces)){
+    for(const [id,allParts] of groupFaces(faces))for(const parts of [allParts.filter(f=>!(f.opacity<1)),allParts.filter(f=>f.opacity<1)]){
+      if(!parts.length)continue;
       const {geometry,lines}=geometryFromFaces(parts);
       if(!geometry.attributes.position.count){geometry.dispose();lines?.dispose();continue;}
-      const mesh=new THREE.Mesh(geometry,material);mesh.userData={cadId:id==='__site'?null:id,faceCount:parts.length};root.add(mesh);meshes.push(mesh);
+      const mesh=new THREE.Mesh(geometry,parts[0].opacity<1?glassMaterial:material);mesh.userData={cadId:id==='__site'?null:id,faceCount:parts.length};root.add(mesh);meshes.push(mesh);
       box.union(geometry.boundingBox);
       if(lines)root.add(new THREE.LineSegments(lines,lineMaterial));
     }
@@ -206,7 +208,7 @@ export function createThreeTwin({canvas,onChange=()=>{},onPick=()=>{},onError=()
     project(point){return projectPoint(camera,point,width,height);},
     state(){const a=cameraAngles(camera,controls.target);return {yaw:a.yaw*180/Math.PI,pitch:a.pitch*180/Math.PI,zoom:camera.zoom,objects:meshes.length,triangles:renderer.info.render.triangles,calls:renderer.info.render.calls};},
     setEnabled(value){if(enabled!==value){if(value)controls.connect(canvas);else controls.disconnect();}enabled=value;controls.enabled=value;renderer.domElement.hidden=!value;down=null;touch.reset();},
-    dispose(){if(disposed)return;disposed=true;touch.dispose();controls.removeEventListener('change',changed);controls.dispose();clearGeometry();material.dispose();lineMaterial.dispose();renderer.domElement.removeEventListener('webglcontextlost',contextLost);renderer.dispose();renderer.domElement.remove();canvas.removeEventListener('pointerdown',pointerDown);canvas.removeEventListener('pointerup',pointerUp);canvas.removeEventListener('pointercancel',resetPointer);}
+    dispose(){if(disposed)return;disposed=true;touch.dispose();controls.removeEventListener('change',changed);controls.dispose();clearGeometry();material.dispose();glassMaterial.dispose();lineMaterial.dispose();renderer.domElement.removeEventListener('webglcontextlost',contextLost);renderer.dispose();renderer.domElement.remove();canvas.removeEventListener('pointerdown',pointerDown);canvas.removeEventListener('pointerup',pointerUp);canvas.removeEventListener('pointercancel',resetPointer);}
   };
 }
 

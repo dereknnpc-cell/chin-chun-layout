@@ -107,7 +107,7 @@ test('photo-mapped QA office keeps its 2D walls and desks while displaying frame
 
 test('three office doors have visible 3D door faces and matching wall openings with lintels',()=>{
   const t=setup(),layout=fixture(),before=JSON.stringify(layout);t.prepare(layout);
-  const checks=[['door_1790246720313','wall_1789539311074','x'],['door_1789543356566','wall_1789539450362','y'],['door_1789543339277','wall_17','y']];
+  const checks=[['door_1790246720313','wall_1789539311074','x'],['door_1789543356566','wall_1789539450362','y'],['door_1789543339277','wall_17','y'],['door_1789543364666','wall_1789539439366','y']];
   for(const [doorId,wallId,axis] of checks){
     const door=t.api.scene().find(s=>s.item.id===doorId),faces=t.api.faces();assert.ok(door);assert.ok(faces.some(f=>f.s.item.id===doorId));
     const coord=axis==='x'?0:1,center=door.points.reduce((sum,p)=>sum+p[coord]/4,0);
@@ -116,6 +116,17 @@ test('three office doors have visible 3D door faces and matching wall openings w
     assert.ok(!walls.some(s=>covers(s) && (s.zBase||0)<2.1),`${doorId} is hidden behind a solid wall`);
     assert.ok(walls.some(s=>covers(s) && s.zBase===2.1),`${doorId} needs a lintel`);
   }
+  assert.equal(JSON.stringify(layout),before);
+});
+
+test('office entrance is a pair of transparent glass doors and adjacent and meeting walls are glass',()=>{
+  const t=setup(),layout=fixture(),before=JSON.stringify(layout);t.prepare(layout);
+  const scene=t.api.scene(),faces=t.api.faces(),door=faces.filter(f=>f.s?.item.id==='door_1790246720313'&&f.part==='glass-door');
+  assert.equal(door.length,2);assert.ok(door.every(f=>f.opacity>0&&f.opacity<1));
+  assert.ok(faces.some(f=>f.s?.item.id==='door_1789543364666'&&f.part==='glass-door'&&f.opacity<1));
+  for(const id of ['wall_1789539300962','wall_1789539439366','wall_21','wall_1789539311074'])assert.ok(scene.some(s=>(s.item.id===id||s.item.id.startsWith(id+'_part_'))&&s.fullGlass),id);
+  assert.ok(faces.some(f=>f.part==='glass-wall'&&f.opacity<1));
+  assert.ok(!t.api.ground().some(f=>f.part==='office-canopy'||f.part==='office-glass'));
   assert.equal(JSON.stringify(layout),before);
 });
 
