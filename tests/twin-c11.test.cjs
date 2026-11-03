@@ -15,7 +15,7 @@ test('C1-1 is a bounded photo model, without borrowing the adjacent C1-2 identit
   assert.ok(p.every(p=>p.length===3 && p.every(Number.isFinite)));
   assert.ok(p.every(([x,y,z])=>x>=item.x && x<=item.x+item.width && y>=item.y-1e-9 && y<=item.y+item.height && z>=0 && z<=3.15+1e-9));
   near(extent(p,2)[1],3.15);assert.equal(JSON.stringify(item),before);
-  assert.equal(models.matches({...item,code:'C1-2'}),false);assert.equal(models.build({...item,code:'C1-2'}),null);
+  assert.ok(models.matches({...item,code:'C1-2'}));assert.notDeepEqual(models.build({...item,code:'C1-2'}),faces);
   assert.ok(!faces.some(f=>/stock|material|scrap|cart|crane|trolley/.test(f.part)));
 });
 
@@ -63,4 +63,18 @@ test('input, press and take-up annotations remain attached through CAD rotation 
   }
   assert.deepEqual(models.flowMarkers({...item,code:'沖孔一',photoModelCode:'C1-1'}),models.flowMarkers(item));
   assert.deepEqual(models.flowMarkers({code:'C1-2'}),[]);
+});
+
+test('C1-2 shares the press and places its own stands within the 2D footprint',()=>{
+  const c12={code:'C1-2',x:0,y:0,width:6.8,height:4.2,rotation:0},faces=models.build(c12),p=faces.flatMap(f=>f.points);
+  assert.ok(p.every(([x,y,z])=>Number.isFinite(x+y+z)&&x>=-1e-9&&x<=6.8+1e-9&&y>=-1e-9&&y<=4.2+1e-9&&z>=0));
+  const press11=models.build(local).filter(f=>f.section==='press'),press12=faces.filter(f=>f.section==='press');
+  assert.equal(press11.length,press12.length);
+  press11.forEach((f,i)=>f.points.forEach((q,j)=>{near(press12[i].points[j][0],q[0]-7.65);near(press12[i].points[j][1],q[1]);near(press12[i].points[j][2],q[2]);}));
+  assert.ok(faces.some(f=>f.section==='guide'&&f.part==='guide-slope'));
+  assert.ok(faces.some(f=>f.section==='takeup'&&f.part==='takeup-motor'));
+  assert.ok(faces.filter(f=>f.section==='unwind'&&f.part==='empty-mandrel').length>0);
+  assert.ok(!faces.some(f=>/crane|stock|material|trolley/.test(f.part)));
+  const rotated=models.build({...c12,x:5,y:7,rotation:90});
+  faces.forEach((f,i)=>f.points.forEach(([x,y,z],j)=>{const q=rotated[i].points[j];near(q[0],8.4-(y-2.1));near(q[1],9.1+(x-3.4));near(q[2],z);}));
 });

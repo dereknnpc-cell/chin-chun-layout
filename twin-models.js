@@ -5,7 +5,7 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
+  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'C1-2', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
   // Site relationship is a display overlay derived from live 2D, not another
   // equipment record or a mutation of the wall. Dimensions remain provisional.
   function dieCutSite(layout) {
@@ -1730,6 +1730,47 @@
     console(18.5);
     return faces;
   }
+  function buildC12(item) {
+    // PDF arrows locate the views: take-up left, shared press in the middle,
+    // sloping grey guide and two independent unwind stands on the right.
+    const faces=[],cream='#d7d1ba',steel='#899696',chrome='#c2cfcb',dark='#35413e',blue='#518388';
+    const world=([x,y,z])=>c11Point(item,[x/6.8*20.23,y,z]);
+    const face=(points,color,part,section)=>faces.push({points:points.map(world),color,part,section});
+    const box=(x,y,z,w,d,h,color,part,section)=>{
+      const p=[[x,y,z],[x+w,y,z],[x+w,y+d,z],[x,y+d,z],[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(i=>p[i]),color,part,section);
+    };
+    const beam=(a,b,r,color,part,section)=>{
+      const v=b.map((q,i)=>q-a[i]),len=Math.hypot(...v),u=v.map(q=>q/len),cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);const el=Math.hypot(...e);e=e.map(q=>q/el);const f=cross(u,e),n=12;
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((q,j)=>q+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color,part,section);face(rb,color,part,section);
+      ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color,part,section));
+    };
+    // Reuse the exact C1-1 press faces, independently fitted into C1-2.
+    const press=buildC11({x:0,y:0,width:20.23,height:4.2,rotation:0}).filter(f=>f.section==='press');
+    for(const f of press)face(f.points.map(([x,y,z])=>[x-7.65,y,z]),f.color,f.part,'press');
+    function stand(x,section,driven){
+      for(const y of [.72,3.12]){
+        box(x-.50,y,0,1,.13,.11,cream,'stand-base',section);
+        face([[x-.38,y,.11],[x+.38,y,.11],[x+.15,y,1.18],[x-.14,y,1.18]],cream,'stand-upright',section);
+        beam([x-.30,y+.06,.16],[x,y+.06,1.12],.045,cream,'stand-brace',section);
+      }
+      for(const xx of [x-.4,x+.4])box(xx,.85,.08,.09,2.27,.10,cream,'stand-crossmember',section);
+      beam([x,.58,1.12],[x,3.42,1.12],.045,chrome,'empty-mandrel',section);
+      beam([x-.39,.84,.23],[x-.39,3.14,.23],.055,blue,'lower-roller',section);
+      if(driven){beam([x,3.24,.45],[x,3.52,.45],.13,dark,'takeup-motor',section);box(x-.18,3.25,.18,.36,.28,.12,cream,'motor-mount',section);}
+    }
+    stand(.70,'takeup',true);stand(5.0,'unwind',false);stand(6.1,'unwind',false);
+    // Photo shows a separate grey sloping guide frame with three crossbars.
+    for(const y of [.77,3.06]){
+      beam([3.95,y,.15],[4.55,y,.15],.055,steel,'guide-base','guide');
+      beam([3.95,y,.15],[3.95,y,1.25],.05,steel,'guide-post','guide');
+      beam([3.95,y,1.25],[4.55,y,.24],.05,steel,'guide-slope','guide');
+    }
+    for(const [x,z] of [[3.95,1.25],[4.2,.84],[4.52,.30]])beam([x,.77,z],[x,3.06,z],.035,chrome,'guide-crossbar','guide');
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'DIE CUT': return buildDieCut(item);
@@ -1738,6 +1779,7 @@
       case 'A1-1': return buildA1(item);
       case 'A1-2': return buildA12(item);
       case 'C1-1': return buildC11(item);
+      case 'C1-2': return buildC12(item);
       case 'F1-1': return buildF1(item);
       case 'G2-1': return buildG21(item);
       case 'G2-2': return buildG2(item);
