@@ -19,7 +19,8 @@ test('the byte-preserved desktop export stays intact and the two PDF-mapped cutt
     ['eq_cutting_office_desk','DESK-CUT',1.1,.55,2.4,1.9],
     ['eq_cutting_bench_grinder','GRINDER-CUT',7.95,.55,1.1,.9]
   ]);
-  assert.equal(desktop.source_geometry_revision,'2026-layout-for-ai-eps-v1.2-r3-cutting-accessories');
+  assert.equal(desktop.source_geometry_revision,'2026-layout-for-ai-eps-v1.2-r4-desk-rotation');
+  assert.equal(desktop.equipment.find(q=>q.id==='eq_cutting_office_desk').rotation,-90);
   assert.equal(desktop.baseline_origin.sha256,crypto.createHash('sha256').update(rawText).digest('hex'));
   assert.equal(desktop.equipment.find(q=>q.code==='D1-1').width,12);
   assert.ok(!desktop.equipment.some(q=>q.code==='PL-3'));
@@ -65,6 +66,10 @@ test('local, imported and cloud revisions append accessories only to r2 while pr
   for(const key of Object.keys(before).filter(k=>!['equipment','source_geometry_revision'].includes(k)))assert.deepEqual(plain(result.layout[key]),before[key],key);
   assert.deepEqual(plain(result.layout.equipment.slice(-2).map(q=>q.id)),['eq_cutting_office_desk','eq_cutting_bench_grinder']);
   assert.equal(result.layout.source_geometry_revision,desktop.source_geometry_revision);
+  const r3=plain(desktop);r3.source_geometry_revision='2026-layout-for-ai-eps-v1.2-r3-cutting-accessories';
+  const desk=r3.equipment.find(q=>q.id==='eq_cutting_office_desk');desk.rotation=0;desk.x=8.713;
+  const upgraded=ctx.applySourceGeometryRevision(r3);assert.equal(upgraded.layout.equipment.find(q=>q.id===desk.id).rotation,-90);assert.equal(upgraded.layout.equipment.find(q=>q.id===desk.id).x,8.713);
+  desk.rotation=45;assert.equal(ctx.applySourceGeometryRevision(r3).layout.equipment.find(q=>q.id===desk.id).rotation,45);
   assert.ok(!section.includes('INITIAL_LAYOUT.equipment'));assert.ok(!section.includes('INITIAL_LAYOUT.walls'));
   const reload=source.slice(source.indexOf('    const forceReloadBtn ='),source.indexOf("    document.getElementById('loadDesktopBaselineBtn')"));
   assert.ok(!reload.includes('removeItem'),'refresh must preserve local drawing and custom library');

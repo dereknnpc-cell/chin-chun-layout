@@ -4050,7 +4050,7 @@
       "width": 2.4,
       "height": 1.9,
       "category": "Office",
-      "rotation": 0,
+      "rotation": -90,
       "geometryAccuracy": "PDF-arrow/photo-estimate"
     },
     {
@@ -4487,7 +4487,7 @@
     "lock_behavior_revision": "columns-editable-v1"
   },
   "source_geometry_file": "2026 Layout for AI.eps",
-  "source_geometry_revision": "2026-layout-for-ai-eps-v1.2-r3-cutting-accessories",
+  "source_geometry_revision": "2026-layout-for-ai-eps-v1.2-r4-desk-rotation",
   "building_geometry": {
     "revision": "user-boundary-20261022-r2",
     "source": "使用者原繪圖及2026-10-22紅線更正",
@@ -4571,7 +4571,7 @@
     let working=candidate,accessoriesAdded=false;
     if(candidate.source_geometry_revision==='2026-layout-for-ai-eps-v1.2-r2' && Array.isArray(candidate.equipment)){
       const accessories=[
-        {x:1.1,y:.55,id:'eq_cutting_office_desk',code:'DESK-CUT',name:'裁切分條部門辦公桌',zone:'裁切分條部門',color:'#8B5E3C',floor:'1F',width:2.4,height:1.9,category:'Office',rotation:0,geometryAccuracy:'PDF-arrow/photo-estimate'},
+        {x:1.1,y:.55,id:'eq_cutting_office_desk',code:'DESK-CUT',name:'裁切分條部門辦公桌',zone:'裁切分條部門',color:'#8B5E3C',floor:'1F',width:2.4,height:1.9,category:'Office',rotation:-90,geometryAccuracy:'PDF-arrow/photo-estimate'},
         {x:7.95,y:.55,id:'eq_cutting_bench_grinder',code:'GRINDER-CUT',name:'裁切分條部門砂輪機',zone:'裁切分條部門',color:'#8A6A58',floor:'1F',width:1.1,height:.9,category:'Tool',rotation:0,geometryAccuracy:'PDF-arrow/photo-estimate'}
       ];
       const ids=new Set(candidate.equipment.map(item=>item.id));
@@ -4580,6 +4580,11 @@
         working={...candidate,equipment:[...candidate.equipment,...missing.map(item=>({...item}))],source_geometry_revision:SOURCE_GEOMETRY_REVISION};
         accessoriesAdded=true;
       }
+    }
+    if(candidate.source_geometry_revision==='2026-layout-for-ai-eps-v1.2-r3-cutting-accessories' && Array.isArray(candidate.equipment)){
+      const equipment=candidate.equipment.map(item=>item.id==='eq_cutting_office_desk' && (item.rotation ?? 0)===0 ? {...item,rotation:-90} : item);
+      working={...candidate,equipment,source_geometry_revision:SOURCE_GEOMETRY_REVISION};
+      accessoriesAdded=true;
     }
     // The user's original drawing wins over both the rejected A3 trace and
     // baseline migrations. Recover only from this document's own archive.

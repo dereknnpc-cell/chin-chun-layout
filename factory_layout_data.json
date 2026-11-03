@@ -4018,7 +4018,7 @@
       "width": 2.4,
       "height": 1.9,
       "category": "Office",
-      "rotation": 0,
+      "rotation": -90,
       "geometryAccuracy": "PDF-arrow/photo-estimate"
     },
     {
@@ -4455,7 +4455,7 @@
     "lock_behavior_revision": "columns-editable-v1"
   },
   "source_geometry_file": "2026 Layout for AI.eps",
-  "source_geometry_revision": "2026-layout-for-ai-eps-v1.2-r3-cutting-accessories",
+  "source_geometry_revision": "2026-layout-for-ai-eps-v1.2-r4-desk-rotation",
   "building_geometry": {
     "revision": "user-boundary-20261022-r2",
     "source": "使用者原繪圖及2026-10-22紅線更正",
