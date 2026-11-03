@@ -87,11 +87,13 @@
   Object.assign(zh,{
     c11Photo:'C1-1（沖孔機一）：依 PDF 箭頭所標照片方位建立。平面圖左側雙放料架，接上升送料架、中央門形沖孔主機、右側導輪與收料架；大飛輪及橘色側護罩在圖面下側。保留空料軸、雙缸與回位彈簧、上方導輪架、側控制台及固定橘色走台。位置、占地與角度跟隨目前 2D；最高約 3.15 m、各段比例及細部尺寸為照片估算，待量測。',
     c12Photo:'C1-2（沖孔機二）：中央主機沿用 C1-1，依 PDF 與照片配置左側收料架、右側雙放料架及灰色斜導架；不含天車或材料卷。位置、占地及角度跟隨 2D，部件比例與高度為照片估算，待現場量測。',
+    tcutPhoto:'T Cut 1 裁片桌：依 PDF 與照片建立深色桌面、銀色桌邊、夾具及右端料架；位置、尺寸和角度跟隨目前 2D。高度及細節為照片估算，待量測。',
     c11Feed:'雙放料架 · 入料',c11Press:'沖孔主機',c11Discharge:'收料架'
   });
   Object.assign(th,{
     c11Photo:'C1-1 (เครื่องเจาะรู 1): สร้างตามทิศมองของภาพที่ลูกศรใน PDF ระบุ จากซ้ายแปลนเป็นชุดคลายม้วนคู่ ชุดป้อนลาดขึ้น เครื่องเจาะโครงซุ้มตรงกลาง ชุดลูกกลิ้งนำและม้วนเก็บด้านขวา ล้อช่วยแรงใหญ่และฝาข้างสีส้มอยู่ด้านล่างแปลน มีแกนเปล่า กระบอกคู่ สปริงคืน โครงลูกกลิ้งด้านบน คอนโซลข้างและทางเดินสีส้มติดเครื่อง ตำแหน่ง ขนาดฐานและมุมตาม 2D ปัจจุบัน สูงประมาณ 3.15 ม. สัดส่วนและรายละเอียดประมาณจากภาพ รอวัดจริง',
     c12Photo:'C1-2: ใช้เครื่องเจาะตรงกลางร่วมแบบกับ C1-1 ตาม PDF และภาพมีชุดม้วนเก็บด้านซ้าย ชุดคลายม้วนคู่ด้านขวาและโครงนำลาดสีเทา ไม่รวมเครนหรือม้วนวัสดุ ตำแหน่ง ขนาดและมุมตามแปลน 2D สัดส่วนและความสูงประมาณจากภาพ รอวัดจริง',
+    tcutPhoto:'T Cut 1: โต๊ะตัดผิวสีเข้ม ขอบสีเงิน ตัวหนีบและโครงรองด้านขวาตาม PDF และภาพ ตำแหน่ง ขนาดและมุมตามแปลน 2D ความสูงและรายละเอียดประมาณจากภาพ รอวัดจริง',
     c11Feed:'ชุดคลายม้วนคู่ · ป้อนเข้า',c11Press:'เครื่องเจาะรู',c11Discharge:'ชุดม้วนเก็บ'
   });
   zh.buildingRoof='外棚屋頂';th.buildingRoof='หลังคาอาคารต่อเติม';
@@ -1070,7 +1072,7 @@
       dialog.querySelector('#twinDetails').textContent+='\n'+t('restroomNote');
       if(window.ChinChunModels?.restroomLayout?.(item)?.compact)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('restroomCompact');
     }
-    if(s?.model && s.type==='equipment' && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','C1-1':'c11Photo','C1-2':'c12Photo','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-1':'j11Photo','J1-2':'j12Photo','J1-3':'j13Photo','N1-1':'n11Photo','DESK-CUT':'cuttingDeskPhoto','GRINDER-CUT':'cuttingGrinderPhoto','D1-1':'d11Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
+    if(s?.model && s.type==='equipment' && !restroom)dialog.querySelector('#twinDetails').textContent+='\n'+t(({'DIE CUT':'dieCutPhoto','A1-1':'a1Photo','A1-2':'a12Photo','C1-1':'c11Photo','C1-2':'c12Photo','T CUT 1':'tcutPhoto','F1-1':'f1Photo','G2-1':'g21Photo','G2-2':'g2Photo','B1-1':'b12Photo','B1-2':'b12Photo','B1-3':'b13Photo','B1-4':'b14Photo','E1-1':'e1Photo','E1-2':'e1Photo','Q2-1':'q21Photo','Q2-2':'q22Photo','Q2-3':'q23Photo','J1-1':'j11Photo','J1-2':'j12Photo','J1-3':'j13Photo','N1-1':'n11Photo','DESK-CUT':'cuttingDeskPhoto','GRINDER-CUT':'cuttingGrinderPhoto','D1-1':'d11Photo','WELDING':'weldingPhoto','L4-1':'l41Photo','PL-1':'rackPhoto','PL-2':'rackPhoto'})[referenceCode(item)] || 'photo');
     if(item && ['EVA 3','EVA3'].includes(referenceCode(item)))dialog.querySelector('#twinDetails').textContent+='\n'+t('eva3Deferred');
     if(item && referenceCode(item)==='DIE CUT' && !dieSite)dialog.querySelector('#twinDetails').textContent+='\n⚠ '+t('dieCutDisconnected');
     if(item && isRamp(item))dialog.querySelector('#twinDetails').textContent+='\n'+t(item.code==='RAMP-ANNEX-ENTRY'?'accessRamp':item.code==='RAMP-CONNECTOR'?'connectorNote':'ramp');

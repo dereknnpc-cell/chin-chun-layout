@@ -117,6 +117,15 @@ test('cutting desk and grinder follow independent 2D movement, rotation and plan
     }));
   }
 });
+test('T Cut 1 photo table follows its independent 2D footprint',()=>{
+  const item=Object.freeze({code:'T Cut 1',x:2,y:3,width:4.45,height:2.4,rotation:0});
+  const before=JSON.stringify(item),faces=models.build(item);
+  for(const part of ['cutting-surface','silver-end','edge-clamp','support-frame','support-roller'])assert.ok(faces.some(f=>f.part===part),part);
+  assert.ok(faces.flatMap(f=>f.points).every(([x,y,z])=>x>=2-1e-9&&x<=6.45+1e-9&&y>=3-1e-9&&y<=5.4+1e-9&&z>=0));
+  assert.equal(JSON.stringify(item),before);assert.ok(!models.matches({code:'T Cut 2'}));
+  const rotated=models.build({...item,rotation:90});
+  faces.forEach((f,i)=>f.points.forEach(([x,y,z],j)=>{const q=rotated[i].points[j];assert.ok(Math.abs(q[0]-(4.225-(y-4.2)))<1e-8);assert.ok(Math.abs(q[1]-(4.2+x-4.225))<1e-8);assert.equal(q[2],z);}));
+});
 test('J1-1 and J1-2 share one photo model while preserving their own CAD records',()=>{
   const item=Object.freeze({id:'eq_vcut1_j1_2',code:'J1-2',x:75.25,y:35.34,width:4.45,height:4.57,rotation:0});
   const before=JSON.stringify(item),faces=models.build(item),points=faces.flatMap(f=>f.points);

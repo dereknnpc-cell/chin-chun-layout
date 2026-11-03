@@ -5,7 +5,7 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'C1-2', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
+  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'C1-2', 'T CUT 1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
   // Site relationship is a display overlay derived from live 2D, not another
   // equipment record or a mutation of the wall. Dimensions remain provisional.
   function dieCutSite(layout) {
@@ -1771,6 +1771,38 @@
     for(const [x,z] of [[3.95,1.25],[4.2,.84],[4.52,.30]])beam([x,.77,z],[x,3.06,z],.035,chrome,'guide-crossbar','guide');
     return faces;
   }
+  function buildTCut(item) {
+    // 4.45 x 2.40 m photo reference: silver end at PDF left, support end right.
+    const faces=[],w=Math.max(.05,Number(item.width)||4.45),d=Math.max(.05,Number(item.height)||2.4);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{const u=x/4.45*w-w/2,v=y/2.4*d-d/2;return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];};
+    const face=(points,color,part)=>faces.push({points:points.map(world),color,part});
+    const box=(x,y,z,bw,bd,bh,color,part)=>{
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(i=>p[i]),color,part);
+    };
+    const beam=(a,b,r,color,part)=>{
+      const v=b.map((q,i)=>q-a[i]),l=Math.hypot(...v),u=v.map(q=>q/l),cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);const el=Math.hypot(...e);e=e.map(q=>q/el);const f=cross(u,e),n=12;
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((q,j)=>q+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(a),rb=ring(b);face([...ra].reverse(),color,part);face(rb,color,part);ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color,part));
+    };
+    box(.12,.18,.08,3.58,2.04,.71,'#303332','table-body');
+    box(.12,.18,.08,.07,2.04,.71,'#b7c3bc','silver-end');
+    box(.12,.18,.80,3.58,2.04,.06,'#bcc7c1','table-rim');
+    box(.22,.27,.86,3.36,1.86,.035,'#31383a','cutting-surface');
+    for(const y of [.20,2.14])box(.15,y,.86,3.5,.045,.04,'#d6ddda','edge-rail');
+    for(const x of [.50,1.65,2.80])box(x,2.12,.84,.18,.10,.06,'#a5b2ac','edge-clamp');
+    // Fixed end-mounted roller and white A-frame: no loose stock or paper tubes.
+    for(const y of [.25,2.08]){
+      beam([3.88,y,.05],[4.14,y,1.10],.035,'#dedfd4','support-frame');
+      beam([4.38,y,.05],[4.14,y,1.10],.035,'#dedfd4','support-frame');
+      beam([3.88,y,.05],[4.38,y,.05],.035,'#dedfd4','support-frame');
+    }
+    beam([4.14,.19,1.10],[4.14,2.20,1.10],.045,'#b6c5c4','support-roller');
+    beam([4.35,.25,.10],[4.35,2.08,.10],.025,'#dedfd4','support-crossbar');
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'DIE CUT': return buildDieCut(item);
@@ -1780,6 +1812,7 @@
       case 'A1-2': return buildA12(item);
       case 'C1-1': return buildC11(item);
       case 'C1-2': return buildC12(item);
+      case 'T CUT 1': return buildTCut(item);
       case 'F1-1': return buildF1(item);
       case 'G2-1': return buildG21(item);
       case 'G2-2': return buildG2(item);
