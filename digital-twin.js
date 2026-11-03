@@ -197,6 +197,17 @@
       let segments=[[0,1]];
       // A loading shutter must be an opening in the west wall, not painted over a solid wall.
       const cuts=[];
+      const officeDoorIds=['door_1790246720313','door_1789543356566','door_1789543339277'];
+      const officeOpenings=[];
+      if(floor==='1F')for(const q of (data.equipment || []).filter(q=>officeDoorIds.includes(q.id) && (q.floor || '1F')==='1F')){
+        const corners=rect(q),xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]);
+        const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+        const horizontal=Math.abs(dy)<.01 && Math.abs(dx)>.01 && x1-x0>y1-y0;
+        const vertical=Math.abs(dx)<.01 && Math.abs(dy)>.01 && y1-y0>x1-x0;
+        if(horizontal && Math.abs((y0+y1)/2-n(item.y1))<.4)officeOpenings.push([(x0-n(item.x1))/dx,(x1-n(item.x1))/dx]);
+        if(vertical && Math.abs((x0+x1)/2-n(item.x1))<.4)officeOpenings.push([(y0-n(item.y1))/dy,(y1-n(item.y1))/dy]);
+      }
+      cuts.push(...officeOpenings);
       if(floor==='1F' && Math.abs(n(item.x1))<.35 && Math.abs(n(item.x2))<.35){
         const shutters=(data.equipment || []).filter(q=>q.category==='Door' && !isDockShutter(q) && /ROLL/i.test(q.code || '') && Math.abs(n(q.x))<1);
         cuts.push(...shutters.flatMap(q=>{
@@ -229,6 +240,14 @@
         const p=(t,side)=>[n(item.x1)+dx*t+a*side,n(item.y1)+dy*t+b*side];
         add(index?{...item,id:`${item.id}_part_${index}`}:item,'wall',[p(start,1),p(end,1),p(end,-1),p(start,-1)],item.type==='exterior'?2.8:2.4,'#ddd4b9');
         if(officeEast || (officeNorth && n(item.x1)+dx*start>=44.99))scene.at(-1).officeGlazing=true;
+      });
+      // The opening is only as high as the door; retain the wall above it.
+      officeOpenings.forEach(([u,v],i)=>{
+        const lo=Math.max(0,Math.min(u,v)),hi=Math.min(1,Math.max(u,v));
+        if(hi<=lo)return;
+        const p=(t,side)=>[n(item.x1)+dx*t+a*side,n(item.y1)+dy*t+b*side];
+        add({...item,id:`${item.id}_office_lintel_${i}`},'wall',[p(lo,1),p(hi,1),p(hi,-1),p(lo,-1)],item.type==='exterior'?2.8:2.4,'#ddd4b9');
+        scene.at(-1).zBase=2.1;
       });
       if(opening){
         const lo=(opening.x-n(item.x1))/dx,hi=(opening.x+opening.width-n(item.x1))/dx;

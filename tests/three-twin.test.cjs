@@ -105,6 +105,20 @@ test('photo-mapped QA office keeps its 2D walls and desks while displaying frame
   assert.equal(JSON.stringify(layout),before);
 });
 
+test('three office doors have visible 3D door faces and matching wall openings with lintels',()=>{
+  const t=setup(),layout=fixture(),before=JSON.stringify(layout);t.prepare(layout);
+  const checks=[['door_1790246720313','wall_1789539311074','x'],['door_1789543356566','wall_1789539450362','y'],['door_1789543339277','wall_17','y']];
+  for(const [doorId,wallId,axis] of checks){
+    const door=t.api.scene().find(s=>s.item.id===doorId),faces=t.api.faces();assert.ok(door);assert.ok(faces.some(f=>f.s.item.id===doorId));
+    const coord=axis==='x'?0:1,center=door.points.reduce((sum,p)=>sum+p[coord]/4,0);
+    const walls=t.api.scene().filter(s=>s.type==='wall' && (s.item.id===wallId || s.item.id.startsWith(wallId+'_part_') || s.item.id.startsWith(wallId+'_office_lintel_')));
+    const covers=s=>Math.min(...s.points.map(p=>p[coord]))<center && Math.max(...s.points.map(p=>p[coord]))>center;
+    assert.ok(!walls.some(s=>covers(s) && (s.zBase||0)<2.1),`${doorId} is hidden behind a solid wall`);
+    assert.ok(walls.some(s=>covers(s) && s.zBase===2.1),`${doorId} needs a lintel`);
+  }
+  assert.equal(JSON.stringify(layout),before);
+});
+
 const codes=['DIE CUT','WC-STALLS','H1-1','A1-1','A1-2','EVA 3','C1-1','C1-2','T Cut 1','F1-1','G2-1','G2-2','B1-1','B1-2','B1-3','B1-4','E1-1','E1-2','Q2-1','Q2-2','Q2-3','J1-1','J1-2','J1-3','N1-1','DESK-CUT','GRINDER-CUT','D1-1','Welding','L4-1','PL-1','PL-2'];
 for(const code of codes)test(`${code}: all existing model geometry survives the Three.js adapter without a second rotation`,()=>{
   const window=loadModels(),item=freeze({id:code,code,x:13.2,y:41.4,width:6,height:4,rotation:37}),before=JSON.stringify(item);
