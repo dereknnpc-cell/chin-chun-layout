@@ -49,15 +49,16 @@ test('full/disabled/corrupted backup storage prevents replacement; malformed des
 test('local, imported and cloud revisions append accessories only to r2 while preserving every prior drawing record',()=>{
   const section=source.slice(source.indexOf('  function applySourceGeometryRevision('),source.indexOf('  // --- State Variables ---'));
   const ctx={window:{},SOURCE_GEOMETRY_REVISION:desktop.source_geometry_revision};vm.createContext(ctx);vm.runInContext(section,ctx);
+  const markEva=layout=>{const e=layout.equipment.find(q=>q.id==='eq_eva3');if(e)e.ls7as_dimensions_confirmed=true;return layout;};
   for(const candidate of [
-    {...plain(old),source_geometry_revision:'legacy-user-revision',dock_shutters_fixed:true},
-    {...plain(raw),source_geometry_revision:'older-user-revision',dock_shutters_fixed:true}
+    markEva({...plain(old),source_geometry_revision:'legacy-user-revision',dock_shutters_fixed:true}),
+    markEva({...plain(raw),source_geometry_revision:'older-user-revision',dock_shutters_fixed:true})
   ]){
     candidate.equipment[0].x=8.713;candidate.walls.push({id:'user-wall',x1:1,y1:2,x2:4,y2:2});
     const before=JSON.stringify(candidate),result=ctx.applySourceGeometryRevision(candidate);
     assert.equal(result.layout,candidate);assert.equal(result.migrated,false);assert.equal(JSON.stringify(candidate),before);
   }
-  const candidate={...plain(raw),baseline_revision:'future-desktop',dock_shutters_fixed:true};
+  const candidate=markEva({...plain(raw),baseline_revision:'future-desktop',dock_shutters_fixed:true});
   candidate.equipment[0].x=8.713;candidate.walls.push({id:'user-wall',x1:1,y1:2,x2:4,y2:2});
   const before=plain(candidate),result=ctx.applySourceGeometryRevision(candidate);
   assert.notEqual(result.layout,candidate);assert.equal(result.migrated,true);assert.equal(result.accessoriesAdded,true);
@@ -66,7 +67,7 @@ test('local, imported and cloud revisions append accessories only to r2 while pr
   for(const key of Object.keys(before).filter(k=>!['equipment','source_geometry_revision'].includes(k)))assert.deepEqual(plain(result.layout[key]),before[key],key);
   assert.deepEqual(plain(result.layout.equipment.slice(-2).map(q=>q.id)),['eq_cutting_office_desk','eq_cutting_bench_grinder']);
   assert.equal(result.layout.source_geometry_revision,desktop.source_geometry_revision);
-  const r3=plain(desktop);r3.source_geometry_revision='2026-layout-for-ai-eps-v1.2-r3-cutting-accessories';
+  const r3=markEva(plain(desktop));r3.source_geometry_revision='2026-layout-for-ai-eps-v1.2-r3-cutting-accessories';
   const desk=r3.equipment.find(q=>q.id==='eq_cutting_office_desk');desk.rotation=0;desk.x=8.713;
   const upgraded=ctx.applySourceGeometryRevision(r3);assert.equal(upgraded.layout.equipment.find(q=>q.id===desk.id).rotation,-90);assert.equal(upgraded.layout.equipment.find(q=>q.id===desk.id).x,8.713);
   desk.rotation=45;assert.equal(ctx.applySourceGeometryRevision(r3).layout.equipment.find(q=>q.id===desk.id).rotation,45);
@@ -101,7 +102,8 @@ test('production ships desktop helper/data, and all existing model builders rema
 test('dock shutters fit evenly within their host wall and are fixed without moving other records',()=>{
   const section=source.slice(source.indexOf('  function applySourceGeometryRevision('),source.indexOf('  // --- State Variables ---'));
   const ctx={window:{},SOURCE_GEOMETRY_REVISION:desktop.source_geometry_revision};vm.createContext(ctx);vm.runInContext(section,ctx);
-  const original=plain(desktop),result=ctx.applySourceGeometryRevision(original),ids=['door_1789543247410','door_1789543258711','door_1789543264240'];
+  const original=plain(desktop);original.equipment.find(q=>q.id==='eq_eva3').ls7as_dimensions_confirmed=true;
+  const result=ctx.applySourceGeometryRevision(original),ids=['door_1789543247410','door_1789543258711','door_1789543264240'];
   const doors=ids.map(id=>result.layout.equipment.find(q=>q.id===id));
   assert.deepEqual(plain(doors.map(q=>[q.x,q.y,q.width,q.rotation])),[[.75,34.825,4,0],[5.5,34.825,4,0],[10.25,34.825,4,0]]);
   assert.equal(result.layout.dock_shutters_fixed,true);assert.equal(ctx.applySourceGeometryRevision(result.layout).migrated,false);
@@ -111,4 +113,15 @@ test('dock shutters fit evenly within their host wall and are fixed without movi
   const lockCtx={layoutData:result.layout,isLayerLocked:()=>false,getRecordLayerKey:()=> 'equipment'};vm.createContext(lockCtx);vm.runInContext(lock,lockCtx);
   assert.equal(lockCtx.isRecordLayerLocked({type:'equipment',item:doors[0]}),true);
   assert.equal(lockCtx.isRecordLayerLocked({type:'equipment',item:{id:'other'}}),false);
+});
+
+test('EVA 3 manual dimensions update once about the same CAD center and preserve other records',()=>{
+  const section=source.slice(source.indexOf('  function applySourceGeometryRevision('),source.indexOf('  // --- State Variables ---'));
+  const ctx={window:{},SOURCE_GEOMETRY_REVISION:desktop.source_geometry_revision};vm.createContext(ctx);vm.runInContext(section,ctx);
+  const original={...plain(desktop),dock_shutters_fixed:true},before=JSON.stringify(original),old=original.equipment.find(q=>q.id==='eq_eva3');
+  const result=ctx.applySourceGeometryRevision(original),updated=result.layout.equipment.find(q=>q.id==='eq_eva3');
+  assert.equal(updated.width,3.817);assert.equal(updated.height,12.47);assert.equal(updated.rotation,old.rotation);
+  assert.ok(Math.abs(updated.x+updated.width/2-old.x-old.width/2)<1e-9);assert.ok(Math.abs(updated.y+updated.height/2-old.y-old.height/2)<1e-9);
+  assert.deepEqual(plain(result.layout.equipment.filter(q=>q.id!=='eq_eva3')),original.equipment.filter(q=>q.id!=='eq_eva3'));
+  assert.equal(JSON.stringify(original),before);assert.equal(ctx.applySourceGeometryRevision(result.layout).migrated,false);
 });

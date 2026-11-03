@@ -117,6 +117,15 @@ test('cutting desk and grinder follow independent 2D movement, rotation and plan
     }));
   }
 });
+test('EVA 3 uses the manual dimensions and photo sections and rotates with its 2D record',()=>{
+  const item=Object.freeze({code:'EVA 3',x:0,y:0,width:3.817,height:12.47,rotation:0}),faces=models.build(item),before=JSON.stringify(item);
+  const points=faces.flatMap(f=>f.points);
+  assert.ok(points.every(([x,y,z])=>Number.isFinite(x+y+z)&&x>=0&&x<=3.817&&y>=0&&y<=12.47&&z>=0&&z<=2.51+1e-9));
+  for(const section of ['C2','B3 cooling','B2 laminating','B1 gluing','A2 unwind','A1 unwind'])assert.ok(faces.some(f=>f.section===section),section);
+  assert.ok(faces.some(f=>f.part==='laminating-drum'));assert.equal(JSON.stringify(item),before);
+  const turned=models.build({...item,x:3,y:5,rotation:270});
+  faces.forEach((f,i)=>f.points.forEach(([x,y,z],j)=>{const p=turned[i].points[j];assert.ok(Math.abs(p[0]-(3+3.817/2+(y-12.47/2)))<1e-8);assert.ok(Math.abs(p[1]-(5+12.47/2-(x-3.817/2)))<1e-8);assert.equal(p[2],z);}));
+});
 test('T Cut 1 photo table follows its independent 2D footprint',()=>{
   const item=Object.freeze({code:'T Cut 1',x:2,y:3,width:4.45,height:2.4,rotation:0});
   const before=JSON.stringify(item),faces=models.build(item);

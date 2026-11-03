@@ -4597,6 +4597,14 @@
       }),dock_shutters_fixed:true};
       accessoriesAdded=true;
     }
+    // EVA 3 manual dimensions confirmed by user. Preserve the CAD center,
+    // rotation, and all other records; flag once to respect later edits.
+    const eva=(working.equipment || []).find(q=>q.id==='eq_eva3');
+    if(eva && !eva.ls7as_dimensions_confirmed && Number.isFinite(Number(eva.x)) && Number.isFinite(Number(eva.y)) && Number(eva.width)>0 && Number(eva.height)>0){
+      const width=3.817,height=12.47;
+      working={...working,equipment:working.equipment.map(q=>q!==eva?q:{...q,x:Number(q.x)+(Number(q.width)-width)/2,y:Number(q.y)+(Number(q.height)-height)/2,width,height,ls7as_dimensions_confirmed:true})};
+      accessoriesAdded=true;
+    }
     // The user's original drawing wins over both the rejected A3 trace and
     // baseline migrations. Recover only from this document's own archive.
     const buildingRepair=window.ChinChunBuilding?.repair(working);

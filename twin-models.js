@@ -5,7 +5,7 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'C1-1', 'C1-2', 'T CUT 1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
+  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'EVA 3', 'EVA3', 'C1-1', 'C1-2', 'T CUT 1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
   // Site relationship is a display overlay derived from live 2D, not another
   // equipment record or a mutation of the wall. Dimensions remain provisional.
   function dieCutSite(layout) {
@@ -1803,6 +1803,50 @@
     beam([4.35,.25,.10],[4.35,2.08,.10],.025,'#dedfd4','support-crossbar');
     return faces;
   }
+  function buildEVA3(item) {
+    // Manual page 4: 12.47 x 3.817 m; C2, cooling, B2, B1, A2, A1
+    // from plan left to right. CAD-local y is the long axis (rotation 270°).
+    const faces=[],w=Math.max(.05,Number(item.width)||5),h=Math.max(.05,Number(item.height)||15);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{const u=x/3.817*w-w/2,v=y/12.47*h-h/2;return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+h/2+u*s+v*c,z];};
+    let section='C2';
+    const face=(points,color,part)=>faces.push({points:points.map(world),color,part,section});
+    const box=(x,y,z,bw,bd,bh,color,part)=>{
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(i=>p[i]),color,part);
+    };
+    const tube=(p0,p1,r,color,part,n=16)=>{
+      const v=p1.map((q,i)=>q-p0[i]),len=Math.hypot(...v),u=v.map(q=>q/len),cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);const el=Math.hypot(...e);e=e.map(q=>q/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((q,j)=>q+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(p0),rb=ring(p1);face([...ra].reverse(),color,part);face(rb,color,part);ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color,part));
+    };
+    const cream='#dfd9c8',blue='#138fc4',metal='#a9b8b7',dark='#3b4746',belt='#8e9892';
+    const roller=(y,z,r,color=metal,part='roller')=>tube([.46,y,z],[3.27,y,z],r,color,part,20);
+    const base=(y,len)=>{for(const x of [.35,3.34])box(x,y,0,.12,len,.14,cream,'base-rail');for(const yy of [y,y+len-.12])box(.35,yy,0,3.11,.12,.14,cream,'base-crossbar');};
+    const cabinet=(y,len)=>{box(3.25,y,.14,.45,len,1.18,blue,'control-cabinet');box(3.69,y+.10,.30,.015,Math.max(.08,len-.2),.76,cream,'cabinet-door');};
+    base(.1,1.4);for(const y of [.38,.75,1.12])roller(y,.74,.13,dark,'takeup-roller');cabinet(.25,.9);
+    section='B3 cooling';base(1.55,2.04);for(const y of [1.75,2.16,2.58,3.0,3.4])roller(y,.70,.09,dark,'cooling-roller');
+    face([[.50,1.75,.88],[3.22,1.75,.88],[3.22,3.55,2.18],[.50,3.55,2.18]],belt,'cooling-belt');
+    for(const x of [1.25,2.55])tube([x,2.30,1.33],[x,2.36,1.37],.22,dark,'cooling-fan',20);
+    for(const x of [.42,3.25]){tube([x,1.70,.55],[x,1.70,1.15],.025,blue,'cooling-guard');tube([x,1.70,1.15],[x,3.46,2.24],.025,blue,'cooling-guard');}
+    section='B2 laminating';base(3.59,2.13);
+    for(const x of [.39,3.20]){box(x,3.60,.15,.22,2.08,1.55,blue,'drum-side');box(x,4.06,1.70,.22,1.14,.60,blue,'drum-top');}
+    tube([.62,4.65,1.27],[3.20,4.65,1.27],1.04,'#a17b61','laminating-drum',32);
+    for(const y of [4.0,5.28])roller(y,2.36,.09,metal,'drum-guide');
+    box(3.29,4.15,2.35,.16,.16,.16,'#e8b348','signal-light');
+    section='B1 gluing';base(5.72,2.18);
+    for(const x of [.39,3.20]){box(x,6.28,.15,.18,1.35,2.20,cream,'glue-frame');box(x,6.28,2.28,.18,1.35,.10,cream,'glue-top');}
+    for(const [y,z,r] of [[6.15,.85,.22],[6.60,1.1,.18],[6.95,1.55,.12],[7.35,1.95,.10],[7.58,2.25,.08]])roller(y,z,r,metal,'glue-roller');
+    cabinet(6.65,.75);
+    for(const [name,start] of [['A2 unwind',8.0],['A1 unwind',10.65]]){
+      section=name;base(start,1.70);
+      for(const x of [.40,3.20]){box(x,start,.14,.18,1.60,1.05,cream,'unwind-post');box(x,start+.35,1.15,.18,.88,.90,cream,'unwind-upright');}
+      for(const [off,z,r] of [[.35,.76,.12],[.8,1.14,.16],[1.2,1.55,.10],[1.4,2.1,.07]])roller(start+off,z,r,metal,'unwind-roller');
+      cabinet(start+.30,.95);
+    }
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
       case 'DIE CUT': return buildDieCut(item);
@@ -1812,6 +1856,8 @@
       case 'A1-2': return buildA12(item);
       case 'C1-1': return buildC11(item);
       case 'C1-2': return buildC12(item);
+      case 'EVA 3':
+      case 'EVA3': return buildEVA3(item);
       case 'T CUT 1': return buildTCut(item);
       case 'F1-1': return buildF1(item);
       case 'G2-1': return buildG21(item);

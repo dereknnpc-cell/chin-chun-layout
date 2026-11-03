@@ -47,7 +47,7 @@ test('new models remain available after equipment label edits via photoModelCode
     assert.equal(JSON.stringify(models.build({code:'renamed',photoModelCode:code,width,height})),JSON.stringify(models.build({code,width,height})));
   }
   assert.equal(JSON.stringify(models.build({code:'G2-1',width:2.4,height:4.19,rotation:0})),previous);
-  assert.equal(models.build({code:'EVA 3',width:5,height:15}),null);
+  assert.ok(models.build({code:'EVA 3',width:3.817,height:12.47}).some(f=>f.part==='laminating-drum'));
   assert.equal(models.build({code:'P1-2',width:5,height:4}),null,'unresolved handwritten P1-2 is not silently remapped');
 });
 test('PL-1 and PL-2 are open steel racks with fixed shelves and end bracing',()=>{
