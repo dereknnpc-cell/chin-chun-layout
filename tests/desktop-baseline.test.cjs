@@ -50,14 +50,14 @@ test('local, imported and cloud revisions append accessories only to r2 while pr
   const section=source.slice(source.indexOf('  function applySourceGeometryRevision('),source.indexOf('  // --- State Variables ---'));
   const ctx={window:{},SOURCE_GEOMETRY_REVISION:desktop.source_geometry_revision};vm.createContext(ctx);vm.runInContext(section,ctx);
   for(const candidate of [
-    {...plain(old),source_geometry_revision:'legacy-user-revision'},
-    {...plain(raw),source_geometry_revision:'older-user-revision'}
+    {...plain(old),source_geometry_revision:'legacy-user-revision',dock_shutters_fixed:true},
+    {...plain(raw),source_geometry_revision:'older-user-revision',dock_shutters_fixed:true}
   ]){
     candidate.equipment[0].x=8.713;candidate.walls.push({id:'user-wall',x1:1,y1:2,x2:4,y2:2});
     const before=JSON.stringify(candidate),result=ctx.applySourceGeometryRevision(candidate);
     assert.equal(result.layout,candidate);assert.equal(result.migrated,false);assert.equal(JSON.stringify(candidate),before);
   }
-  const candidate={...plain(raw),baseline_revision:'future-desktop'};
+  const candidate={...plain(raw),baseline_revision:'future-desktop',dock_shutters_fixed:true};
   candidate.equipment[0].x=8.713;candidate.walls.push({id:'user-wall',x1:1,y1:2,x2:4,y2:2});
   const before=plain(candidate),result=ctx.applySourceGeometryRevision(candidate);
   assert.notEqual(result.layout,candidate);assert.equal(result.migrated,true);assert.equal(result.accessoriesAdded,true);
@@ -96,4 +96,19 @@ test('production ships desktop helper/data, and all existing model builders rema
   assert.match(build,/"desktop-baseline.js"/);assert.match(build,/"factory_layout_data.json"/);
   assert.match(html,/desktopBaselineStatus/);assert.match(html,/loadDesktopBaselineBtn/);
   assert.ok(!read('desktop-baseline.js').includes('scheduleSave'),'pure backup helper has no cloud side effects');
+});
+
+test('dock shutters fit evenly within their host wall and are fixed without moving other records',()=>{
+  const section=source.slice(source.indexOf('  function applySourceGeometryRevision('),source.indexOf('  // --- State Variables ---'));
+  const ctx={window:{},SOURCE_GEOMETRY_REVISION:desktop.source_geometry_revision};vm.createContext(ctx);vm.runInContext(section,ctx);
+  const original=plain(desktop),result=ctx.applySourceGeometryRevision(original),ids=['door_1789543247410','door_1789543258711','door_1789543264240'];
+  const doors=ids.map(id=>result.layout.equipment.find(q=>q.id===id));
+  assert.deepEqual(plain(doors.map(q=>[q.x,q.y,q.width,q.rotation])),[[.75,34.825,4,0],[5.5,34.825,4,0],[10.25,34.825,4,0]]);
+  assert.equal(result.layout.dock_shutters_fixed,true);assert.equal(ctx.applySourceGeometryRevision(result.layout).migrated,false);
+  assert.deepEqual(plain(result.layout.equipment.filter(q=>!ids.includes(q.id))),original.equipment.filter(q=>!ids.includes(q.id)));
+  assert.deepEqual(plain(result.layout.walls),original.walls);
+  const lock=source.slice(source.indexOf('  function isRecordLayerLocked('),source.indexOf('  function updateLayerLockControls('));
+  const lockCtx={layoutData:result.layout,isLayerLocked:()=>false,getRecordLayerKey:()=> 'equipment'};vm.createContext(lockCtx);vm.runInContext(lock,lockCtx);
+  assert.equal(lockCtx.isRecordLayerLocked({type:'equipment',item:doors[0]}),true);
+  assert.equal(lockCtx.isRecordLayerLocked({type:'equipment',item:{id:'other'}}),false);
 });

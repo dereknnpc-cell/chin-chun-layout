@@ -160,6 +160,7 @@
     const a = n(item.rotation)*Math.PI/180, c = Math.cos(a), s = Math.sin(a);
     return [[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([x,y])=>[cx+x*c-y*s,cy+x*s+y*c]);
   }
+  const isDockShutter=item=>['door_1789543247410','door_1789543258711','door_1789543264240'].includes(item?.id);
   function rebuild() {
     if (!data) return;
     fitExtent=null;
@@ -178,7 +179,7 @@
       const z = isRamp(item) ? factoryRise : category==='Door' ? (/ROLL/i.test(item.code || '') ? 2.7 : 2.1) : category==='Window' ? .25 : /Furniture|Office/.test(category) ? .9 : 1.7;
       const offset=window.ChinChunModels?.rotationOffset?.(item) || 0;
       const points=rect(offset?{...item,rotation:n(item.rotation)+offset}:item);
-      if(floor==='1F' && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1){
+      if(floor==='1F' && !isDockShutter(item) && /ROLL/i.test(item.code || '') && Math.abs(n(item.x))<1){
         const center=points.reduce((p,q)=>[p[0]+q[0]/4,p[1]+q[1]/4],[0,0]);
         points.forEach(p=>{p[0]-=center[0];});
       }
@@ -193,14 +194,14 @@
       // A loading shutter must be an opening in the west wall, not painted over a solid wall.
       const cuts=[];
       if(floor==='1F' && Math.abs(n(item.x1))<.35 && Math.abs(n(item.x2))<.35){
-        const shutters=(data.equipment || []).filter(q=>q.category==='Door' && /ROLL/i.test(q.code || '') && Math.abs(n(q.x))<1);
+        const shutters=(data.equipment || []).filter(q=>q.category==='Door' && !isDockShutter(q) && /ROLL/i.test(q.code || '') && Math.abs(n(q.x))<1);
         cuts.push(...shutters.flatMap(q=>{
           const ys=rect(q).map(p=>p[1]),lo=Math.min(...ys),hi=Math.max(...ys);
           return [[(lo-n(item.y1))/dy,(hi-n(item.y1))/dy]];
         }));
       }
       if(floor==='1F' && Math.abs(dy)<.01){
-        (data.equipment || []).filter(isOfficeEntry).forEach(q=>{
+        (data.equipment || []).filter(q=>isOfficeEntry(q) || (item.id==='wall_11' && isDockShutter(q))).forEach(q=>{
           const door=rect(q),xs=door.map(p=>p[0]),ys=door.map(p=>p[1]);
           if(Math.abs((Math.min(...ys)+Math.max(...ys))/2-n(item.y1))<.4)
             cuts.push([(Math.min(...xs)-n(item.x1))/dx,(Math.max(...xs)-n(item.x1))/dx]);
@@ -674,7 +675,7 @@
         faces.push(...blockFaces(office,[entry.edge(-entry.half,near),entry.edge(entry.half,near),entry.edge(entry.half,far),entry.edge(-entry.half,far)],0,factoryRise*(steps-k)/steps,'#aeb8af'));
       }
     }
-    const shutter=scene.find(s=>s.item.category==='Door' && /ROLL/i.test(s.item.code || '') && Math.abs(n(s.item.x))<1);
+    const shutter=scene.find(s=>s.item.category==='Door' && !isDockShutter(s.item) && /ROLL/i.test(s.item.code || '') && Math.abs(n(s.item.x))<1);
     if(shutter && (!detail || selected===shutter)){
       const ys=shutter.points.map(p=>p[1]),lo=Math.min(...ys),hi=Math.max(...ys);
       const landing=[[-2,lo-.45],[.05,lo-.45],[.05,hi+.45],[-2,hi+.45]];

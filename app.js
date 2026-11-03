@@ -4586,6 +4586,17 @@
       working={...candidate,equipment,source_geometry_revision:SOURCE_GEOMETRY_REVISION};
       accessoriesAdded=true;
     }
+    // Fix the three confirmed dock shutters to their 15 m host wall. Run once
+    // per document and never replace any unrelated wall or equipment records.
+    const dockIds=['door_1789543247410','door_1789543258711','door_1789543264240'];
+    const dockWall=(working.walls || []).find(w=>w.id==='wall_11' && w.x1===0 && w.x2===15 && w.y1===35 && w.y2===35);
+    if(!working.dock_shutters_fixed && dockWall && dockIds.every(id=>(working.equipment || []).some(q=>q.id===id && q.code==='ROLL-4000'))){
+      working={...working,equipment:working.equipment.map(q=>{
+        const i=dockIds.indexOf(q.id);
+        return i<0?q:{...q,x:.75+i*4.75,y:34.825,width:4,height:.35,rotation:0};
+      }),dock_shutters_fixed:true};
+      accessoriesAdded=true;
+    }
     // The user's original drawing wins over both the rejected A3 trace and
     // baseline migrations. Recover only from this document's own archive.
     const buildingRepair=window.ChinChunBuilding?.repair(working);
@@ -5033,7 +5044,7 @@
   }
 
   function isRecordLayerLocked(rec) {
-    return isLayerLocked(getRecordLayerKey(rec));
+    return Boolean(rec?.type==='equipment' && layoutData.dock_shutters_fixed && ['door_1789543247410','door_1789543258711','door_1789543264240'].includes(rec.item.id)) || isLayerLocked(getRecordLayerKey(rec));
   }
 
   function updateLayerLockControls() {
