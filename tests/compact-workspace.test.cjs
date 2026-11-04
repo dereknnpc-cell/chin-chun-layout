@@ -46,13 +46,13 @@ test('desktop layers default open; breakpoint changes close mobile overlays with
   const controllerSource=source.slice(source.indexOf('  function bindMobileWorkspace()'),source.indexOf('  // --- Dynamic Floor Management'));
   assert.doesNotMatch(controllerSource,/layoutData|localStorage|scheduleSave|pushHistoryState/);
 });
-test('phone fitting preserves aspect, centers every drawing extent including negative positions, and changes no input',()=>{
+test('drawing fitting preserves aspect, centers every drawing extent including negative positions, and changes no input',()=>{
   const context={};vm.runInNewContext(source.slice(source.indexOf('  function fitDrawingBounds('),source.indexOf('  function fitToScreen()')),context);
-  for(const [w,h] of [[360,724],[390,768],[844,314],[900,700]]){
+  for(const [w,h] of [[360,724],[390,768],[844,314],[900,700],[1920,1000],[2560,1200]]){
     const bounds={x:-150,y:-200,width:2700,height:1900},before=JSON.stringify(bounds),r=context.fitDrawingBounds(bounds,w,h);
     assert.equal(JSON.stringify(bounds),before);assert.ok(Math.abs(r.width/r.height-w/h)<1e-10);
     assert.ok(r.x<bounds.x && r.y<bounds.y);assert.ok(r.x+r.width>bounds.x+bounds.width);assert.ok(r.y+r.height>bounds.y+bounds.height);
     assert.ok(Math.abs(r.x+r.width/2-(bounds.x+bounds.width/2))<1e-8);
   }
-  assert.match(source,/window.innerWidth <= 900 && currentFloor !== "2F" && siteViewMode !== "max"/,'preserve the existing 2F mezzanine and explicit wide-site cameras');
+  assert.match(source,/if \(currentFloor !== "2F" && siteViewMode !== "max"\)/,'preserve the existing 2F mezzanine and explicit wide-site cameras');
 });

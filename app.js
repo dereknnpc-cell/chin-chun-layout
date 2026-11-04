@@ -6974,6 +6974,26 @@
     renderSvg();
   }
 
+  function nudgeSelectedEquipment(event) {
+    const directions={ArrowLeft:[-.1,0],ArrowRight:[.1,0],ArrowUp:[0,-.1],ArrowDown:[0,.1]};
+    const delta=directions[event.key];
+    if(!delta || !selectedId || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || isDrawingRoute || isDragging) return false;
+    if(event.target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]') || document.querySelector('dialog[open]'))return false;
+    const rec=findItemRecord(selectedId);
+    if(rec?.type!=='equipment' || !Number.isFinite(Number(rec.item.x)) || !Number.isFinite(Number(rec.item.y)))return false;
+    event.preventDefault();
+    if(isRecordLayerLocked(rec)){
+      if(!event.repeat)showToast('設備圖層已鎖定，請先解鎖再微調位置','info',2200);
+      return true;
+    }
+    pushHistoryState(`微調物件 ${rec.item.code || rec.item.name || ''} 0.1 m`);
+    rec.item.x=Math.round((Number(rec.item.x)+delta[0])*1e6)/1e6;
+    rec.item.y=Math.round((Number(rec.item.y)+delta[1])*1e6)/1e6;
+    selectItem(selectedId);
+    saveToLocalStorage();
+    return true;
+  }
+
   function rotateSelected(delta) {
     if (!selectedId) return;
     const rec = findItemRecord(selectedId);
@@ -7530,10 +7550,9 @@
 
     const aspectVp = vpW / vpH;
 
-    // A phone's whole-drawing view fits the actual CAD drawing, not the large
-    // decorative site margins. Geometry and saved layout coordinates stay intact.
-    // Explicit wide-site mode retains its existing surrounding context.
-    if (window.innerWidth <= 900 && currentFloor !== "2F" && siteViewMode !== "max") {
+    // Fit the working drawing on desktop and phone, excluding decorative site
+    // margins. Keep a small screen-space inset and preserve the explicit wide view.
+    if (currentFloor !== "2F" && siteViewMode !== "max") {
       const groups = svgEl.querySelectorAll("#layerEquipment, #layerWalls, #layerGrid, #layerAisles, #layerDimensions, #layerTitleBlock, #layer2FMezzanine, #layerHandrails, #layerVerticalCirculation, #layerFlows");
       const rects = Array.from(groups, group => group.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0);
       const matrix = svgEl.getScreenCTM();
@@ -7541,7 +7560,10 @@
         const inverse = matrix.inverse();
         const first = new DOMPoint(Math.min(...rects.map(r => r.left)), Math.min(...rects.map(r => r.top))).matrixTransform(inverse);
         const last = new DOMPoint(Math.max(...rects.map(r => r.right)), Math.max(...rects.map(r => r.bottom))).matrixTransform(inverse);
-        Object.assign(viewBox, fitDrawingBounds({ x: first.x, y: first.y, width: last.x - first.x, height: last.y - first.y }, vpW, vpH));
+        // Keep the drawing clear of the floating bottom status bar.
+        const usableH = Math.max(1, vpH - 36);
+        const fitted = fitDrawingBounds({ x: first.x, y: first.y, width: last.x - first.x, height: last.y - first.y }, vpW, usableH);
+        Object.assign(viewBox, fitted, { height: fitted.height * vpH / usableH });
         updateViewBox();
         return;
       }
@@ -8533,7 +8555,8 @@
 
     // Keyboard Shortcuts & History Navigation
     window.addEventListener("keydown", (e) => {
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+      if (nudgeSelectedEquipment(e)) return;
+      if (e.target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"])') || document.querySelector('dialog[open]')) return;
 
       if (e.key === "Control") {
         ctrlKeyDownTimestamp = Date.now();
