@@ -40,16 +40,23 @@
     const lane=lanes.find(a=>a.id==='aisle_2'),boundary=b.main.y+b.main.height;
     const die=(layout.equipment || []).find(e=>String(e.photoModelCode || e.code || '').trim().toUpperCase()==='DIE CUT' && (e.floor || '1F')==='1F');
     if(lane && die && lane.y<=boundary && lane.y+lane.height>boundary && b.main.rise>b.annex.rise){
-      const cx=lane.x+lane.width/2,width=Math.min(1.2,lane.width),left=cx-width/2,right=cx+width/2;
+      const laneCenter=lane.x+lane.width/2,width=Math.min(1.2,lane.width),probeLeft=laneCenter-width/2,probeRight=laneCenter+width/2;
       const walls=(layout.walls || []).filter(w=>(w.floor || '1F')==='1F' && Math.abs(w.y1-boundary)<.05 && Math.abs(w.y2-boundary)<.05);
       // Use the gap in the user's own drawing; never cut or remove an edited wall.
-      const blocked=walls.some(w=>Math.min(w.x1,w.x2)<right && Math.max(w.x1,w.x2)>left);
-      const lo=Math.max(...walls.map(w=>Math.max(w.x1,w.x2)).filter(x=>x<=left));
-      const hi=Math.min(...walls.map(w=>Math.min(w.x1,w.x2)).filter(x=>x>=right));
-      if(!blocked && Number.isFinite(lo) && Number.isFinite(hi) && hi-lo<=6 && die.x>right && die.x-cx<6 && die.y>=boundary && die.y-boundary<4){
+      const blocked=walls.some(w=>Math.min(w.x1,w.x2)<probeRight && Math.max(w.x1,w.x2)>probeLeft);
+      const lo=Math.max(...walls.map(w=>Math.max(w.x1,w.x2)).filter(x=>x<=probeLeft));
+      const hi=Math.min(...walls.map(w=>Math.min(w.x1,w.x2)).filter(x=>x>=probeRight));
+      // In the current drawing the Die Cut itself occupies the existing gap.
+      // Keep the human doorway at the left end and the waist-high machine
+      // opening to its right. The older arrangement places the machine beyond
+      // the gap, so its previously confirmed doorway remains in the lane.
+      const machineInGap=die.x>=lo && die.x<hi && die.x+Number(die.width)<=hi+.15;
+      const left=machineInGap?lo+.15:probeLeft,right=left+width,cx=(left+right)/2;
+      const roomForDoor=!machineInGap || right+.10<=die.x;
+      if(!blocked && Number.isFinite(lo) && Number.isFinite(hi) && hi-lo<=6 && roomForDoor && (machineInGap || die.x>right && die.x-cx<6) && die.y>=boundary && die.y-boundary<4){
         stairs={id:'site_diecut_stairs',code:'STAIR-DIECUT',name:'Die Cut 旁通行樓梯與局部牆面',
           x:left,y:boundary,width,height:1,rotation:0,low:b.annex.rise,high:b.main.rise,steps:3,
-          portal:{left:lo,right:hi,y:boundary,openingLeft:left,openingRight:right,thickness:.2,top:b.main.rise+2.4,head:b.main.rise+2.1,sill:b.main.rise+.8},
+          portal:{left:lo,right:hi,y:boundary,openingLeft:left,openingRight:right,thickness:.2,top:b.main.rise+2.4,head:b.main.rise+2.1,sill:b.annex.rise+.85},
           source,accuracy:'photo-position; illustrative-door-and-treads',
           lowPoint:[cx,boundary+1,b.annex.rise],highPoint:[cx,boundary,b.main.rise]};
       }

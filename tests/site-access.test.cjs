@@ -83,7 +83,7 @@ test('Die Cut access has discrete stair treads up from 1 to 1.5, with a clear do
   assert.ok(walls.some(f=>f.part==='access-wall-left'));assert.ok(walls.some(f=>f.part==='access-wall-sill'));assert.ok(walls.some(f=>f.part==='access-wall-header'));
   assert.ok(!walls.some(f=>intersects(f,cx,p.y,2.5)),'walk-through doorway is open');
   assert.ok(walls.some(f=>intersects(f,(p.left+p.openingLeft)/2,p.y,2.5)),'left wall remains');
-  assert.ok(walls.some(f=>intersects(f,(p.openingRight+p.right)/2,p.y,2)),'right waist wall remains');
+  assert.ok(walls.some(f=>intersects(f,(p.openingRight+p.right)/2,p.y,1.7)),'right waist wall remains');
   assert.ok(!walls.some(f=>intersects(f,(p.openingRight+p.right)/2,p.y,2.8)),'window above waist wall remains open');
   assert.ok(faces.every(f=>f.points.every(v=>v.every(Number.isFinite))));
 });
@@ -149,4 +149,23 @@ test('Die Cut close-up retains adjacent stair, columns, half-wall and continuous
   assert.ok(machineLintel && machineSill);
   assert.ok(Math.abs(machineLintel.zBase+site.insideRise-stairs.item.portal.head)<1e-8,'lintels align across the separate apertures');
   assert.equal(JSON.stringify(d),before);
+});
+
+test('saved drawing with Die Cut inside the five metre wall gap still renders the separate stair doorway, sill and beams',()=>{
+  const d=fixture(),machine=d.equipment.find(q=>q.id==='eq_diecut_sub');
+  Object.assign(machine,{x:51.6,y:40.3,width:3.25,height:3});
+  const before=JSON.stringify(d),stairs=access.get(d).stairs;
+  assert.ok(stairs,'stairs must not disappear when the machine is inside the wall gap');
+  assert.ok(stairs.x>=50 && stairs.x+stairs.width<machine.x);
+  assert.equal(stairs.steps,3);assert.equal(stairs.high-stairs.low,.5);
+  const p=stairs.portal,faces=access.stairFaces(stairs),cx=stairs.x+stairs.width/2,mid=machine.x+machine.width/2;
+  const solids=[...new Set(faces.map(f=>f.part))].map(part=>({part,points:faces.filter(f=>f.part===part).flatMap(f=>f.points)}));
+  assert.ok(!solids.some(f=>f.part.startsWith('access-wall') && intersects(f,cx,p.y,2.5)),'passage remains open above the stairs');
+  assert.ok(solids.some(f=>f.part==='access-wall-sill' && intersects(f,mid,p.y,1.8)),'machine aperture retains its lower wall');
+  assert.ok(solids.some(f=>f.part==='access-door-jamb' && intersects(f,p.openingRight+.1,p.y,2.8)),'central pillar remains');
+  assert.ok(solids.some(f=>f.part==='access-wall-header' && intersects(f,mid,p.y,3.7)),'beam spans the opening');
+  assert.ok(solids.some(f=>f.part==='access-wall-header' && intersects(f,cx,p.y,3.7)),'beam also spans the doorway');
+  assert.equal(JSON.stringify(d),before);
+  const blocked=fixture();Object.assign(blocked.equipment.find(q=>q.id===machine.id),{x:50.5,y:40.3});
+  assert.equal(access.get(blocked).stairs,null,'never put stairs through a machine that leaves no doorway');
 });

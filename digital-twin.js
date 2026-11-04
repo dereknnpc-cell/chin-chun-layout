@@ -355,6 +355,7 @@
     if(!detail || !selected)return bounds;
     const xs=selected.points.map(p=>p[0]),ys=selected.points.map(p=>p[1]);
     if(selected.item.code==='STAIR-DIECUT')for(const f of selected.model || [])for(const p of f.points){xs.push(p[0]);ys.push(p[1]);}
+    if(referenceCode(selected.item)==='DIE CUT'){const stairs=scene.find(q=>q.item.code==='STAIR-DIECUT');if(stairs)for(const f of stairs.model || [])for(const p of f.points){xs.push(p[0]);ys.push(p[1]);}}
     if(dieSite && selected.item.id===dieSite.item.id){
       const r=dieSite.collection;xs.push(r.x,r.x+r.width);ys.push(r.y,r.y+r.height);
       const stairs=scene.find(q=>q.item.code==='STAIR-DIECUT');
@@ -1011,12 +1012,12 @@
       const r=dieGround.pad;
       visible.push({item:dieGround.item,type:'site',points:[[r.x,r.y],[r.x+r.width,r.y],[r.x+r.width,r.y+r.height],[r.x,r.y+r.height]],model:window.ChinChunModels.dieCutSiteFaces(dieGround).filter(f=>(dieSite || f.part==='filled-ground') && !(window.ChinChunBuilding?.get(data) && f.part==='filled-ground'))});
     }
-    if(dieSite && detail && selected?.item.id===dieSite.item.id){
+    if(detail && selected && referenceCode(selected.item)==='DIE CUT'){
       const stairs=scene.find(q=>q.item.code==='STAIR-DIECUT');
       if(stairs)visible.push(stairs);
       const neighbor=scene.find(q=>referenceCode(q.item)==='L4-1');
       if(neighbor)visible.push(neighbor);
-      for(const s of scene.filter(q=>q.type==='wall' && (q.item.id===dieSite.wall.id || q.item.id.startsWith(dieSite.wall.id+'_')))){
+      for(const s of scene.filter(q=>dieSite && q.type==='wall' && (q.item.id===dieSite.wall.id || q.item.id.startsWith(dieSite.wall.id+'_')))){
         const lo=Math.max(b.x0,Math.min(...s.points.map(p=>p[0]))),hi=Math.min(b.x1,Math.max(...s.points.map(p=>p[0])));
         if(hi<=lo)continue;
         visible.push({...s,points:s.points.map((p,i)=>[i===0||i===3?lo:hi,p[1]])});
