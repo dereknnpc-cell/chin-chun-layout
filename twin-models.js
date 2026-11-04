@@ -5,7 +5,7 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'EVA 3', 'EVA3', 'C1-1', 'C1-2', 'T CUT 1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT', 'COMPRESSOR-DIECUT', 'DESK-DIECUT', 'ZH-1500GF'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
+  const matches = item => ['M2-1', 'DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'EVA 3', 'EVA3', 'C1-1', 'C1-2', 'T CUT 1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT', 'COMPRESSOR-DIECUT', 'DESK-DIECUT', 'ZH-1500GF'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
   // Site relationship is a display overlay derived from live 2D, not another
   // equipment record or a mutation of the wall. Dimensions remain provisional.
   function dieCutSite(layout) {
@@ -1930,8 +1930,34 @@
     }
     return faces;
   }
+  // Photo-based proportions; footprint and placement come exclusively from 2D.
+  function buildM21(item) {
+    const faces=[], w=Math.max(.05,Number(item.width)||28), d=Math.max(.05,Number(item.height)||4.3);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{const u=x*w/28-w/2,v=y*d/4.3-d/2;return [(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];};
+    const face=(p,color,part)=>faces.push({points:p.map(world),color,part});
+    const box=(x,y,z,bw,bd,bh,color,part)=>{const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(i=>p[i]),color,part);};
+    const beam=(a,b,r,color,part)=>{const v=b.map((q,i)=>q-a[i]),l=Math.hypot(...v),u=v.map(q=>q/l),cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]),n=Math.hypot(...e);e=e.map(q=>q/n);const f=cross(u,e),ring=p=>Array.from({length:10},(_,i)=>p.map((q,j)=>q+r*(e[j]*Math.cos(i*Math.PI/5)+f[j]*Math.sin(i*Math.PI/5))));const p=ring(a),q=ring(b);face(p.slice().reverse(),color,part);face(q,color,part);p.forEach((v,i)=>face([v,p[(i+1)%10],q[(i+1)%10],q[i]],color,part));};
+    const cream='#ddd9c9',red='#bd492e',blue='#347d91',metal='#a8b4b1',dark='#3b4645';
+    // Main open steel structure and raised maintenance decks.
+    for(const x of [1,5,9,13,17,21,25,27]) for(const y of [.45,3.75]) box(x,y,0,.16,.16,3.25,cream,'frame-column');
+    for(const y of [.45,3.75]) {box(.8,y,3.10,26.4,.16,.25,cream,'frame-beam');box(2,y<2?.12:3.55,3.35,24,.65,.12,blue,'walkway');}
+    // Segmented elevated drying tunnel, higher in the middle.
+    for(let i=0;i<10;i++){const x=3+i*2.2,z=3.55+Math.min(i,9-i,2)*.18;box(x,.88,z,2.16,2.54,1.05,cream,'dryer');box(x+.12,.86,z+.22,1.9,.035,.55,'#c9c3ae','dryer-access');beam([x+1.1,2.15,z+1.05],[x+1.1,2.15,z+1.50],.12,metal,'exhaust-stack');}
+    // Red railings along both sides of the upper walkway.
+    for(const y of [.16,4.12]) {for(let x=2;x<=26;x+=2) beam([x,y,3.47],[x,y,4.38],.035,red,'guard-post');for(const z of [3.90,4.38])beam([2,y,z],[26,y,z],.035,red,'guardrail');}
+    // Two access stairways, with visible treads and sloping handrails.
+    for(const x0 of [2.1,23.2]) {for(let i=0;i<12;i++){const x=x0+i*.25,z=i*.28;box(x,.10,z,.25,.72,.07,blue,'stair-tread');}beam([x0,.08,.4],[x0+3,.08,3.76],.035,red,'stair-rail');beam([x0,.85,.4],[x0+3,.85,3.76],.035,red,'stair-rail');}
+    // Roll stations at each end, with the large laminating drum at plan left.
+    for(const x of [1.2,2.0,2.8,24.5,25.5,26.5]) {box(x-.25,.65,.10,.16,3,.95,cream,'roller-frame');beam([x,.75,1.05],[x,3.55,1.05],.17,metal,'roller');}
+    beam([4,.65,1.65],[4,3.65,1.65],.80,metal,'laminating-drum');
+    for(const x of [7,13,19,24]) {box(x,3.45,.1,.6,.5,1.5,cream,'control-cabinet');box(x+.12,3.96,1,.36,.025,.35,dark,'control-panel');}
+    for(const y of [1.35,2.9])beam([3,y,5.18],[25,y,5.18],.18,metal,'exhaust-duct');
+    return faces;
+  }
   function build(item) {
     switch(modelCode(item)) {
+      case 'M2-1': return buildM21(item);
       case 'DIE CUT': return buildDieCut(item);
       case 'WC-STALLS': return buildRestroom(item);
       case 'H1-1': return buildH1(item);
