@@ -5,7 +5,7 @@
   // Display-only calibration; rotate each corrected mesh and its footprint
   // rigidly about the same CAD center. Never rescale it to the old rectangle.
   const rotationOffset = item => ({'Q2-3':-90,'G2-1':180})[modelCode(item)] || 0;
-  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'EVA 3', 'EVA3', 'C1-1', 'C1-2', 'T CUT 1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT', 'COMPRESSOR-DIECUT', 'DESK-DIECUT'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
+  const matches = item => ['DIE CUT', 'WC-STALLS', 'H1-1', 'A1-1', 'A1-2', 'EVA 3', 'EVA3', 'C1-1', 'C1-2', 'T CUT 1', 'F1-1', 'G2-1', 'G2-2', 'B1-1', 'B1-2', 'B1-3', 'B1-4', 'E1-1', 'E1-2', 'Q2-1', 'Q2-2', 'Q2-3', 'J1-1', 'J1-2', 'N1-1', 'DESK-CUT', 'GRINDER-CUT', 'COMPRESSOR-DIECUT', 'DESK-DIECUT', 'ZH-1500GF'].includes(modelCode(item)) || Boolean(window.ChinChunPhotoModels?.matches(item));
   // Site relationship is a display overlay derived from live 2D, not another
   // equipment record or a mutation of the wall. Dimensions remain provisional.
   function dieCutSite(layout) {
@@ -1453,6 +1453,62 @@
     box(1.52,.13,.74,.16,.12,.28,'#e0daca','control-box');
     return faces;
   }
+  function buildGasBoiler(item) {
+    // ZH-1500GF specification: 1945 x 1915 x 2305 mm, not the GE column.
+    // The complete skid establishes the exact envelope. Internals are photo-informed.
+    const faces=[],w=Math.max(.05,Number(item.width)||1.945),d=Math.max(.05,Number(item.height)||1.915);
+    const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const world=([x,y,z])=>{const u=x/1.945*w-w/2,v=y/1.915*d-d/2;return[(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];};
+    const face=(points,color,part)=>faces.push({points:points.map(world),color,part});
+    function box(x,y,z,bw,bd,bh,color,part){
+      const p=[[x,y,z],[x+bw,y,z],[x+bw,y+bd,z],[x,y+bd,z],[x,y,z+bh],[x+bw,y,z+bh],[x+bw,y+bd,z+bh],[x,y+bd,z+bh]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(i=>p[i]),color,part);
+    }
+    function tube(p0,p1,r,color,part,n=16){
+      const v=p1.map((q,i)=>q-p0[i]),len=Math.hypot(...v),u=v.map(q=>q/len),cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];
+      let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]);const el=Math.hypot(...e);e=e.map(q=>q/el);const f=cross(u,e);
+      const ring=p=>Array.from({length:n},(_,i)=>p.map((q,j)=>q+r*(e[j]*Math.cos(i*2*Math.PI/n)+f[j]*Math.sin(i*2*Math.PI/n))));
+      const ra=ring(p0),rb=ring(p1);face([...ra].reverse(),color,part);face(rb,color,part);ra.forEach((p,i)=>face([p,ra[(i+1)%n],rb[(i+1)%n],rb[i]],color,part));
+    }
+    const white='#e5e6df',green='#3e5a52',black='#23332f',steel='#aebdb9',red='#b43c3b';
+    box(0,0,0,1.945,1.915,.10,black,'skid');
+    for(const x of [.18,1.09])box(x,.28,.10,.12,1.18,.12,black,'vessel-foot');
+    tube([.73,.88,.22],[.73,.88,1.86],.66,white,'vessel',48);
+    tube([.73,.88,.22],[.73,.88,.27],.68,green,'vessel-rim',48);
+    tube([.73,.88,1.83],[.73,.88,1.91],.68,green,'vessel-rim',48);
+    tube([.73,.88,1.91],[.73,.88,1.94],.61,green,'vessel-top',48);
+    box(1.32,1.20,.10,.50,.60,1.70,green,'control-cabinet');
+    box(1.345,1.805,.29,.45,.018,1.28,'#38534c','cabinet-door');
+    box(1.58,1.831,1.05,.15,.013,.34,'#506475','controller');
+    box(1.60,1.846,1.25,.11,.008,.10,'#253941','display');
+    for(const x of [1.62,1.69])box(x,1.849,1.09,.025,.012,.035,red,'control-button');
+    box(1.37,1.832,.55,.018,.025,.12,steel,'cabinet-handle');
+    tube([1.68,1.81,1.66],[1.68,1.84,1.66],.09,steel,'gauge-bezel',24);
+    tube([1.68,1.84,1.66],[1.68,1.85,1.66],.074,'#f3f1e7','gauge-face',24);
+    tube([1.68,1.856,1.66],[1.713,1.856,1.70],.004,black,'gauge-needle',8);
+    box(1.12,1.40,1.02,.15,.10,.48,white,'water-level-box');
+    box(1.175,1.505,1.09,.035,.01,.32,black,'water-level-window');
+    tube([.42,1.505,.31],[.42,1.53,.31],.05,black,'drain');
+    // Rear heat exchanger and 360 mm flue, kept inside confirmed total height.
+    tube([1.59,.47,.20],[1.59,.47,1.99],.22,white,'heat-exchanger',32);
+    tube([1.59,.47,1.99],[1.59,.47,2.265],.18,white,'flue',32);
+    tube([1.59,.47,2.265],[1.59,.47,2.305],.22,steel,'flue-flange',32);
+    tube([1.59,.58,1.86],[1.15,.74,1.86],.12,black,'flue-connection',20);
+    tube([.58,.70,1.94],[.58,.70,2.13],.045,steel,'steam-pipe');
+    tube([.58,.70,2.13],[.97,.70,2.13],.045,steel,'steam-pipe');
+    tube([.97,.70,2.13],[.97,.70,2.24],.035,steel,'valve-stem');
+    for(let i=0;i<16;i++){
+      const t=i*Math.PI/8,u=(i+1)*Math.PI/8;
+      tube([.97+.075*Math.cos(t),.70+.075*Math.sin(t),2.24],[.97+.075*Math.cos(u),.70+.075*Math.sin(u),2.24],.009,red,'valve-wheel',8);
+    }
+    for(const t of [0,Math.PI/2])tube([.97-.07*Math.cos(t),.70-.07*Math.sin(t),2.24],[.97+.07*Math.cos(t),.70+.07*Math.sin(t),2.24],.008,red,'valve-spoke',8);
+    tube([1.78,.89,.49],[1.78,1.18,.49],.15,steel,'blower',24);
+    box(1.66,.81,.10,.24,.42,.15,black,'blower-base');
+    // Thin pipework follows the side of the cylinder, with a small return elbow.
+    tube([1.15,1.43,.20],[1.15,1.43,1.97],.015,steel,'feed-pipe',10);
+    tube([1.15,1.43,1.97],[.98,1.16,1.97],.015,steel,'feed-pipe',10);
+    return faces;
+  }
   function buildCuttingDesk(item) {
     // The PDF arrow points to this office station left of N1-1.  It is a
     // separate selectable furniture object: desk, monitor, keyboard and chair
@@ -1904,6 +1960,7 @@
       case 'DESK-CUT':
       case 'DESK-DIECUT': return buildCuttingDesk(item);
       case 'COMPRESSOR-DIECUT': return buildDieCutCompressor(item);
+      case 'ZH-1500GF': return buildGasBoiler(item);
       case 'GRINDER-CUT': return buildCuttingGrinder(item);
       default: return window.ChinChunPhotoModels?.build(item) || null;
     }

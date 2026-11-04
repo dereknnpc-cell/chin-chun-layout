@@ -6,6 +6,7 @@ const staticFiles = [
   "index.html",
   "app.js",
   "desktop-baseline.js",
+  "boiler-equipment.js",
   "factory_layout_data.json",
   "building-geometry.js",
   "site-access.js",
