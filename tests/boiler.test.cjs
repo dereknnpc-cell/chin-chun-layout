@@ -42,3 +42,26 @@ test('boiler model fits the exact envelope, has identifiable photo components an
   const transformed=m.build({...item,x:3,y:4,rotation:90}),scaled=m.build({...item,width:3.89,height:3.83});
   faces.forEach((f,i)=>f.points.forEach((p,j)=>{const q=transformed[i].points[j],r=scaled[i].points[j];assert.ok(Math.abs(q[0]-(3+1.945/2-(p[1]-1.915/2)))<1e-9);assert.ok(Math.abs(q[1]-(4+1.915/2+(p[0]-1.945/2)))<1e-9);assert.equal(q[2],p[2]);assert.ok(Math.abs(r[0]-p[0]*2)<1e-9 && Math.abs(r[1]-p[1]*2)<1e-9);assert.equal(r[2],p[2]);}));
 });
+
+test('acoustic walls face EVA1 west and H1-1 south with exact 1 m clear gaps and an independent outer rail',()=>{
+  const old=window.ChinChunBoiler.upgrade(base()).layout,before=JSON.stringify(old),r=window.ChinChunBoiler.upgradeSurround(old),b=old.equipment.find(q=>q.id===id);
+  assert.equal(JSON.stringify(old),before);assert.equal(r.migrated,true);
+  const west=r.layout.walls.find(q=>q.acousticSide==='eva1'),south=r.layout.walls.find(q=>q.acousticSide==='h1'),rail=r.layout.equipment.find(q=>q.code==='BOILER-RAIL');
+  const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
+  near(b.x-(west.x1+west.thickness/2),1);near(south.y1-south.thickness/2-b.y-b.height,1);
+  near(west.x1-west.thickness/2-rail.x-rail.width,1);
+  assert.equal(west.x1,west.x2);assert.equal(south.y1,south.y2);assert.equal(west.clearPanelHeight,0);assert.equal(south.clearPanelHeight,.85);
+  assert.deepEqual(r.layout.equipment.slice(0,-1),old.equipment);assert.equal(JSON.stringify(r.layout.walls.slice(0,-2)),JSON.stringify(old.walls));assert.equal(r.layout.aisles,old.aisles);
+  assert.equal(window.ChinChunBoiler.upgradeSurround(r.layout).migrated,false);
+  r.layout.walls=[];r.layout.equipment=r.layout.equipment.filter(q=>q.code!=='BOILER-RAIL');assert.equal(window.ChinChunBoiler.upgradeSurround(r.layout).migrated,false,'later deletion is respected');
+});
+test('acoustic geometry includes framed foil, transparent upper H1 panels and orange mesh rail',()=>{
+  const layout=window.ChinChunBoiler.upgradeSurround(window.ChinChunBoiler.upgrade(base()).layout).layout;
+  const parts=[...layout.walls.filter(q=>q.acousticSide),layout.equipment.find(q=>q.code==='BOILER-RAIL')];
+  const all=parts.map(q=>window.ChinChunBoiler.surroundFaces(q));
+  assert.ok(!all[0].some(f=>f.opacity));assert.ok(all[1].some(f=>f.part==='acoustic-clear-panel' && f.opacity===.24));
+  assert.ok(all[2].some(f=>f.part==='guardrail-mesh'));assert.ok(all.flat(2).every(f=>f.points.every(p=>p.every(Number.isFinite))));
+  const west=parts[0],moved=window.ChinChunBoiler.surroundFaces({...west,x1:west.x1+3,x2:west.x2+3,y1:west.y1+2,y2:west.y2+2});
+  all[0].forEach((f,i)=>f.points.forEach((p,j)=>{assert.ok(Math.abs(moved[i].points[j][0]-p[0]-3)<1e-9);assert.ok(Math.abs(moved[i].points[j][1]-p[1]-2)<1e-9);assert.equal(moved[i].points[j][2],p[2]);}));
+  const source=read('digital-twin.js');assert.match(source,/opacity:f.opacity/);assert.match(source,/ChinChunBoiler\?\.surroundFaces\(item\)/);
+});

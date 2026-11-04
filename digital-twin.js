@@ -34,7 +34,7 @@
     a12Photo:'A1-2：依 2D PDF 及紅字照片建立六段，從圖面左側起：\n1 捲取頭 · 2 壓合輪 · 3 貼合頭\n4 滾輪架 · 5 烘箱 · 6 上膠頭\n烘箱側視照已確認為第五段。PDF 參考為 16.0 × 2.0 m；顯示尺寸、位置與角度仍跟隨目前 2D，不自動覆蓋圖面。第四段滾輪架放回正常直線位置，不含旁邊綠色推車、堆料、料卷、紙管或鄰機。最高約 2.55 m、各段長度比例與部件尺寸為照片估算。',
     g21Photo:'G2-1：已依指示將整台模型相對上一版旋轉 180°，保留中心位置與 2.40 × 4.19 m 占地；這是模型基準方向校正，之後的移動、尺寸與旋轉仍跟隨 2D。保留滾輪主機、開放料軸架、斜面控制櫃、刀架、氣缸與燈架；不含泡棉、料卷、紙管或鄰機。最高約 2.35 m 與部件比例為照片估算。',
     n11Photo:'N1-1：依修正後 PDF 的箭頭確認為照片中的長型米白分條／收捲機。保留低位底櫃、空螺紋料軸、五支銀色固定滾輪、滑軌、移動夾座、端部手輪、斜面紅色控制板及側料盤；不含料卷、膠帶、紙管、砂輪機、桌椅、鄰近裁切台或堆料。位置、1.35 × 3.74 m 占地與旋轉跟隨目前 2D，不寫回平面資料；最高約 1.55 m、控制端方向及細部尺寸依照片與 PDF 方位估算。',
-    boilerPhoto:'ZH-1500GF 瓦斯鍋爐：原廠規格長 1.945 × 寬 1.915 × 高 2.305 m，蒸發量 1500 kg/h。位置依鍋爐位置 PDF 藍色區塊；內部零件比例依外觀照片建立。',
+    boilerPhoto:'ZH-1500GF 瓦斯鍋爐：原廠規格長 1.945 × 寬 1.915 × 高 2.305 m，蒸發量 1500 kg/h。位置依鍋爐位置 PDF 藍色區塊；內部零件比例依外觀照片建立。EVA1 側鋁箔牆、H1-1 側鋁箔＋上方透明板，各距鍋爐 1 m；EVA1 側欄杆再距鋁箔牆 1 m。鋁箔高 2.20／透明板 0.85／欄杆高 1.10 m 為照片估算。',
     cuttingDeskPhoto:'裁切分條部門辦公桌：依修正版 PDF 箭頭，獨立放在 N1-1 左側靠北牆。模型包含木紋辦公桌、抽屜、螢幕、鍵盤與辦公椅；不含旁邊覆蓋的工作台、文件、植物及堆料。位置與 2.40 × 1.90 m 使用範圍由 PDF／照片估算，會跟隨 2D 移動、縮放與旋轉，待現場量測。',
     cuttingGrinderPhoto:'裁切分條部門砂輪機：依修正版 PDF 箭頭，獨立放在 N1-1 與 J1-1 之間靠北牆。模型包含紅褐色鋼桌、桌腳與補強、下方桶、馬達、雙砂輪、護罩及托架；不含 N1-1、膠帶、收納箱或散料。位置與 1.10 × 0.90 m 占地、最高約 1.30 m 均由 PDF／照片估算，待現場量測。',
     j11Photo:'J1-1：依使用者確認，與 J1-2 共用同型機台模型；模型使用 J1-1 自己的 2D 位置、4.45 × 4.57 m 占地及角度，不會與 J1-2 綁定移動。包含大型分片工作台、深色木質延伸邊、米白門形機身、中央鋁製導尺、手輪、滑軌與低位馬達；不含泡棉、堆料、紙管、藍色棧板及鄰機。最高約 2.30 m、部件比例及朝向仍為照片估算。',
@@ -65,7 +65,7 @@
     a12Photo:'A1-2: จำลอง 6 ช่วงตาม PDF แปลน 2D และข้อความสีแดงในภาพ เรียงจากซ้ายของแปลน:\n1 ชุดม้วนเก็บ · 2 ลูกกลิ้งกด · 3 หัวลามิเนต\n4 โต๊ะลูกกลิ้ง · 5 เตาอบ · 6 หัวทากาว\nยืนยันแล้วว่าภาพด้านข้างเตาอบเป็นช่วงที่ 5 ขนาดอ้างอิง PDF 16.0 × 2.0 ม.; ขนาด ตำแหน่งและมุมที่แสดงยังตามแปลน 2D ปัจจุบัน โดยไม่เขียนทับแปลน ช่วงที่ 4 อยู่ในแนวใช้งานปกติ ไม่รวมรถเข็นสีเขียวข้างเครื่อง วัสดุ ม้วน แกนกระดาษหรือเครื่องข้างเคียง ความสูงสูงสุดประมาณ 2.55 ม. และสัดส่วนแต่ละช่วงประมาณจากภาพ',
     g21Photo:'G2-1: หมุนทั้งเครื่อง 180° จากรุ่นก่อนตามคำยืนยัน คงจุดศูนย์กลางและขนาดฐาน 2.40 × 4.19 ม. เป็นการปรับทิศตั้งต้นของแบบ การย้าย ปรับขนาดและหมุนต่อไปยังคงตามแปลน 2D มีตู้ลูกกลิ้ง ชุดแกนม้วนแบบเปิด ตู้ควบคุมลาดเอียง ชุดใบมีด กระบอกลมและโครงไฟ ไม่รวมโฟม ม้วนวัสดุ แกนกระดาษหรือเครื่องข้างเคียง ความสูงประมาณ 2.35 ม. และสัดส่วนเป็นการประมาณจากภาพ',
     n11Photo:'N1-1: ลูกศรใน PDF ที่แก้ไขแล้วระบุว่าเป็นเครื่องแบ่งม้วน/ม้วนเก็บสีครีมทรงยาวในภาพ มีตู้ฐานต่ำ แกนเกลียวเปล่า ลูกกลิ้งเงินถาวร 5 ลูก รางเลื่อน แคร่ปรับ มือหมุนปลายเครื่อง แผงควบคุมลาดสีแดงและถาดข้าง ไม่รวมม้วนวัสดุ เทป แกนกระดาษ เครื่องเจียร โต๊ะ เก้าอี้ โต๊ะตัดข้างเคียงหรือกองวัสดุ ตำแหน่ง ฐาน 1.35 × 3.74 ม. และมุมตาม 2D ปัจจุบัน โดยไม่เขียนกลับแปลน สูงประมาณ 1.55 ม. ทิศด้านควบคุมและรายละเอียดประมาณจากภาพและ PDF',
-    boilerPhoto:'หม้อไอน้ำแก๊ส ZH-1500GF: ขนาดผู้ผลิตยาว 1.945 × กว้าง 1.915 × สูง 2.305 ม. กำลังผลิตไอน้ำ 1500 กก./ชม. วางในพื้นที่สีน้ำเงินของ PDF รายละเอียดชิ้นส่วนประมาณจากภาพ',
+    boilerPhoto:'หม้อไอน้ำแก๊ส ZH-1500GF: ขนาดผู้ผลิตยาว 1.945 × กว้าง 1.915 × สูง 2.305 ม. กำลังผลิตไอน้ำ 1500 กก./ชม. วางในพื้นที่สีน้ำเงินของ PDF รายละเอียดประมาณจากภาพ ผนังฟอยล์ด้าน EVA1 และผนังฟอยล์ด้าน H1-1 พร้อมแผงใสด้านบนห่างหม้อไอน้ำ 1 ม. ราวด้าน EVA1 ห่างผนังฟอยล์อีก 1 ม. ความสูงฟอยล์ 2.20/แผงใส 0.85/ราว 1.10 ม. ประมาณจากภาพ',
     cuttingDeskPhoto:'โต๊ะสำนักงานแผนกตัด/แบ่งม้วน: ลูกศรใน PDF ที่แก้ไขแล้ววางเป็นวัตถุแยกทางซ้ายของ N1-1 ชิดผนังเหนือ มีโต๊ะลายไม้ ลิ้นชัก จอ แป้นพิมพ์และเก้าอี้ ไม่รวมโต๊ะงานคลุมผ้า เอกสาร ต้นไม้หรือกองวัสดุ ตำแหน่งและพื้นที่ใช้งาน 2.40 × 1.90 ม. ประมาณจาก PDF/ภาพ และตามการย้าย ปรับขนาดและหมุนใน 2D รอวัดจริง',
     cuttingGrinderPhoto:'เครื่องเจียรแผนกตัด/แบ่งม้วน: ลูกศรใน PDF ที่แก้ไขแล้ววางเป็นวัตถุแยกระหว่าง N1-1 กับ J1-1 ชิดผนังเหนือ มีโต๊ะเหล็กสีน้ำตาลแดง ขาและค้ำ ถังด้านล่าง มอเตอร์ หินเจียรคู่ ฝาครอบและแท่นรอง ไม่รวม N1-1 เทป กล่องหรือวัสดุกระจัดกระจาย ตำแหน่ง ฐาน 1.10 × 0.90 ม. และสูงประมาณ 1.30 ม. ประมาณจาก PDF/ภาพ รอวัดจริง',
     j11Photo:'J1-1: ตามคำยืนยันของผู้ใช้ ใช้แบบเครื่องชนิดเดียวกับ J1-2 แต่ยึดตำแหน่ง ขนาดฐาน 4.45 × 4.57 ม. และมุมของ J1-1 เอง จึงไม่เคลื่อนตาม J1-2 มีโต๊ะขนาดใหญ่แบบแยกแผ่น ขอบต่อไม้สีเข้ม โครงซุ้มสีครีม รั้วนำอะลูมิเนียมตรงกลาง มือหมุน รางเลื่อนและมอเตอร์ด้านล่าง ไม่รวมโฟม วัสดุสะสม แกนกระดาษ พาเลทสีฟ้าหรือเครื่องข้างเคียง ความสูงประมาณ 2.30 ม. สัดส่วนและทิศทางประมาณจากภาพ',
@@ -178,7 +178,7 @@
     // Camera/equipment rotation must not change the local ground level. A
     // disconnected orientation hides the material connection, not the fill.
     dieGround=dieSite || (floor==='1F'?window.ChinChunModels?.dieCutSite?.({...data,equipment:(data.equipment || []).map(q=>referenceCode(q)==='DIE CUT'?{...q,rotation:0}:q)}):null);
-    const add = (item,type,points,z,color) => scene.push({item,type,points,z,color,model:type==='equipment'?window.ChinChunModels?.build(item):null});
+    const add = (item,type,points,z,color) => scene.push({item,type,points,z,color,model:window.ChinChunBoiler?.surroundFaces(item) || (type==='equipment'?window.ChinChunModels?.build(item):null)});
     if(floor==='2F') (data.mezzanine_2f?.zones || []).forEach(item=>add(item,'zone',rect(item),.04,'#91afac'));
     (floor==='2F' ? data.equipment_2f || [] : data.equipment || []).forEach(item => {
       const category = item.category || '';
@@ -355,6 +355,7 @@
     if(!detail || !selected)return bounds;
     const xs=selected.points.map(p=>p[0]),ys=selected.points.map(p=>p[1]);
     if(selected.item.code==='STAIR-DIECUT')for(const f of selected.model || [])for(const p of f.points){xs.push(p[0]);ys.push(p[1]);}
+    if(referenceCode(selected.item)==='ZH-1500GF')for(const s of scene.filter(q=>q.item.boilerId===selected.item.id))for(const p of s.points){xs.push(p[0]);ys.push(p[1]);}
     if(referenceCode(selected.item)==='DIE CUT'){const stairs=scene.find(q=>q.item.code==='STAIR-DIECUT');if(stairs)for(const f of stairs.model || [])for(const p of f.points){xs.push(p[0]);ys.push(p[1]);}}
     if(dieSite && selected.item.id===dieSite.item.id){
       const r=dieSite.collection;xs.push(r.x,r.x+r.width);ys.push(r.y,r.y+r.height);
@@ -806,7 +807,7 @@
   function objectFaces(s) {
     const rise=elevation(s);
     const lift=faces=>rise?faces.map(f=>{const points=f.points.map(p=>[p[0],p[1],p[2]+rise]);return {...f,points,depth:faceDepth(points)};}):faces;
-    if(s.model)return lift(s.model.filter(f=>!(s===selected && restroomCutaway && referenceCode(s.item)==='WC-STALLS' && f.cutaway)).map(f=>({s:s.type==='site'?scene.find(q=>q.type==='equipment' && q.item.id===s.item.id)||s:s,points:f.points,color:f.color,part:f.part,model:true,depth:faceDepth(f.points)})));
+    if(s.model)return lift(s.model.filter(f=>!(s===selected && restroomCutaway && referenceCode(s.item)==='WC-STALLS' && f.cutaway)).map(f=>({s:s.type==='site'?scene.find(q=>q.type==='equipment' && q.item.id===s.item.id)||s:s,points:f.points,color:f.color,part:f.part,opacity:f.opacity,model:true,depth:faceDepth(f.points)})));
     if(s.type==='wall')return lift(wallFaces(s));
     if(s.type==='column')return lift(columnFaces(s));
     if(s.item.category==='Door')return lift(doorFaces(s));
@@ -1008,6 +1009,7 @@
   // Keep the two nearby but separate openings in the Die Cut close-up.
   function sceneForView(b) {
     const visible=detail&&selected?[selected]:[...scene];
+    if(detail && selected && referenceCode(selected.item)==='ZH-1500GF')visible.push(...scene.filter(q=>q.item.boilerId===selected.item.id));
     if(dieGround && (!detail || selected?.item.id===dieGround.item.id)){
       const r=dieGround.pad;
       visible.push({item:dieGround.item,type:'site',points:[[r.x,r.y],[r.x+r.width,r.y],[r.x+r.width,r.y+r.height],[r.x,r.y+r.height]],model:window.ChinChunModels.dieCutSiteFaces(dieGround).filter(f=>(dieSite || f.part==='filled-ground') && !(window.ChinChunBuilding?.get(data) && f.part==='filled-ground'))});

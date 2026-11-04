@@ -4613,6 +4613,8 @@
     }
     const boilerAddition=window.ChinChunBoiler?.upgrade(working);
     if(boilerAddition?.migrated){working=boilerAddition.layout;accessoriesAdded=true;}
+    const boilerSurround=window.ChinChunBoiler?.upgradeSurround(working);
+    if(boilerSurround?.migrated){working=boilerSurround.layout;accessoriesAdded=true;}
     // Fix the three confirmed dock shutters to their 15 m host wall. Run once
     // per document and never replace any unrelated wall or equipment records.
     const dockIds=['door_1789543247410','door_1789543258711','door_1789543264240'];
