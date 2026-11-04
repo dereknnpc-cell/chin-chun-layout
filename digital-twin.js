@@ -229,10 +229,8 @@
       const officeEast=item.id==='wall_1789539415779' && Math.abs(dx)<.01 && Math.abs(n(item.x1)-50)<.01 && n(item.y1)===30 && n(item.y2)===40;
       if(officeNorth)segments=[[0,(45-n(item.x1))/dx],[(45-n(item.x1))/dx,1]];
       const entranceFront=item.id==='wall_1789539311074' && Math.abs(dy)<.01 && n(item.x1)===20 && n(item.x2)===50 && n(item.y1)===40;
-      const meetingNorth=item.id==='wall_21' && Math.abs(dy)<.01 && n(item.x1)===20 && n(item.x2)===30 && n(item.y1)===35;
       const meetingSide=['wall_1789539300962','wall_1789539439366'].includes(item.id) && Math.abs(dx)<.01 && Math.min(n(item.y1),n(item.y2))===35 && Math.max(n(item.y1),n(item.y2))===40 && [20,25].includes(n(item.x1));
       if(entranceFront)segments=[[0,1/3],[1/3,1]];
-      if(meetingNorth)segments=[[0,.5],[.5,1]];
       for(const cut of cuts){
         const lo=Math.min(...cut),hi=Math.max(...cut);
         if(hi<=0 || lo>=1)continue;
@@ -245,7 +243,7 @@
         const p=(t,side)=>[n(item.x1)+dx*t+a*side,n(item.y1)+dy*t+b*side];
         add(index?{...item,id:`${item.id}_part_${index}`}:item,'wall',[p(start,1),p(end,1),p(end,-1),p(start,-1)],item.type==='exterior'?2.8:2.4,'#ddd4b9');
         if(officeEast || (officeNorth && n(item.x1)+dx*start>=44.99))scene.at(-1).officeGlazing=true;
-        if(meetingSide || (entranceFront && n(item.x1)+dx*(start+end)/2<30) || (meetingNorth && n(item.x1)+dx*(start+end)/2<25))scene.at(-1).fullGlass=true;
+        if(meetingSide || (entranceFront && n(item.x1)+dx*(start+end)/2<30))scene.at(-1).fullGlass=true;
       });
       // The opening is only as high as the door; retain the wall above it.
       officeOpenings.forEach(([u,v],i)=>{

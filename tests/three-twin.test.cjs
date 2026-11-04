@@ -124,8 +124,12 @@ test('office entrance is a pair of transparent glass doors and adjacent and meet
   const scene=t.api.scene(),faces=t.api.faces(),door=faces.filter(f=>f.s?.item.id==='door_1790246720313'&&f.part==='glass-door');
   assert.equal(door.length,2);assert.ok(door.every(f=>f.opacity>0&&f.opacity<1));
   assert.ok(faces.some(f=>f.s?.item.id==='door_1789543364666'&&f.part==='glass-door'&&f.opacity<1));
-  for(const id of ['wall_1789539300962','wall_1789539439366','wall_21','wall_1789539311074'])assert.ok(scene.some(s=>(s.item.id===id||s.item.id.startsWith(id+'_part_'))&&s.fullGlass),id);
+  for(const id of ['wall_1789539300962','wall_1789539439366','wall_1789539311074'])assert.ok(scene.some(s=>(s.item.id===id||s.item.id.startsWith(id+'_part_'))&&s.fullGlass),id);
   assert.ok(faces.some(f=>f.part==='glass-wall'&&f.opacity<1));
+  const liftWall=scene.filter(s=>s.item.id==='wall_21'||s.item.id.startsWith('wall_21_part_'));
+  assert.ok(liftWall.length>0);assert.ok(liftWall.every(s=>!s.fullGlass));
+  assert.ok(faces.some(f=>f.s?.item.id==='wall_21' && f.points.some(p=>p[2]===1.5) && f.points.some(p=>p[2]===3.9)));
+  assert.ok(!faces.some(f=>f.s?.item.id==='wall_21' && f.part==='glass-wall'));
   assert.ok(!t.api.ground().some(f=>f.part==='office-canopy'||f.part==='office-glass'));
   assert.equal(JSON.stringify(layout),before);
 });
