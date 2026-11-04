@@ -132,3 +132,21 @@ test('Twin registers the stairs as read-only site geometry and renders the rotat
   const top=api.top(ramp);assert.ok(top.filter(p=>p[2]===1).every(p=>Math.abs(p[0]-35)<1e-8));assert.ok(top.filter(p=>p[2]===0).every(p=>Math.abs(p[0]-30)<1e-8));
   assert.equal(JSON.stringify(d),before);assert.ok(!source.includes('scheduleSave'));
 });
+
+test('Die Cut close-up retains adjacent stair, columns, half-wall and continuous lintels',()=>{
+  const source=read('digital-twin.js'),end='})();',w={};
+  for(const f of ['building-geometry.js','site-access.js','twin-models.js'])vm.runInNewContext(read(f),{window:w});
+  const noop=()=>{},element=()=>({setAttribute:noop,replaceChildren:noop,add:noop});
+  const probe=`window.__openingTest={prepare(d){data=d;dialog={querySelector:element};rebuild();},select(){selected=scene.find(q=>q.item.id==='eq_diecut_sub');detail=true;},bounds:()=>viewBounds(),visible:b=>sceneForView(b),site:()=>dieSite};`;
+  vm.runInNewContext(source.trimEnd().slice(0,-end.length)+probe+end,{window:w,element,document:{documentElement:{lang:'zh-Hant'}},Option:function(){},requestAnimationFrame:noop});
+  const d=freeze(fixture()),before=JSON.stringify(d),api=w.__openingTest;api.prepare(d);api.select();
+  const b=api.bounds(),visible=api.visible(b),stairs=visible.find(q=>q.item.code==='STAIR-DIECUT'),site=api.site();
+  assert.ok(stairs,'person passage and steps stay visible when focusing the machine');
+  assert.ok(b.x0<stairs.item.x && b.x1>site.opening.x+site.opening.width);
+  for(const part of ['access-stair-tread','access-wall-left','access-wall-sill','access-door-jamb','access-wall-header'])assert.ok(stairs.model.some(f=>f.part===part),part);
+  const machineLintel=visible.find(q=>q.item.id===site.wall.id+'_diecut_lintel');
+  const machineSill=visible.find(q=>q.item.id===site.wall.id+'_diecut_sill');
+  assert.ok(machineLintel && machineSill);
+  assert.ok(Math.abs(machineLintel.zBase+site.insideRise-stairs.item.portal.head)<1e-8,'lintels align across the separate apertures');
+  assert.equal(JSON.stringify(d),before);
+});

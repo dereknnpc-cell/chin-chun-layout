@@ -30,7 +30,7 @@
     const pad={x:Math.min(lo-.35,...footprint.map(p=>p[0]))-.1,y:boundary+.11,
       width:Math.max(hi+.35,...footprint.map(p=>p[0]))-Math.min(lo-.35,...footprint.map(p=>p[0]))+.2,
       height:Math.max(...footprint.map(p=>p[1]))-boundary+.25};
-    return {item,wall,footprint,out,feed,opening:{x:lo,y:boundary,width:openingWidth,sill:.35,top:1.6},collection,table,pad,
+    return {item,wall,footprint,out,feed,opening:{x:lo,y:boundary,width:openingWidth,sill:.35,top:2.1},collection,table,pad,
       // Owner confirmed this filled extension is only 0.5 m below the main floor.
       insideRise:1.5,outsideRise:1.0,beltHeight:1.0};
   }

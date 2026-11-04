@@ -87,8 +87,8 @@ test('live scene cuts only the discharge aperture, preserving the sill, lintel a
   vm.createContext(c);vm.runInContext(source.slice(start,end),c);c.rebuild();
   const walls=c.scene.filter(s=>s.type==='wall'),cx=c.dieSite.opening.x+c.dieSite.opening.width/2;
   const atOpening=walls.filter(s=>Math.min(...s.points.map(p=>p[0]))<cx && Math.max(...s.points.map(p=>p[0]))>cx);
-  assert.equal(atOpening.length,2);assert.ok(atOpening.some(s=>s.z===.35));assert.ok(atOpening.some(s=>s.zBase===1.6 && s.z===2.4));
-  assert.ok(atOpening.every(s=>s.z<=.35 || s.zBase>=1.6),'no solid wall across the belt-height opening');
+  assert.equal(atOpening.length,2);assert.ok(atOpening.some(s=>s.z===.35));assert.ok(atOpening.some(s=>s.zBase===2.1 && s.z===2.4));
+  assert.ok(atOpening.every(s=>s.z<=.35 || s.zBase>=2.1),'no solid wall across the belt-height opening');
   assert.ok(walls.some(s=>Math.min(...s.points.map(p=>p[0]))>=c.dieSite.opening.x+c.dieSite.opening.width));
   c.data={...layout,equipment:[{...item,rotation:180},l41]};c.rebuild();
   assert.equal(c.dieSite,null);assert.ok(c.dieGround,'rotation does not drop the machine from the filled ground');

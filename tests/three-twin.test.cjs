@@ -163,7 +163,7 @@ test('Three geometry includes every wall side, preserves aperture and the confir
   for(const z of [0,1,1.5])assert.ok(slabHeights.has(z));
   const connectedWall=test.window.ChinChunModels.dieCutSite(layout).wall.id;
   const walls=test.api.scene().filter(s=>s.type==='wall' && s.item.id.startsWith(connectedWall));
-  assert.ok(walls.some(s=>s.zBase===1.6));assert.ok(walls.some(s=>s.z===.35));
+  assert.ok(walls.some(s=>s.zBase===2.1));assert.ok(walls.some(s=>s.z===.35));
   assert.ok(faces.some(f=>f.s?.type==='wall' && f.points.every(p=>p[0]===f.points[0][0])));
   assert.ok(faces.some(f=>f.s?.type==='wall' && f.points.every(p=>p[1]===f.points[0][1])));
   assert.equal(JSON.stringify(layout),before);

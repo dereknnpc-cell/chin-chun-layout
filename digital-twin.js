@@ -357,6 +357,8 @@
     if(selected.item.code==='STAIR-DIECUT')for(const f of selected.model || [])for(const p of f.points){xs.push(p[0]);ys.push(p[1]);}
     if(dieSite && selected.item.id===dieSite.item.id){
       const r=dieSite.collection;xs.push(r.x,r.x+r.width);ys.push(r.y,r.y+r.height);
+      const stairs=scene.find(q=>q.item.code==='STAIR-DIECUT');
+      if(stairs)for(const f of stairs.model || [])for(const p of f.points){xs.push(p[0]);ys.push(p[1]);}
       const neighbor=scene.find(q=>referenceCode(q.item)==='L4-1');
       if(neighbor)for(const p of neighbor.points){xs.push(p[0]);ys.push(p[1]);}
     }
@@ -1002,28 +1004,32 @@
     drawPhotoDirections();drawAccessDirections();
     dialog.querySelector('#twinCount').textContent=`${floor} / ${scene.length} ${t('count')} · Three.js r${window.ChinChunThree.revision} · ${t('updated')}`;
   }
+  // Keep the two nearby but separate openings in the Die Cut close-up.
+  function sceneForView(b) {
+    const visible=detail&&selected?[selected]:[...scene];
+    if(dieGround && (!detail || selected?.item.id===dieGround.item.id)){
+      const r=dieGround.pad;
+      visible.push({item:dieGround.item,type:'site',points:[[r.x,r.y],[r.x+r.width,r.y],[r.x+r.width,r.y+r.height],[r.x,r.y+r.height]],model:window.ChinChunModels.dieCutSiteFaces(dieGround).filter(f=>(dieSite || f.part==='filled-ground') && !(window.ChinChunBuilding?.get(data) && f.part==='filled-ground'))});
+    }
+    if(dieSite && detail && selected?.item.id===dieSite.item.id){
+      const stairs=scene.find(q=>q.item.code==='STAIR-DIECUT');
+      if(stairs)visible.push(stairs);
+      const neighbor=scene.find(q=>referenceCode(q.item)==='L4-1');
+      if(neighbor)visible.push(neighbor);
+      for(const s of scene.filter(q=>q.type==='wall' && (q.item.id===dieSite.wall.id || q.item.id.startsWith(dieSite.wall.id+'_')))){
+        const lo=Math.max(b.x0,Math.min(...s.points.map(p=>p[0]))),hi=Math.min(b.x1,Math.max(...s.points.map(p=>p[0])));
+        if(hi<=lo)continue;
+        visible.push({...s,points:s.points.map((p,i)=>[i===0||i===3?lo:hi,p[1]])});
+      }
+    }
+    return visible;
+  }
   function draw() {
     frame=0;if(!dialog?.open || !bounds)return;
     const size=canvas.getBoundingClientRect();width=size.width;height=size.height;
     const dpr=Math.min(devicePixelRatio || 1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
     if(engineMode==='three' && !threeView)startThree();
-    const b=viewBounds(),visible=detail&&selected?[selected]:[...scene];
-    if(dieGround && (!detail || selected?.item.id===dieGround.item.id)){
-      const r=dieGround.pad;
-      visible.push({item:dieGround.item,type:'site',points:[[r.x,r.y],[r.x+r.width,r.y],[r.x+r.width,r.y+r.height],[r.x,r.y+r.height]],model:window.ChinChunModels.dieCutSiteFaces(dieGround).filter(f=>(dieSite || f.part==='filled-ground') && !(window.ChinChunBuilding?.get(data) && f.part==='filled-ground'))});
-    }
-    if(dieSite && (!detail || selected?.item.id===dieSite.item.id)){
-      if(detail){
-        const neighbor=scene.find(q=>referenceCode(q.item)==='L4-1');
-        if(neighbor)visible.push(neighbor);
-        // Keep only the local wall in the equipment close-up, including sill/lintel.
-        for(const s of scene.filter(q=>q.type==='wall' && (q.item.id===dieSite.wall.id || q.item.id.startsWith(dieSite.wall.id+'_')))){
-          const lo=Math.max(b.x0,Math.min(...s.points.map(p=>p[0]))),hi=Math.min(b.x1,Math.max(...s.points.map(p=>p[0])));
-          if(hi<=lo)continue;
-          visible.push({...s,points:s.points.map((p,i)=>[i===0||i===3?lo:hi,p[1]])});
-        }
-      }
-    }
+    const b=viewBounds(),visible=sceneForView(b);
     const corners=[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]];
     baseScale=fittedScale(b,width,height);
     hits=[];
