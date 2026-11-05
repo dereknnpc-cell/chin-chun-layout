@@ -1932,7 +1932,7 @@
   }
   // Photo-based proportions; footprint and placement come exclusively from 2D.
   function buildM21(item) {
-    const faces=[], w=Math.max(.05,Number(item.width)||28), d=Math.max(.05,Number(item.height)||4.3);
+    const faces=[], w=Math.max(.05,Number(item.width)||31.3), d=Math.max(.05,Number(item.height)||4.3);
     const a=(Number(item.rotation)||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
     const world=([x,y,z])=>{const u=x*w/28-w/2,v=y*d/4.3-d/2;return [(Number(item.x)||0)+w/2+u*c-v*s,(Number(item.y)||0)+d/2+u*s+v*c,z];};
     const face=(p,color,part)=>faces.push({points:p.map(world),color,part});
@@ -1944,9 +1944,9 @@
     for(const y of [.45,3.75]) {box(.8,y,2.48,26.4,.16,.25,cream,'frame-beam');box(2,y<2?.12:3.55,2.61,24,.65,.12,blue,'walkway');}
     // Drawing S-HM1600: a 24.15 × 1.945 m steam oven with a continuous arched profile.
     // Horizontal dimensions remain proportional to the user's 2D footprint.
-    const ovenZ=x=>3.13+.64*(1-Math.pow((x-14)/12.075,2));
+    const ovenZ=x=>3.13+.64*(1-Math.pow((x-14)/(12.075*28/31.3),2));
     for(let i=0;i<10;i++){
-      const x=(2.925+i*2.415)*28/30,x2=(2.925+(i+1)*2.415)*28/30,z=ovenZ(x),z2=ovenZ(x2),y=1.1775,y2=3.1225;
+      const x=(3.575+i*2.415)*28/31.3,x2=(3.575+(i+1)*2.415)*28/31.3,z=ovenZ(x),z2=ovenZ(x2),y=1.1775,y2=3.1225;
       const p=[[x,y,z],[x2,y,z2],[x2,y2,z2],[x,y2,z],[x,y,z+1.05],[x2,y,z2+1.05],[x2,y2,z2+1.05],[x,y2,z+1.05]];
       for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(j=>p[j]),cream,'dryer');
       face([[x+.12,y-.01,z+.22],[x2-.12,y-.01,z2+.22],[x2-.12,y-.01,z2+.78],[x+.12,y-.01,z+.78]],'#c9c3ae','dryer-access');
@@ -1958,52 +1958,66 @@
     for(const x0 of [2.1,23.2]) {for(let i=0;i<12;i++){const x=x0+i*.25,z=i*(2.73/12);box(x,.10,z,.25,.72,.07,blue,'stair-tread');}beam([x0,.08,.4],[x0+3,.08,3.13],.035,red,'stair-rail');beam([x0,.85,.4],[x0+3,.85,3.13],.035,red,'stair-rail');}
     // PDF is rotated 180 degrees: the drum and outer unwind stand are at
     // the lower-X end; the red coating platform is at the higher-X end.
-    const sideCover=(x,y,len,height,part)=>{
-      const profile=[[x,0],[x+len,0],[x+len,height*.62],[x+len*.66,height],[x+len*.27,height],[x,height*.55]];
-      const a=profile.map(([xx,z])=>[xx,y,z]),b=profile.map(([xx,z])=>[xx,y+.16,z]);
-      face(a.slice().reverse(),cream,part);face(b,cream,part);
-      for(let i=0;i<a.length;i++)face([a[i],a[(i+1)%a.length],b[(i+1)%a.length],b[i]],cream,part);
-      for(let i=0;i<4;i++)for(let j=0;j<5;j++)beam([x+.18+j*.09,y-.012,.25+i*.09],[x+.18+j*.09,y-.004,.25+i*.09],.018,dark,'cover-vent');
+    // S-HM_A001 dimensioned drawing is the reference for end equipment.
+    // Local measured metres are converted to the existing 2D footprint; no
+    // assumption is made that the reference drawing's full line is identical
+    // to the photographed oven. The oven length is independently retained.
+    const X=v=>v*28/31.3;
+    const measuredBox=(x,y,z,l,b,h,color,part)=>box(X(x),y,z,X(l),b,h,color,part);
+    const measuredBeam=(a,b,r,color,part)=>beam([X(a[0]),a[1],a[2]],[X(b[0]),b[1],b[2]],r,color,part);
+    const roller=(x,z,r,part)=>{
+      const rings=[1.27,3.03].map(y=>Array.from({length:24},(_,i)=>{
+        const angle=i*Math.PI/12;return [X(x+r*Math.cos(angle)),y,z+r*Math.sin(angle)];
+      }));
+      face(rings[0].slice().reverse(),metal,part);face(rings[1],metal,part);
+      for(let i=0;i<24;i++)face([rings[0][i],rings[0][(i+1)%24],rings[1][(i+1)%24],rings[1][i]],metal,part);
     };
-    // Outer unwind: red skid, paired sloping cream guards, hinged arms and shafts.
-    box(.25,.55,.04,2.35,3.15,.14,red,'unwind-skid');
-    for(const y of [.62,3.45]){
-      sideCover(.35,y,1.05,1.25,'unwind-side-cover');
-      beam([1.08,y+.08,.78],[2.18,y+.08,1.23],.065,cream,'unwind-lifting-arm');
-      beam([.50,y+.08,1.06],[2.16,y+.08,1.30],.055,cream,'unwind-upper-arm');
-      beam([2.16,y+.08,1.30],[2.16,y+.08,1.55],.05,cream,'unwind-bearing');
-    }
-    for(const [x,z,r] of [[.75,1.08,.07],[1.35,.76,.09],[1.85,1.05,.09],[2.16,1.55,.07]])beam([x,.67,z],[x,3.55,z],r,metal,'roller');
-    box(2.55,.64,.08,.12,2.96,.12,red,'unwind-base');
-    // Large chrome laminating drum, side casing, smaller feed and guide rollers.
-    beam([4.0,.68,1.62],[4.0,3.48,1.62],.78,'#96aaa9','laminating-drum');
-    for(const y of [.48,3.51]){
-      box(3.35,y,.15,1.28,.20,1.72,cream,'drum-side-casing');
-      beam([3.18,y+.10,.35],[2.72,y+.10,1.05],.09,cream,'drum-brace');
-      beam([3.28,y+.10,1.10],[2.68,y+.10,1.28],.065,cream,'feed-arm');
-    }
-    for(const [x,z] of [[2.72,1.05],[3.05,.72],[4.82,1.05],[5.12,1.38]])beam([x,.70,z],[x,3.48,z],.09,metal,'guide-roller');
-    box(3.30,3.72,.64,1.36,.08,.95,cream,'ventilated-drive-cover');
-    for(let i=0;i<4;i++)for(let j=0;j<7;j++)beam([3.40+j*.16,3.805,.76+i*.16],[3.40+j*.16,3.815,.76+i*.16],.022,dark,'drive-vent');
-    box(2.20,3.45,.1,.48,.48,.72,red,'operator-station');
-    // Opposite end: red elevated coater and separate angled material stand.
-    box(24.0,.56,.08,2.05,3.10,.18,red,'coater-base');
-    for(const y of [.62,3.45]){box(24.15,y,.26,.15,.15,1.42,red,'coater-leg');beam([24.2,y,1.20],[25.8,y,1.85],.08,cream,'coater-arm');}
-    box(24.10,.62,1.55,1.90,2.98,.12,red,'coater-platform');
-    for(const y of [.68,3.47]) {sideCover(26.1,y,1.55,1.05,'rewind-side-cover');beam([26.35,y+.08,.75],[27.48,y+.08,1.30],.065,cream,'rewind-arm');}
-    box(26.05,.55,.04,1.75,3.12,.14,red,'rewind-skid');
-    for(const [x,z] of [[26.35,.72],[26.80,1.0],[27.45,1.30]])beam([x,.72,z],[x,3.48,z],.10,metal,'roller');
-    // End assemblies: S-HM1600 elevation shows paired drive wheels and
-    // a compact control cabinet on each end station beneath the oven.
-    for(const x of [3.3,24.55]){
-      box(x-.36,1.72,.10,.72,.72,1.05,cream,'end-drive-cabinet');
-      for(const dx of [-.38,.38]) {
-        beam([x+dx,1.70,1.52],[x+dx,1.81,1.52],.28,metal,'end-drive-wheel');
-        beam([x+dx,1.68,1.52],[x+dx,1.84,1.52],.06,dark,'end-drive-hub');
-        beam([x+dx,1.75,1.50],[x,1.75,1.05],.035,dark,'end-drive-belt');
+    function rollStand(x,z,rollRadius,part) {
+      // 1045 mm base, 775 mm inner frame; paired supports, hinged arms,
+      // bearing blocks and the 1760 mm shaft body.
+      for(const y of [1.12,3.06]){
+        measuredBox(x-.5225,y,0,1.045,.12,.12,cream,part+'-base');
+        measuredBeam([x-.40,y+.06,.12],[x-.13,y+.06,z],.055,cream,part+'-leg');
+        measuredBeam([x+.42,y+.06,.12],[x+.13,y+.06,z],.055,cream,part+'-leg');
+        measuredBeam([x-.43,y+.06,.40],[x+.43,y+.06,.40],.045,cream,part+'-brace');
+        measuredBox(x-.14,y,z-.12,.28,.12,.24,cream,part+'-bearing');
+        measuredBeam([x+.15,y+.06,.47],[x+.70,y+.06,.83],.055,cream,part+'-swing-arm');
       }
-      box(x-.22,1.62,1.20,.44,.26,.18,cream,'end-drive-head');
+      measuredBeam([x,1.05,z],[x,3.25,z],.08,dark,part+'-shaft');
+      roller(x,z,rollRadius,part+'-roll');
+      roller(x+.64,.85,.0825,part+'-guide');
+      measuredBox(x-.30,3.18,.20,.60,.24,.38,cream,part+'-drive');
     }
+    // Lower-X end: Ø1500 supply roll (axis 1 m), then the Ø1500
+    // processing drum (axis 1.424 m), with guide rollers and a 1250 mm base.
+    rollStand(.70,1.0,.75,'unwind');
+    measuredBox(1.68,1.05,.02,1.25,2.20,.12,cream,'drum-base');
+    for(const y of [1.08,3.10]){
+      measuredBox(1.75,y,.14,.15,.15,1.80,cream,'drum-upright');
+      measuredBox(2.70,y,.14,.15,.15,1.80,cream,'drum-upright');
+      measuredBox(1.75,y,1.86,1.10,.15,.12,cream,'drum-crosshead');
+    }
+    roller(2.30,1.424,.75,'laminating-drum');
+    for(const [x,z] of [[1.67,.62],[1.81,1.02],[2.96,.63],[2.98,1.04],[2.99,1.43]])roller(x,z,.0825,'guide-roller');
+    // Higher-X end: Ø1000 roll (axis 850 mm), inclined guides, 1500 mm
+    // receiving frame, Ø315 upper guide, and 2280 mm rear extension.
+    rollStand(28.05,.85,.50,'rewind');
+    for(const y of [1.08,3.10]){
+      measuredBox(28.85,y,.02,1.50,.12,.10,cream,'receiver-base');
+      measuredBox(29.10,y,.12,.12,.12,1.78,cream,'receiver-post');
+      measuredBeam([28.60,y+.06,.80],[29.14,y+.06,1.72],.05,cream,'receiver-guide-arm');
+    }
+    roller(29.13,1.74,.1575,'receiver-upper-roller');
+    for(const [x,z] of [[28.58,.70],[28.82,1.05],[29.32,.92]])roller(x,z,.08,'receiver-guide-roller');
+    for(const y of [1.08,3.10]){
+      measuredBox(29.02,y,.02,2.28,.12,.10,cream,'extension-base');
+      measuredBox(31.18,y,.12,.12,.12,1.88,cream,'extension-post');
+      measuredBeam([29.10,y+.06,.90],[31.24,y+.06,.90],.045,cream,'extension-rail');
+    }
+    measuredBox(29.12,1.20,.82,2.06,1.90,.08,cream,'extension-platform');
+    // Controls are distinct from the material reels.
+    measuredBox(27.10,3.35,.08,.55,.45,1.18,cream,'end-drive-cabinet');
+    measuredBox(27.18,3.80,.85,.36,.025,.26,dark,'control-panel');
     for(const x of [7,13,19,24]) {box(x,3.45,.1,.6,.5,1.5,cream,'control-cabinet');box(x+.12,3.96,1,.36,.025,.35,dark,'control-panel');}
     for(const y of [1.35,2.9])beam([3,y,5.18],[25,y,5.18],.18,metal,'exhaust-duct');
     return faces;
