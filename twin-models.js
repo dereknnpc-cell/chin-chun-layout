@@ -1948,9 +1948,43 @@
     for(const y of [.16,4.12]) {for(let x=2;x<=26;x+=2) beam([x,y,3.47],[x,y,4.38],.035,red,'guard-post');for(const z of [3.90,4.38])beam([2,y,z],[26,y,z],.035,red,'guardrail');}
     // Two access stairways, with visible treads and sloping handrails.
     for(const x0 of [2.1,23.2]) {for(let i=0;i<12;i++){const x=x0+i*.25,z=i*.28;box(x,.10,z,.25,.72,.07,blue,'stair-tread');}beam([x0,.08,.4],[x0+3,.08,3.76],.035,red,'stair-rail');beam([x0,.85,.4],[x0+3,.85,3.76],.035,red,'stair-rail');}
-    // Roll stations at each end, with the large laminating drum at plan left.
-    for(const x of [1.2,2.0,2.8,24.5,25.5,26.5]) {box(x-.25,.65,.10,.16,3,.95,cream,'roller-frame');beam([x,.75,1.05],[x,3.55,1.05],.17,metal,'roller');}
-    beam([4,.65,1.65],[4,3.65,1.65],.80,metal,'laminating-drum');
+    // PDF is rotated 180 degrees: the drum and outer unwind stand are at
+    // the lower-X end; the red coating platform is at the higher-X end.
+    const sideCover=(x,y,len,height,part)=>{
+      const profile=[[x,0],[x+len,0],[x+len,height*.62],[x+len*.66,height],[x+len*.27,height],[x,height*.55]];
+      const a=profile.map(([xx,z])=>[xx,y,z]),b=profile.map(([xx,z])=>[xx,y+.16,z]);
+      face(a.slice().reverse(),cream,part);face(b,cream,part);
+      for(let i=0;i<a.length;i++)face([a[i],a[(i+1)%a.length],b[(i+1)%a.length],b[i]],cream,part);
+      for(let i=0;i<4;i++)for(let j=0;j<5;j++)beam([x+.18+j*.09,y-.012,.25+i*.09],[x+.18+j*.09,y-.004,.25+i*.09],.018,dark,'cover-vent');
+    };
+    // Outer unwind: red skid, paired sloping cream guards, hinged arms and shafts.
+    box(.25,.55,.04,2.35,3.15,.14,red,'unwind-skid');
+    for(const y of [.62,3.45]){
+      sideCover(.35,y,1.05,1.25,'unwind-side-cover');
+      beam([1.08,y+.08,.78],[2.18,y+.08,1.23],.065,cream,'unwind-lifting-arm');
+      beam([.50,y+.08,1.06],[2.16,y+.08,1.30],.055,cream,'unwind-upper-arm');
+      beam([2.16,y+.08,1.30],[2.16,y+.08,1.55],.05,cream,'unwind-bearing');
+    }
+    for(const [x,z,r] of [[.75,1.08,.07],[1.35,.76,.09],[1.85,1.05,.09],[2.16,1.55,.07]])beam([x,.67,z],[x,3.55,z],r,metal,'roller');
+    box(2.55,.64,.08,.12,2.96,.12,red,'unwind-base');
+    // Large chrome laminating drum, side casing, smaller feed and guide rollers.
+    beam([4.0,.68,1.62],[4.0,3.48,1.62],.78,'#96aaa9','laminating-drum');
+    for(const y of [.48,3.51]){
+      box(3.35,y,.15,1.28,.20,1.72,cream,'drum-side-casing');
+      beam([3.18,y+.10,.35],[2.72,y+.10,1.05],.09,cream,'drum-brace');
+      beam([3.28,y+.10,1.10],[2.68,y+.10,1.28],.065,cream,'feed-arm');
+    }
+    for(const [x,z] of [[2.72,1.05],[3.05,.72],[4.82,1.05],[5.12,1.38]])beam([x,.70,z],[x,3.48,z],.09,metal,'guide-roller');
+    box(3.30,3.72,.64,1.36,.08,.95,cream,'ventilated-drive-cover');
+    for(let i=0;i<4;i++)for(let j=0;j<7;j++)beam([3.40+j*.16,3.805,.76+i*.16],[3.40+j*.16,3.815,.76+i*.16],.022,dark,'drive-vent');
+    box(2.20,3.45,.1,.48,.48,.72,red,'operator-station');
+    // Opposite end: red elevated coater and separate angled material stand.
+    box(24.0,.56,.08,2.05,3.10,.18,red,'coater-base');
+    for(const y of [.62,3.45]){box(24.15,y,.26,.15,.15,1.42,red,'coater-leg');beam([24.2,y,1.20],[25.8,y,1.85],.08,cream,'coater-arm');}
+    box(24.10,.62,1.55,1.90,2.98,.12,red,'coater-platform');
+    for(const y of [.68,3.47]) {sideCover(26.1,y,1.55,1.05,'rewind-side-cover');beam([26.35,y+.08,.75],[27.48,y+.08,1.30],.065,cream,'rewind-arm');}
+    box(26.05,.55,.04,1.75,3.12,.14,red,'rewind-skid');
+    for(const [x,z] of [[26.35,.72],[26.80,1.0],[27.45,1.30]])beam([x,.72,z],[x,3.48,z],.10,metal,'roller');
     for(const x of [7,13,19,24]) {box(x,3.45,.1,.6,.5,1.5,cream,'control-cabinet');box(x+.12,3.96,1,.36,.025,.35,dark,'control-panel');}
     for(const y of [1.35,2.9])beam([3,y,5.18],[25,y,5.18],.18,metal,'exhaust-duct');
     return faces;
