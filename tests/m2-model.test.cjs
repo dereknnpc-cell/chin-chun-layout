@@ -8,3 +8,10 @@ test('M2-1 follows the 2D position and rotation without altering the source',()=
  for(const part of ['dryer','walkway','stair-tread','guardrail','laminating-drum','roller','exhaust-duct']) assert.ok(a.some(f=>f.part===part),part);
  a.forEach((f,i)=>f.points.forEach((p,j)=>{const q=b[i].points[j],cx=item.x+14,cy=item.y+2.15;assert.ok(p.every(Number.isFinite));assert.ok(Math.abs(q[0]-(cx+3-(p[1]-cy)))<1e-8);assert.ok(Math.abs(q[1]-(cy+2+(p[0]-cx)))<1e-8);assert.equal(q[2],p[2]);}));
 });
+test('oven uses the assembly drawing footprint and platform elevation at the nominal 2D size',()=>{
+ const f=window.ChinChunModels.build({code:'M2-1',x:0,y:0,width:30,height:4.3});
+ const p=f.filter(x=>x.part==='dryer').flatMap(x=>x.points);
+ const extent=i=>Math.max(...p.map(x=>x[i]))-Math.min(...p.map(x=>x[i]));
+ assert.ok(Math.abs(extent(0)-24.15)<1e-8); assert.ok(Math.abs(extent(1)-1.945)<1e-8);
+ const deck=f.filter(x=>x.part==='walkway').flatMap(x=>x.points);assert.ok(Math.abs(Math.max(...deck.map(p=>p[2]))-2.73)<1e-8);
+});

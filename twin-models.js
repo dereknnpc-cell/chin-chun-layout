@@ -1940,14 +1940,22 @@
     const beam=(a,b,r,color,part)=>{const v=b.map((q,i)=>q-a[i]),l=Math.hypot(...v),u=v.map(q=>q/l),cross=(p,q)=>[p[1]*q[2]-p[2]*q[1],p[2]*q[0]-p[0]*q[2],p[0]*q[1]-p[1]*q[0]];let e=cross(u,Math.abs(u[2])<.9?[0,0,1]:[0,1,0]),n=Math.hypot(...e);e=e.map(q=>q/n);const f=cross(u,e),ring=p=>Array.from({length:10},(_,i)=>p.map((q,j)=>q+r*(e[j]*Math.cos(i*Math.PI/5)+f[j]*Math.sin(i*Math.PI/5))));const p=ring(a),q=ring(b);face(p.slice().reverse(),color,part);face(q,color,part);p.forEach((v,i)=>face([v,p[(i+1)%10],q[(i+1)%10],q[i]],color,part));};
     const cream='#ddd9c9',red='#bd492e',blue='#347d91',metal='#a8b4b1',dark='#3b4645';
     // Main open steel structure and raised maintenance decks.
-    for(const x of [1,5,9,13,17,21,25,27]) for(const y of [.45,3.75]) box(x,y,0,.16,.16,3.25,cream,'frame-column');
-    for(const y of [.45,3.75]) {box(.8,y,3.10,26.4,.16,.25,cream,'frame-beam');box(2,y<2?.12:3.55,3.35,24,.65,.12,blue,'walkway');}
-    // Segmented elevated drying tunnel, higher in the middle.
-    for(let i=0;i<10;i++){const x=3+i*2.2,z=3.55+Math.min(i,9-i,2)*.18;box(x,.88,z,2.16,2.54,1.05,cream,'dryer');box(x+.12,.86,z+.22,1.9,.035,.55,'#c9c3ae','dryer-access');beam([x+1.1,2.15,z+1.05],[x+1.1,2.15,z+1.50],.12,metal,'exhaust-stack');}
+    for(const x of [1,5,9,13,17,21,25,27]) for(const y of [.45,3.75]) box(x,y,0,.16,.16,2.73,cream,'frame-column');
+    for(const y of [.45,3.75]) {box(.8,y,2.48,26.4,.16,.25,cream,'frame-beam');box(2,y<2?.12:3.55,2.61,24,.65,.12,blue,'walkway');}
+    // Drawing S-HM1600: a 24.15 × 1.945 m steam oven with a continuous arched profile.
+    // Horizontal dimensions remain proportional to the user's 2D footprint.
+    const ovenZ=x=>3.13+.64*(1-Math.pow((x-14)/12.075,2));
+    for(let i=0;i<10;i++){
+      const x=(2.925+i*2.415)*28/30,x2=(2.925+(i+1)*2.415)*28/30,z=ovenZ(x),z2=ovenZ(x2),y=1.1775,y2=3.1225;
+      const p=[[x,y,z],[x2,y,z2],[x2,y2,z2],[x,y2,z],[x,y,z+1.05],[x2,y,z2+1.05],[x2,y2,z2+1.05],[x,y2,z+1.05]];
+      for(const ids of [[0,3,2,1],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7]])face(ids.map(j=>p[j]),cream,'dryer');
+      face([[x+.12,y-.01,z+.22],[x2-.12,y-.01,z2+.22],[x2-.12,y-.01,z2+.78],[x+.12,y-.01,z+.78]],'#c9c3ae','dryer-access');
+      box(x+.65,1.72,(z+z2)/2+1.05,.65,.8,.32,metal,'dryer-blower');
+    }
     // Red railings along both sides of the upper walkway.
-    for(const y of [.16,4.12]) {for(let x=2;x<=26;x+=2) beam([x,y,3.47],[x,y,4.38],.035,red,'guard-post');for(const z of [3.90,4.38])beam([2,y,z],[26,y,z],.035,red,'guardrail');}
+    for(const y of [.16,4.12]) {for(let x=2;x<=26;x+=2) beam([x,y,2.73],[x,y,3.64],.035,red,'guard-post');for(const z of [3.16,3.64])beam([2,y,z],[26,y,z],.035,red,'guardrail');}
     // Two access stairways, with visible treads and sloping handrails.
-    for(const x0 of [2.1,23.2]) {for(let i=0;i<12;i++){const x=x0+i*.25,z=i*.28;box(x,.10,z,.25,.72,.07,blue,'stair-tread');}beam([x0,.08,.4],[x0+3,.08,3.76],.035,red,'stair-rail');beam([x0,.85,.4],[x0+3,.85,3.76],.035,red,'stair-rail');}
+    for(const x0 of [2.1,23.2]) {for(let i=0;i<12;i++){const x=x0+i*.25,z=i*(2.73/12);box(x,.10,z,.25,.72,.07,blue,'stair-tread');}beam([x0,.08,.4],[x0+3,.08,3.13],.035,red,'stair-rail');beam([x0,.85,.4],[x0+3,.85,3.13],.035,red,'stair-rail');}
     // PDF is rotated 180 degrees: the drum and outer unwind stand are at
     // the lower-X end; the red coating platform is at the higher-X end.
     const sideCover=(x,y,len,height,part)=>{
@@ -1985,6 +1993,17 @@
     for(const y of [.68,3.47]) {sideCover(26.1,y,1.55,1.05,'rewind-side-cover');beam([26.35,y+.08,.75],[27.48,y+.08,1.30],.065,cream,'rewind-arm');}
     box(26.05,.55,.04,1.75,3.12,.14,red,'rewind-skid');
     for(const [x,z] of [[26.35,.72],[26.80,1.0],[27.45,1.30]])beam([x,.72,z],[x,3.48,z],.10,metal,'roller');
+    // End assemblies: S-HM1600 elevation shows paired drive wheels and
+    // a compact control cabinet on each end station beneath the oven.
+    for(const x of [3.3,24.55]){
+      box(x-.36,1.72,.10,.72,.72,1.05,cream,'end-drive-cabinet');
+      for(const dx of [-.38,.38]) {
+        beam([x+dx,1.70,1.52],[x+dx,1.81,1.52],.28,metal,'end-drive-wheel');
+        beam([x+dx,1.68,1.52],[x+dx,1.84,1.52],.06,dark,'end-drive-hub');
+        beam([x+dx,1.75,1.50],[x,1.75,1.05],.035,dark,'end-drive-belt');
+      }
+      box(x-.22,1.62,1.20,.44,.26,.18,cream,'end-drive-head');
+    }
     for(const x of [7,13,19,24]) {box(x,3.45,.1,.6,.5,1.5,cream,'control-cabinet');box(x+.12,3.96,1,.36,.025,.35,dark,'control-panel');}
     for(const y of [1.35,2.9])beam([3,y,5.18],[25,y,5.18],.18,metal,'exhaust-duct');
     return faces;

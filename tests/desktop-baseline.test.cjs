@@ -102,7 +102,7 @@ test('production ships desktop helper/data, and all existing model builders rema
 test('dock shutters fit evenly within their host wall and are fixed without moving other records',()=>{
   const section=source.slice(source.indexOf('  function applySourceGeometryRevision('),source.indexOf('  // --- State Variables ---'));
   const ctx={window:{},SOURCE_GEOMETRY_REVISION:desktop.source_geometry_revision};vm.createContext(ctx);vm.runInContext(section,ctx);
-  const original=plain(desktop);original.diecut_accessories_20261103={};original.equipment.find(q=>q.id==='eq_eva3').ls7as_dimensions_confirmed=true;
+  const original=plain(desktop);original.diecut_accessories_20261103={};original.equipment.find(q=>q.id==='eq_adh2_m2_1').m2_length_20261105=true;original.equipment.find(q=>q.id==='eq_eva3').ls7as_dimensions_confirmed=true;
   const result=ctx.applySourceGeometryRevision(original),ids=['door_1789543247410','door_1789543258711','door_1789543264240'];
   const doors=ids.map(id=>result.layout.equipment.find(q=>q.id===id));
   assert.deepEqual(plain(doors.map(q=>[q.x,q.y,q.width,q.rotation])),[[.75,34.825,4,0],[5.5,34.825,4,0],[10.25,34.825,4,0]]);
@@ -118,7 +118,7 @@ test('dock shutters fit evenly within their host wall and are fixed without movi
 test('EVA 3 manual dimensions update once about the same CAD center and preserve other records',()=>{
   const section=source.slice(source.indexOf('  function applySourceGeometryRevision('),source.indexOf('  // --- State Variables ---'));
   const ctx={window:{},SOURCE_GEOMETRY_REVISION:desktop.source_geometry_revision};vm.createContext(ctx);vm.runInContext(section,ctx);
-  const original={...plain(desktop),dock_shutters_fixed:true,diecut_accessories_20261103:{}},before=JSON.stringify(original),old=original.equipment.find(q=>q.id==='eq_eva3');
+  const original={...plain(desktop),dock_shutters_fixed:true,diecut_accessories_20261103:{}};original.equipment.find(q=>q.id==='eq_adh2_m2_1').m2_length_20261105=true;const before=JSON.stringify(original),old=original.equipment.find(q=>q.id==='eq_eva3');
   const result=ctx.applySourceGeometryRevision(original),updated=result.layout.equipment.find(q=>q.id==='eq_eva3');
   assert.equal(updated.width,3.817);assert.equal(updated.height,12.47);assert.equal(updated.rotation,old.rotation);
   assert.ok(Math.abs(updated.x+updated.width/2-old.x-old.width/2)<1e-9);assert.ok(Math.abs(updated.y+updated.height/2-old.y-old.height/2)<1e-9);
@@ -139,4 +139,14 @@ test('Die Cut accessories are added once between machines while preserving later
   assert.equal(next.layout.equipment.find(q=>q.id===vcut.id).x,64);assert.ok(!next.layout.equipment.some(q=>q.id===air.id));
   const custom=JSON.parse(before);custom.equipment.find(q=>q.id==='eq_vcut3_j1_3').rotation=90;const skipped=ctx.applySourceGeometryRevision(custom);
   assert.equal(skipped.layout.equipment.find(q=>q.id==='eq_vcut3_j1_3').rotation,90);assert.ok(!skipped.layout.equipment.some(q=>q.id==='eq_diecut_desk'));
+});
+
+test('M2 length updates once around its center and respects later edits',()=>{
+ const section=source.slice(source.indexOf('  function applySourceGeometryRevision('),source.indexOf('  // --- State Variables ---'));
+ const ctx={window:{},SOURCE_GEOMETRY_REVISION:desktop.source_geometry_revision};vm.createContext(ctx);vm.runInContext(section,ctx);
+ const original=plain(desktop);original.dock_shutters_fixed=true;original.diecut_accessories_20261103={};original.equipment.find(q=>q.id==='eq_eva3').ls7as_dimensions_confirmed=true;
+ const old=original.equipment.find(q=>q.id==='eq_adh2_m2_1'),result=ctx.applySourceGeometryRevision(original),updated=result.layout.equipment.find(q=>q.id===old.id);
+ assert.equal(updated.width,30);assert.equal(updated.x+15,old.x+14);assert.equal(old.width,28);
+ updated.width=29;assert.equal(ctx.applySourceGeometryRevision(result.layout).layout.equipment.find(q=>q.id===old.id).width,29);
+ const custom=plain(original);custom.equipment.find(q=>q.id===old.id).width=27;assert.equal(ctx.applySourceGeometryRevision(custom).layout.equipment.find(q=>q.id===old.id).width,27);
 });
