@@ -2018,7 +2018,9 @@
     // Controls are distinct from the material reels.
     measuredBox(27.10,3.35,.08,.55,.45,1.18,cream,'end-drive-cabinet');
     measuredBox(27.18,3.80,.85,.36,.025,.26,dark,'control-panel');
-    for(const x of [7,13,19,24]) {box(x,3.45,.1,.6,.5,1.5,cream,'control-cabinet');box(x+.12,3.96,1,.36,.025,.35,dark,'control-panel');}
+    // Only the end cabinet exists; the three intermediate cabinets marked
+    // in the site review (local X 7, 13, 19) are intentionally omitted.
+    for(const x of [24]) {box(x,3.45,.1,.6,.5,1.5,cream,'control-cabinet');box(x+.12,3.96,1,.36,.025,.35,dark,'control-panel');}
     for(const y of [1.35,2.9])beam([3,y,5.18],[25,y,5.18],.18,metal,'exhaust-duct');
     return faces;
   }

@@ -21,3 +21,12 @@ test('dimensioned end rolls retain their drawing diameters and shaft span',()=>{
  const extent=(part,axis)=>{const points=faces.filter(f=>f.part===part).flatMap(f=>f.points);assert.ok(points.length,part);return Math.max(...points.map(p=>p[axis]))-Math.min(...points.map(p=>p[axis]));};
  for(const [part,diameter] of [['unwind-roll',1.5],['laminating-drum',1.5],['rewind-roll',1],['receiver-upper-roller',.315]]){assert.ok(Math.abs(extent(part,0)-diameter)<1e-8,part);assert.ok(Math.abs(extent(part,2)-diameter)<1e-8,part);assert.ok(Math.abs(extent(part,1)-1.76)<1e-8,part);}
 });
+
+test('site review removes only the three intermediate cabinets and keeps end controls',()=>{
+ const faces=window.ChinChunModels.build({code:'M2-1',x:0,y:0,width:31.3,height:4.3});
+ const cabinets=faces.filter(f=>f.part==='control-cabinet');
+ assert.equal(cabinets.length,6,'one six-face end cabinet remains');
+ assert.ok(cabinets.flatMap(f=>f.points).every(p=>p[0]>=24*31.3/28-1e-8));
+ assert.equal(faces.filter(f=>f.part==='end-drive-cabinet').length,6);
+ assert.equal(faces.filter(f=>f.part==='control-panel').length,12,'both end control panels remain');
+});
