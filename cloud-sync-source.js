@@ -11,9 +11,13 @@ const UNSYNCED_SNAPSHOT_KEY = "chinChun.unsyncedCloudSnapshot.v1";
 
 async function fetchWithTimeout(input, init = {}) {
   const controller = new AbortController();
+  const upstream = init.signal || (typeof Request !== "undefined" && input instanceof Request ? input.signal : null);
+  const abort = () => controller.abort(upstream.reason);
+  if (upstream?.aborted) abort();
+  else upstream?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(() => controller.abort(), 20000);
-  try { return await fetch(input, { ...init, signal: init.signal || controller.signal }); }
-  finally { clearTimeout(timeout); }
+  try { return await fetch(input, { ...init, signal: controller.signal }); }
+  finally { clearTimeout(timeout); upstream?.removeEventListener("abort", abort); }
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

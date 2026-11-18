@@ -23,7 +23,7 @@ function setup(){
   const dialog={open:false,querySelector:element};
   const ctx=new Proxy({measureText:text=>({width:String(text).length*7})},{get:(target,key)=>target[key] || noop});
   const canvas={getBoundingClientRect:()=>({left:0,top:0,width:1280,height:720})};
-  const context={window,document:{documentElement:{lang:'zh-Hant'}},Option:function(){},console:{warn:noop},Path2D:class{moveTo(){}lineTo(){}closePath(){}},requestAnimationFrame:noop};
+  const context={window,devicePixelRatio:1,document:{documentElement:{lang:'zh-Hant'}},Option:function(){},console:{warn:noop},Path2D:class{moveTo(){}lineTo(){}closePath(){}},requestAnimationFrame:noop};
   const source=read('digital-twin.js'),marker='})();';
   const probe=`window.__test={
     prepare(d,ui,c,x){dialog=ui;canvas=c;ctx=x;width=1280;height=720;engineMode='legacy';data=d;rebuild();},
@@ -35,7 +35,7 @@ function setup(){
     three:v=>{engineMode='three';threeView=v;threeSceneCache=null;},
     draw:()=>drawThree(detail&&selected?[selected]:scene,viewBounds(),1),
     orbit,tilt,cameraKey,cameraWheel,fit,resetView,startThree,switchEngine,
-    cache:()=>threeSceneCache,mode:()=>engineMode,error:()=>engineError
+    drawFrame:draw,cache:()=>threeSceneCache,mode:()=>engineMode,error:()=>engineError
   };`;
   vm.runInNewContext(source.trimEnd().slice(0,-marker.length)+probe+marker,context);
   return {window,api:window.__test,elements,dialog,ctx,canvas,prepare(d){window.__test.prepare(d,dialog,canvas,ctx);}};
@@ -209,10 +209,22 @@ test('switching engines carries camera angle only and never writes any layout fi
 });
 test('runtime bundles Three locally and retains a read-only 2D bridge and legacy comparison',()=>{
   const html=read('index.html'),source=read('three-twin.mjs'),twin=read('digital-twin.js'),app=read('app.js');
-  assert.ok(html.indexOf('src="three-twin.js')<html.indexOf('src="digital-twin.js'));
+  assert.match(html,/src="twin-loader\.js/);
+  assert.match(read('twin-loader.js'),/await load\('digital-twin\.js'\)/);
   assert.match(read('build.mjs'),/entryPoints:\["three-twin\.mjs"\]/);assert.match(read('package.json'),/"three": "0\.186\.1"/);
   assert.match(twin,/ChinChunModels\?\.build\(item\)/);assert.match(app,/ChinChunTwin\?\.update\(layoutData, currentFloor\)/);
   assert.match(twin,/\['legacy','legacyEngine'\]/);assert.match(twin,/if\(!allFaces && project/);
   assert.ok(!/localStorage|supabase|fetch\(|\.setItem\(|layoutData\s*=/.test(source));
   assert.match(source,/geometry\?\.dispose\(\)/);assert.match(source,/controls\.dispose\(\)/);
 });
+
+ test('repainting clears overlays without reallocating the canvas until the viewport changes',()=>{
+  const t=setup();t.prepare(fixture());t.dialog.open=true;let writes=0,clears=0,w=0,h=0;
+  Object.defineProperties(t.canvas,{width:{get:()=>w,set:v=>{w=v;writes++;}},height:{get:()=>h,set:v=>{h=v;writes++;}}});
+  t.ctx.clearRect=()=>clears++;
+  t.api.three({resize(){},setScene(){},render(){},fit(){},project:p=>[p[0]*4,p[1]*4,.5],state:()=>({yaw:0,pitch:35})});
+  t.api.drawFrame();assert.equal(writes,2);assert.equal(clears,1);
+  t.api.drawFrame();assert.equal(writes,2);assert.equal(clears,2);
+  t.canvas.getBoundingClientRect=()=>({left:0,top:0,width:640,height:360});
+  t.api.drawFrame();assert.equal(writes,4);assert.equal(clears,3);
+ });

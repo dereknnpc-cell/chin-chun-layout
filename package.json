@@ -3,13 +3,17 @@
   "version": "3.0.1",
   "private": true,
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.cjs",
+    "build:portable": "ESBUILD_WASM=1 node build.mjs",
+    "verify": "npm test && npm run build:portable && node scripts/check-build.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",
     "three": "0.186.1"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "esbuild-wasm": "0.28.2"
   }
 }

@@ -1030,7 +1030,13 @@
   function draw() {
     frame=0;if(!dialog?.open || !bounds)return;
     const size=canvas.getBoundingClientRect();width=size.width;height=size.height;
-    const dpr=Math.min(devicePixelRatio || 1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+    const dpr=Math.min(devicePixelRatio || 1,2);
+    const pixelWidth=Math.round(width*dpr),pixelHeight=Math.round(height*dpr);
+    if(canvas.width!==pixelWidth)canvas.width=pixelWidth;
+    if(canvas.height!==pixelHeight)canvas.height=pixelHeight;
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+    ctx.save();
+    try {
     if(engineMode==='three' && !threeView)startThree();
     const b=viewBounds(),visible=sceneForView(b);
     const corners=[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]];
@@ -1099,6 +1105,7 @@
     });
     drawLive(visible);
     dialog.querySelector('#twinCount').textContent=`${floor} / ${scene.length} ${t('count')} · ${t('updated')}`;
+    } finally { ctx.restore(); }
   }
   function updateInfo() {
     const s=selected, item=s?.item;
@@ -1271,10 +1278,12 @@
       requestDraw();
     }).observe(canvas);
   }
+  function openTwin(){mount();localize();closeTwinMenus();detail=false;if(!dialog.open)dialog.showModal();threeView?.setEnabled(engineMode==='three');rebuild();fit();}
   window.ChinChunTwin={
+    open:openTwin,
     connect(api){bridge=api;
       window.ChinChunLive?.attach({layout:()=>data});
-      window.ChinChunLive?.subscribe(()=>{if(!dialog?.open)return;if(selected?.type==='equipment')updateInfo();updateLiveButton();requestDraw();});document.getElementById('openDigitalTwin')?.addEventListener('click',()=>{mount();localize();closeTwinMenus();detail=false;dialog.showModal();threeView?.setEnabled(engineMode==='three');rebuild();fit();});},
+      window.ChinChunLive?.subscribe(()=>{if(!dialog?.open)return;if(selected?.type==='equipment')updateInfo();updateLiveButton();requestDraw();});document.getElementById('openDigitalTwin')?.addEventListener('click',openTwin);},
     update(layout,activeFloor){data=layout;if(!dialog?.open){floor=activeFloor==='2F'?'2F':'1F';return;}rebuild();}
   };
 })();

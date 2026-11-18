@@ -112,7 +112,7 @@ test('vertical D1-1 and Welding footprints fit the process axis to the long side
 });
 test('runtime loads the new module before old model dispatch, and ships it in the static build',()=>{
   const html=read('index.html');assert.ok(html.indexOf('src="photo-models.js')<html.indexOf('src="twin-models.js'));
-  assert.ok(html.indexOf('src="twin-models.js')<html.indexOf('src="digital-twin.js'));
+  assert.ok(html.indexOf('src="twin-models.js')<html.indexOf('src="twin-loader.js'));
   assert.match(read('build.mjs'),/"photo-models\.js"/);
   const renderer=read('digital-twin.js');
   for(const key of ['rackPhoto','j13Photo','d11Photo','weldingPhoto','l41Photo','eva3Deferred','photoSiteNote']){
