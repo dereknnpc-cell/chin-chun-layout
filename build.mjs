@@ -17,7 +17,7 @@ await writeFile("cloud-sync.js", cloudBundle.replace(/[ \t]+$/gm, ""), "utf8");
 const assets = {};
 async function emit(name, source) {
   const loader = name.endsWith(".css") ? "css" : "js";
-  const { code } = await transform(source, { loader, minify: true, target: "es2020", legalComments: "eof" });
+  const { code } = await transform(source, { loader, minify: true, charset: "utf8", target: "es2020", legalComments: "eof" });
   const hash = createHash("sha256").update(code).digest("hex").slice(0, 16);
   const path = `assets/${name.replace(/\.(js|css)$/, `.${hash}.$1`)}`;
   await writeFile(`${outputDirectory}/${path}`, code);
