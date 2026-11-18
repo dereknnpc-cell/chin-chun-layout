@@ -19,7 +19,7 @@ function fixture(){
 function setup(){
   const window=loadModels(),elements=new Map(),noop=()=>{};
   window.ChinChunThree={revision:'test'};
-  const element=selector=>{if(!elements.has(selector))elements.set(selector,{textContent:'',value:'',hidden:false,setAttribute:noop,replaceChildren:noop,add:noop,getBoundingClientRect:()=>({left:970,top:220,width:260,height:360})});return elements.get(selector);};
+  const element=selector=>{if(!elements.has(selector))elements.set(selector,{textContent:'',value:'',hidden:false,dataset:{},setAttribute:noop,replaceChildren:noop,add:noop,getBoundingClientRect:()=>({left:970,top:220,width:260,height:360})});return elements.get(selector);};
   const dialog={open:false,querySelector:element};
   const ctx=new Proxy({measureText:text=>({width:String(text).length*7})},{get:(target,key)=>target[key] || noop});
   const canvas={getBoundingClientRect:()=>({left:0,top:0,width:1280,height:720})};
@@ -32,6 +32,7 @@ function setup(){
     faces:()=>{allFaces=true;try{return scene.filter(s=>s.type!=='aisle').flatMap(objectFaces);}finally{allFaces=false;}},
     ground:()=>threeGroundFaces(scene,bounds),
     flags:(roof,cutaway)=>{buildingRoof=roof;restroomCutaway=cutaway;},
+    bridge:v=>{bridge=v;}, moveModule:moveSelectedModule, duplicateModule:duplicateSelectedModule,
     three:v=>{engineMode='three';threeView=v;threeSceneCache=null;},
     draw:()=>drawThree(detail&&selected?[selected]:scene,viewBounds(),1),
     orbit,tilt,cameraKey,cameraWheel,fit,resetView,startThree,switchEngine,
@@ -156,6 +157,24 @@ test('full layout update keeps every 2D field and follows move, resize, rotation
   assert.equal(JSON.stringify(s.model),JSON.stringify(test.window.ChinChunModels.build(item)));
   const deleted=plain(next);deleted.equipment=deleted.equipment.filter(q=>q.id!==id);test.api.layout(freeze(deleted));assert.ok(!test.api.scene().some(s=>s.item.id===id));
   test.api.floor('2F');assert.equal(test.api.scene().filter(s=>s.type==='equipment').length,deleted.equipment_2f.length);
+});
+test('2.5D machine modules send independent move and copy commands through the CAD bridge',()=>{
+  const test=setup(),layout=fixture(),calls=[];test.prepare(layout);
+  const machine=layout.equipment.find(q=>q.code==='L4-1');
+  test.api.bridge({
+    move:(...args)=>{calls.push(['move',...args]);return {ok:true,id:machine.id};},
+    duplicate:(...args)=>{calls.push(['duplicate',...args]);return {ok:true,id:machine.id};}
+  });
+  test.api.select(machine.id);
+  assert.equal(test.api.moveModule(1,-1),true);
+  assert.equal(test.api.duplicateModule(),true);
+  assert.deepEqual(calls,[['move',machine.id,'1F',.1,-.1],['duplicate',machine.id,'1F']]);
+  assert.equal(test.elements.get('#twinModuleStatus').textContent,'已建立獨立機台副本');
+
+  const door=layout.equipment.find(q=>q.category==='Door');
+  assert.ok(door);test.api.select(door.id);
+  assert.equal(test.api.moveModule(1,0),false);
+  assert.equal(calls.length,2);
 });
 test('Three geometry includes every wall side, preserves aperture and the confirmed floor levels',()=>{
   const test=setup(),layout=test.window.ChinChunBuilding.apply(fixture());

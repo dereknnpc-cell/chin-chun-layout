@@ -6929,6 +6929,60 @@
   }
 
   // --- Universal Duplication ---
+  function moveTwinEquipment(id, dx, dy) {
+    const rec = findItemRecord(id);
+    const deltaX = Number(dx);
+    const deltaY = Number(dy);
+    if (rec?.type !== "equipment" || !Number.isFinite(deltaX) || !Number.isFinite(deltaY)) {
+      return { ok: false, reason: "invalid" };
+    }
+    if (isRecordLayerLocked(rec)) {
+      showToast("設備圖層已鎖定，請先解鎖再移動機台", "info", 2200);
+      return { ok: false, reason: "locked" };
+    }
+    const item = rec.item;
+    const x = Number(item.x);
+    const y = Number(item.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return { ok: false, reason: "invalid" };
+
+    pushHistoryState(`2.5D 移動機台 ${item.code || item.name || ""}`);
+    item.x = Math.round((x + deltaX) * 1e6) / 1e6;
+    item.y = Math.round((y + deltaY) * 1e6) / 1e6;
+    selectItem(item.id);
+    saveToLocalStorage();
+    renderSvg();
+    return { ok: true, id: item.id, x: item.x, y: item.y };
+  }
+
+  function duplicateTwinEquipment(id) {
+    const rec = findItemRecord(id);
+    if (rec?.type !== "equipment" || !rec.collection) return { ok: false, reason: "invalid" };
+    if (isRecordLayerLocked(rec)) {
+      showToast("設備圖層已鎖定，無法複製機台", "info", 2200);
+      return { ok: false, reason: "locked" };
+    }
+
+    const item = rec.item;
+    const cloned = JSON.parse(JSON.stringify(item));
+    let suffix = 0;
+    do {
+      cloned.id = `equipment_${Date.now()}${suffix ? `_${suffix}` : ""}`;
+      suffix += 1;
+    } while (findItemRecord(cloned.id));
+    cloned.code = `${item.code || item.name || "設備"}-COPY`;
+    cloned.x = Math.round((Number(item.x) + 1) * 1e6) / 1e6;
+    cloned.y = Math.round((Number(item.y) + 1) * 1e6) / 1e6;
+
+    pushHistoryState(`2.5D 複製機台 ${item.code || item.name || ""}`);
+    // Keep the clone in the exact source collection. Some legacy 2F records
+    // do not carry item.floor, so inferring the floor from that field is unsafe.
+    rec.collection.push(cloned);
+    selectItem(cloned.id);
+    saveToLocalStorage();
+    renderSvg();
+    return { ok: true, id: cloned.id, x: cloned.x, y: cloned.y };
+  }
+
   function duplicateSelected() {
     if (!selectedId) return;
     const rec = findItemRecord(selectedId);
@@ -7877,6 +7931,14 @@
         if (floor !== currentFloor) switchFloor(floor);
         selectItem(id);
         renderSvg();
+      },
+      move(id, floor, dx, dy) {
+        if (floor !== currentFloor) switchFloor(floor);
+        return moveTwinEquipment(id, dx, dy);
+      },
+      duplicate(id, floor) {
+        if (floor !== currentFloor) switchFloor(floor);
+        return duplicateTwinEquipment(id);
       }
     });
     bindMobileWorkspace();

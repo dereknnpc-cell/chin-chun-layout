@@ -51,7 +51,8 @@
     f1Photo:'F1-1：捲料軸位於平面圖右端，最高約 2.8 m（已確認）。僅顯示機台結構，不含泡棉材料。橘紅護欄、上層走台、直梯與滾輪依六張照片建模；其餘尺寸為照片估算。',
     title:'廠房數位孿生', close:'返回平面圖', floor:'樓層', fit:'全覽', rotate:'右轉90°', orbitLeft:'左轉90°', tiltUp:'俯視＋', tiltDown:'俯視−', resetView:'重設視角', cameraAngle:'水平', cameraPitch:'俯仰', labels:'設備標籤',
     select:'選取物件', all:'選擇設備／柱子／牆面', empty:'點選場景中的物件，查看尺寸與位置。', edit:'在平面圖編輯',
-    note:'2D 為主、配置同步 · 視角操作不改動機台尺寸或方向 · 一般廠內外高差約 1.5 m（局部例外詳設備） · 未接入即時機台訊號', help:'拖曳平移 · 滾動縮放 · ⌘／Shift＋滾動：左右旋轉 · ⌥＋滾動：上下俯仰 · 方向鍵：左右旋轉／上下俯仰 · 0 重設視角 · Esc 返回',
+    moduleMove:'機台模組移動', moveStep:'移動步距', moveLeft:'向左移動', moveRight:'向右移動', moveUp:'向上移動', moveDown:'向下移動', duplicateMachine:'複製此機台', moduleHint:'Shift＋方向鍵也可移動所選機台', moduleMoved:'機台位置已同步至 2D', moduleCopied:'已建立獨立機台副本', moduleLocked:'設備圖層已鎖定', moduleError:'無法修改此機台',
+    note:'2D 為主、配置同步 · 視角操作不改動機台尺寸或方向 · 一般廠內外高差約 1.5 m（局部例外詳設備） · 未接入即時機台訊號', help:'拖曳平移 · 滾動縮放 · ⌘／Shift＋滾動：左右旋轉 · ⌥＋滾動：上下俯仰 · 方向鍵：調整視角 · Shift＋方向鍵：移動所選機台 · 0 重設視角 · Esc 返回',
     equipment:'設備', column:'柱子', wall:'牆面', aisle:'走道', zone:'夾層區域', size:'平面尺寸', position:'座標', rotation:'角度', count:'物件',
     updated:'已載入目前圖面', floor1:'1F 主廠房', floor2:'2F 夾層', focus:'設備特寫', photo:'M2-1 整線長 31.30 m；收放料架依尺寸圖建模。\n烘箱依獨立圖面配置；兩端與烘箱之間的銜接位置為示意。', a1Photo:'A1-1 依新照片重畫：右端綠色輸送帶入料，經加工滾輪與靠右的大輪，帶材斜向左端取料滾輪。方向已確認；部件尺寸與高度仍是照片估算。', a1Entrance:'入料（綠色輸送帶）', a1Collection:'取料（銀色滾輪）', feed:'入料（兩人端）', collect:'收料（一人端）', ramp:'坡道高差：約 1.50 m（廠內高、廠外低）', rampInside:'廠內 +1.5m', rampOutside:'廠外 0m', officeSteps:'辦公室入口台階跟隨 DOOR-1800 位置；階高為照片示意，待現場量測。', dockSite:'西側上貨月台依照片示意；廠內高於外側約 1.5 m。'
   };
@@ -82,7 +83,8 @@
     f1Photo:'F1-1: แกนม้วนอยู่ปลายขวาของแปลน สูงสุดประมาณ 2.8 ม. (ยืนยันแล้ว) แสดงเฉพาะโครงสร้างเครื่อง ไม่รวมวัสดุโฟม ราวสีส้ม ทางเดินด้านบน บันไดและลูกกลิ้งจำลองจากภาพ 6 ภาพ ขนาดส่วนอื่นประมาณจากภาพ',
     title:'ดิจิทัลทวินโรงงาน', close:'กลับแปลน', floor:'ชั้น', fit:'ดูทั้งหมด', rotate:'ขวา90°', orbitLeft:'ซ้าย90°', tiltUp:'มุมก้ม＋', tiltDown:'มุมก้ม−', resetView:'คืนมุมมอง', cameraAngle:'แนวราบ', cameraPitch:'มุมก้ม', labels:'ป้ายอุปกรณ์',
     select:'เลือกวัตถุ', all:'เลือกอุปกรณ์ / เสา / ผนัง', empty:'คลิกวัตถุเพื่อดูขนาดและตำแหน่ง', edit:'แก้ไขในแปลน',
-    note:'ยึดแปลน 2D · กล้องไม่เปลี่ยนขนาดหรือทิศเครื่อง · ต่างระดับทั่วไปประมาณ 1.5 ม. (ข้อยกเว้นดูรายละเอียดเครื่อง) · ยังไม่มีสัญญาณเครื่องสด', help:'ลากเลื่อน · ล้อซูม · ⌘/Shift＋เลื่อน: หมุนซ้ายขวา · ⌥＋เลื่อน: ปรับมุมก้ม · ลูกศร: ซ้ายขวาหมุน/ขึ้นลงปรับมุม · 0 คืนมุมมอง · Esc กลับ',
+    moduleMove:'ย้ายโมดูลเครื่องจักร', moveStep:'ระยะขยับ', moveLeft:'ย้ายซ้าย', moveRight:'ย้ายขวา', moveUp:'ย้ายขึ้น', moveDown:'ย้ายลง', duplicateMachine:'คัดลอกเครื่องนี้', moduleHint:'ใช้ Shift + ปุ่มลูกศรเพื่อย้ายเครื่องที่เลือกได้', moduleMoved:'ซิงค์ตำแหน่งไปยัง 2D แล้ว', moduleCopied:'สร้างสำเนาเครื่องแยกแล้ว', moduleLocked:'ชั้นอุปกรณ์ถูกล็อก', moduleError:'แก้ไขเครื่องนี้ไม่ได้',
+    note:'ยึดแปลน 2D · กล้องไม่เปลี่ยนขนาดหรือทิศเครื่อง · ต่างระดับทั่วไปประมาณ 1.5 ม. (ข้อยกเว้นดูรายละเอียดเครื่อง) · ยังไม่มีสัญญาณเครื่องสด', help:'ลากเลื่อน · ล้อซูม · ⌘/Shift＋เลื่อน: หมุนซ้ายขวา · ⌥＋เลื่อน: ปรับมุมก้ม · ลูกศร: ปรับมุมมอง · Shift＋ลูกศร: ย้ายเครื่องที่เลือก · 0 คืนมุมมอง · Esc กลับ',
     equipment:'อุปกรณ์', column:'เสา', wall:'ผนัง', aisle:'ทางเดิน', zone:'พื้นที่ชั้นลอย', size:'ขนาดแปลน', position:'พิกัด', rotation:'มุม', count:'วัตถุ',
     updated:'โหลดแปลนปัจจุบันแล้ว', floor1:'1F โรงงาน', floor2:'2F ชั้นลอย', focus:'ดูอุปกรณ์ระยะใกล้', photo:'M2-1 ยาวรวม 31.30 ม. ชุดม้วนสร้างตามแบบระบุขนาด\nเตาอบอ้างอิงแบบแยก ตำแหน่งเชื่อมต่อเป็นภาพประมาณ', a1Photo:'วาด A1-1 ใหม่จากภาพล่าสุด: ป้อนวัสดุจากสายพานสีเขียวด้านขวา ผ่านลูกกลิ้งและดรัมใหญ่ที่อยู่ค่อนไปทางขวา แล้วแผ่นวัสดุลาดไปยังลูกกลิ้งรับงานด้านซ้าย ทิศทางยืนยันแล้ว แต่ขนาดและความสูงยังเป็นการประมาณจากภาพ', a1Entrance:'ป้อนเข้า (สายพานสีเขียว)', a1Collection:'รับงาน (ลูกกลิ้งสีเงิน)', feed:'ป้อนเข้า (ฝั่งสองคน)', collect:'รับงานออก (ฝั่งหนึ่งคน)', ramp:'ทางลาดต่างระดับประมาณ 1.50 ม. (ด้านในสูงกว่าด้านนอก)', rampInside:'ภายใน +1.5 ม.', rampOutside:'ภายนอก 0 ม.', officeSteps:'ขั้นทางเข้าสำนักงานยึดตำแหน่ง DOOR-1800; ความสูงเป็นภาพจำลองจากรูปถ่าย ต้องวัดจริง', dockSite:'ท่าโหลดฝั่งตะวันตกจำลองจากรูปถ่าย; พื้นในสูงกว่าด้านนอกประมาณ 1.5 ม.'
   };
@@ -158,6 +160,7 @@
   };
   function localize() {
     dialog.querySelectorAll('[data-twin-text]').forEach(el => { el.textContent = t(el.dataset.twinText); });
+    dialog.querySelectorAll('[data-twin-label]').forEach(el => { el.setAttribute('aria-label',t(el.dataset.twinLabel)); });
     updateEngineInfo();updateLiveButton();
   }
   function rect(item, centered=false) {
@@ -323,6 +326,39 @@
   function orbit(delta){if(usingThree())threeView.orbit(delta*Math.PI/2);else angle=((angle+delta)%4+4)%4;requestDraw();}
   function tilt(delta){if(usingThree())threeView.tilt(delta);else pitch=Math.max(Math.PI*25/180,Math.min(Math.PI*65/180,pitch+delta));requestDraw();}
   function resetView(){angle=0;pitch=defaultPitch;if(usingThree())threeView.reset();fit();}
+  const isMachineModule=s=>s?.type==='equipment' && !/^(Door|Window|Furniture|Office|Infrastructure|Sanitary|Elevator|Stairs)$/i.test(String(s.item?.category || ''));
+  function moduleStatus(result,successKey){
+    const output=dialog?.querySelector('#twinModuleStatus');
+    if(!output)return;
+    output.textContent=t(result?.ok?successKey:result?.reason==='locked'?'moduleLocked':'moduleError');
+    output.dataset.state=result?.ok?'success':'error';
+  }
+  function moveSelectedModule(dx,dy){
+    if(!isMachineModule(selected))return false;
+    const step=Number(dialog?.querySelector('#twinMoveStep')?.value || .1);
+    const result=bridge?.move?.(selected.item.id,floor,dx*step,dy*step) || {ok:false,reason:'unavailable'};
+    moduleStatus(result,'moduleMoved');
+    return true;
+  }
+  function duplicateSelectedModule(){
+    if(!isMachineModule(selected))return false;
+    const result=bridge?.duplicate?.(selected.item.id,floor) || {ok:false,reason:'unavailable'};
+    if(result.ok){
+      selected=scene.find(s=>s.item.id===result.id) || selected;
+      detail=false;
+      updateInfo();
+      requestDraw();
+    }
+    moduleStatus(result,'moduleCopied');
+    return true;
+  }
+  function moduleKey(e){
+    if(!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey || e.target?.closest?.('input,select,textarea,[contenteditable="true"]'))return false;
+    const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+    if(!direction || !moveSelectedModule(...direction))return false;
+    e.preventDefault();
+    return true;
+  }
   function cameraKey(e){
     if(e.target?.closest?.('input,select,textarea,[contenteditable="true"]') || e.metaKey || e.ctrlKey || e.altKey)return;
     const step=5*Math.PI/180;
@@ -1120,6 +1156,11 @@
       if(!item)dialog.querySelector('#twinDetails').textContent+='\n'+(photoDirections?t('photoSiteNote'):t('buildingNote'));
     }else dialog.querySelector('[data-twin-text="note"]').textContent=t('note');
     dialog.querySelector('#twinEdit').hidden=!s || s.type==='site';
+    const moduleControls=dialog.querySelector('#twinModuleControls');
+    if(moduleControls){
+      moduleControls.hidden=!isMachineModule(s);
+      if(!isMachineModule(s))dialog.querySelector('#twinModuleStatus').textContent='';
+    }
     dialog.querySelector('#twinFocus').hidden=!s;
     const restroom=referenceCode(item || {})==='WC-STALLS';
     const cutawayButton=dialog.querySelector('#twinRestroomCutaway');
@@ -1205,7 +1246,7 @@
   function mount() {
     if(dialog)return;
     dialog=document.createElement('dialog');dialog.className='twin-dialog';dialog.setAttribute('aria-labelledby','twinHeading');
-    dialog.innerHTML=`<div class="twin-shell"><header class="twin-header"><div><div class="twin-eyebrow">CHIN CHUN · WORLD VIEW</div><h2 id="twinHeading"><span data-twin-text="title"></span> / 2.5D</h2></div><button id="twinClose" data-twin-text="close"></button></header><nav class="twin-toolbar"><label><span data-twin-text="floor"></span><select id="twinFloor"><option value="1F" data-twin-text="floor1"></option><option value="2F" data-twin-text="floor2"></option></select></label><button id="twinFit" data-twin-text="fit"></button><button id="twinRotate" data-twin-text="rotate"></button><button id="twinMinus" aria-label="Zoom out">−</button><button id="twinPlus" aria-label="Zoom in">＋</button><label><input id="twinLabels" type="checkbox" checked><span data-twin-text="labels"></span></label><label><span data-twin-text="select"></span><select id="twinObjects" style="max-width:220px"></select></label></nav><div class="twin-stage"><canvas aria-label="Isometric factory layout"></canvas><div class="twin-plaque">FACTORY ATLAS<br>配置世界 / ISOMETRIC DIORAMA</div><aside class="twin-info"><h3 id="twinName"></h3><p id="twinDetails"></p><button id="twinEdit" data-twin-text="edit" hidden></button></aside></div><footer class="twin-footer"><span id="twinCount"></span><span data-twin-text="help"></span></footer><div class="twin-footer" data-twin-text="note"></div></div>`;
+    dialog.innerHTML=`<div class="twin-shell"><header class="twin-header"><div><div class="twin-eyebrow">CHIN CHUN · WORLD VIEW</div><h2 id="twinHeading"><span data-twin-text="title"></span> / 2.5D</h2></div><button id="twinClose" data-twin-text="close"></button></header><nav class="twin-toolbar"><label><span data-twin-text="floor"></span><select id="twinFloor"><option value="1F" data-twin-text="floor1"></option><option value="2F" data-twin-text="floor2"></option></select></label><button id="twinFit" data-twin-text="fit"></button><button id="twinRotate" data-twin-text="rotate"></button><button id="twinMinus" aria-label="Zoom out">−</button><button id="twinPlus" aria-label="Zoom in">＋</button><label><input id="twinLabels" type="checkbox" checked><span data-twin-text="labels"></span></label><label><span data-twin-text="select"></span><select id="twinObjects" style="max-width:220px"></select></label></nav><div class="twin-stage"><canvas aria-label="Isometric factory layout"></canvas><div class="twin-plaque">FACTORY ATLAS<br>配置世界 / ISOMETRIC DIORAMA</div><aside class="twin-info"><h3 id="twinName"></h3><p id="twinDetails"></p><section id="twinModuleControls" class="twin-module-controls" hidden><strong data-twin-text="moduleMove"></strong><label><span data-twin-text="moveStep"></span><select id="twinMoveStep"><option value="0.1">0.1 m</option><option value="0.5">0.5 m</option><option value="1">1.0 m</option></select></label><div class="twin-move-pad"><button type="button" data-module-dx="0" data-module-dy="-1" data-twin-label="moveUp">↑</button><button type="button" data-module-dx="-1" data-module-dy="0" data-twin-label="moveLeft">←</button><button type="button" data-module-dx="1" data-module-dy="0" data-twin-label="moveRight">→</button><button type="button" data-module-dx="0" data-module-dy="1" data-twin-label="moveDown">↓</button></div><button type="button" id="twinDuplicate" data-twin-text="duplicateMachine"></button><small data-twin-text="moduleHint"></small><output id="twinModuleStatus" role="status" aria-live="polite"></output></section><button id="twinEdit" data-twin-text="edit" hidden></button></aside></div><footer class="twin-footer"><span id="twinCount"></span><span data-twin-text="help"></span></footer><div class="twin-footer" data-twin-text="note"></div></div>`;
     document.body.append(dialog);canvas=dialog.querySelector('canvas');ctx=canvas.getContext('2d');
     const engineLabel=document.createElement('label'),engineTitle=document.createElement('span'),engineSelect=document.createElement('select');
     engineTitle.dataset.twinText='engine';engineSelect.id='twinEngine';
@@ -1226,7 +1267,7 @@
     dialog.querySelector('.twin-toolbar').append(cutawayButton);
     focus.onclick=()=>{if(selected){detail=true;fit();closeTwinMenus();}};
     // Keep CAD delete/rotate/undo shortcuts from changing the model behind the modal.
-    dialog.addEventListener('keydown',e=>{cameraKey(e);e.stopPropagation();});
+    dialog.addEventListener('keydown',e=>{if(!moduleKey(e))cameraKey(e);e.stopPropagation();});
     dialog.addEventListener('keyup',e=>e.stopPropagation());
     dialog.querySelector('#twinClose').onclick=()=>dialog.close();
     dialog.querySelector('#twinFloor').onchange=e=>{floor=e.target.value;selected=null;rebuild();fit();closeTwinMenus();};
@@ -1242,6 +1283,8 @@
     dialog.querySelector('#twinMinus').onclick=()=>zoomAt(.8);
     dialog.querySelector('#twinLabels').onchange=e=>{labels=e.target.checked;requestDraw();};
     dialog.querySelector('#twinObjects').onchange=e=>{selected=scene.find(s=>s.item.id===e.target.value)||null;if(!selected)detail=false;updateInfo();if(detail)fit();else requestDraw();};
+    dialog.querySelectorAll('[data-module-dx]').forEach(button=>button.onclick=()=>moveSelectedModule(Number(button.dataset.moduleDx),Number(button.dataset.moduleDy)));
+    dialog.querySelector('#twinDuplicate').onclick=duplicateSelectedModule;
     dialog.querySelector('#twinEdit').onclick=()=>{if(selected && selected.type!=='site'){const id=selected.type==='wall'?(data.walls || []).find(w=>selected.item.id===w.id || selected.item.id.startsWith(w.id+'_part_') || selected.item.id.startsWith(w.id+'_diecut_'))?.id || selected.item.id:selected.item.id;dialog.close();bridge?.edit(id,floor);}};
     closeTwinMenus=bindCompactTwinControls(dialog);
     canvas.addEventListener('wheel',e=>{if(usingThree())e.stopImmediatePropagation();cameraWheel(e);},{capture:true,passive:false});

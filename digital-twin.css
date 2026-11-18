@@ -24,6 +24,19 @@
 .twin-info h3 { font-size:16px; margin:0 0 10px; color:#ead48a; }
 .twin-info p { font-size:12px; line-height:1.8; white-space:pre-line; margin:0 0 12px; color:#d6e0cf; }
 .twin-info button { width:100%; }
+.twin-module-controls { display:grid; gap:8px; margin:0 0 12px; padding:10px; border:1px solid #78987c66; border-radius:8px; background:#10282399; }
+.twin-module-controls > strong { color:#ead48a; font-size:12px; }
+.twin-module-controls > label { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; }
+.twin-module-controls select { padding:6px 8px; }
+.twin-module-controls small { color:#bfcdb8; font-size:10px; line-height:1.45; }
+.twin-module-controls output { min-height:1.35em; color:#bfe4b1; font-size:11px; }
+.twin-module-controls output[data-state="error"] { color:#ffc1a8; }
+.twin-move-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+.twin-move-pad button { min-width:0; padding:7px; }
+.twin-move-pad button:nth-child(1) { grid-column:2; }
+.twin-move-pad button:nth-child(2) { grid-column:1; grid-row:2; }
+.twin-move-pad button:nth-child(3) { grid-column:3; grid-row:2; }
+.twin-move-pad button:nth-child(4) { grid-column:2; grid-row:3; }
 .twin-footer { display:flex; gap:10px; justify-content:space-between; padding:10px 22px; font-size:11px; color:#c7d4bd; border-top:1px solid #78987c44; }
 .twin-dialog [hidden] { display:none!important; }
 @media(max-width:700px) { .twin-dialog { width:100vw; height:100dvh; border-radius:0; max-height:100dvh; } .twin-header { padding:12px; } .twin-header h2 { font-size:15px; } .twin-toolbar { padding:8px; gap:5px; } .twin-footer { padding:8px; font-size:10px; } .twin-info { width:220px; padding:12px; } }
